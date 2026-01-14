@@ -1,0 +1,35 @@
+{
+  "name": "js-tmpl",
+  "version": "0.0.1",
+  "description": "The pure JavaScript templating engine that uses handlebars.",
+  "type": "module",
+  "bin": {
+    "js-tmpl": "bin/js-tmpl"
+  },
+  "exports": {
+    ".": {
+      "import": "./src/index.js"
+    }
+  },
+  "scripts": {
+    "test": "node tests/test-template-config.js",
+    "start": "node src/cli.js",
+    "help": "node src/cli.js --help",
+    "dev": "node src/cli.js",
+    "tool": "node src/cli.js"
+  },
+  "keywords": [
+    "js",
+    "templating",
+    "handlebars",
+    "utils"
+  ],
+  "author": "pasxd245",
+  "license": "MIT",
+  "packageManager": "pnpm@10.22.0",
+  "dependencies": {
+    "config": "^4.1.1",
+    "handlebars": "^4.7.8",
+    "js-yaml": "^4.1.1"
+  }
+}
