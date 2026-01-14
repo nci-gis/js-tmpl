@@ -12,11 +12,13 @@
     }
   },
   "scripts": {
-    "test": "node tests/test-template-config.js",
-    "start": "node src/cli.js",
-    "help": "node src/cli.js --help",
-    "dev": "node src/cli.js",
-    "tool": "node src/cli.js"
+    "test": "node --test $(find tests -name '*.test.js')",
+    "test:watch": "node --test --watch $(find tests -name '*.test.js')",
+    "test:coverage": "node --experimental-test-coverage --test $(find tests -name '*.test.js')",
+    "start": "node src/cli/main.js",
+    "help": "node src/cli/main.js --help",
+    "dev": "node src/cli/main.js",
+    "tool": "node src/cli/main.js"
   },
   "keywords": [
     "js",
