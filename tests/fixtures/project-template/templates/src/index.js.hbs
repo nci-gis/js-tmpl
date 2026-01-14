@@ -1,0 +1,19 @@
+// {{project.name}} - {{project.description}}
+// Version: {{project.version}}
+
+const config = require('../config/app.json');
+
+console.log('Starting {{project.name}}...');
+console.log('Config:', config);
+
+{{#if features.auth}}
+// Authentication enabled
+console.log('Auth service:', '{{services.1.url}}');
+{{/if}}
+
+{{#if features.api}}
+// API enabled
+console.log('API service:', '{{services.0.url}}');
+{{/if}}
+
+console.log('Server running on {{config.host}}:{{config.port}}');
