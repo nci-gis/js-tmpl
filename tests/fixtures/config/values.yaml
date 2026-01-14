@@ -1,0 +1,8 @@
+name: test-app
+version: 1.0.0
+config:
+  port: 3000
+  debug: true
+list:
+  - item1
+  - item2

@@ -1,0 +1,3 @@
+templateDir: custom-templates
+partialsDir: custom-partials
+outDir: custom-output
