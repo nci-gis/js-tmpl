@@ -1,12 +1,14 @@
-import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
-import path from "node:path";
 import fs from "node:fs/promises";
+import path from "node:path";
+import { beforeEach,describe, it } from "node:test";
+
 import Handlebars from "handlebars";
+
+import { loadYamlOrJson } from "../../src/config/loader.js";
 import { renderDirectory } from "../../src/engine/renderDirectory.js";
 import { getFixturePath } from "../helpers/fixtures.js";
 import { withTempDir } from "../helpers/tempDir.js";
-import { loadYamlOrJson } from "../../src/config/loader.js";
 
 describe("Integration: Fixture-based Rendering", () => {
   beforeEach(() => {

@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import Handlebars from "handlebars";
 
 /**
@@ -20,7 +21,7 @@ export async function registerPartials(partialsDir, ext = ".hbs") {
         const groupFiles = await fs.readdir(abs);
 
         for (const f of groupFiles) {
-          if (!f.endsWith(ext)) continue;
+          if (!f.endsWith(ext)) {continue;}
           const key = path.basename(f, ext);
           const name = `${group}.${key}`;
           const content = await fs.readFile(path.join(abs, f), "utf8");

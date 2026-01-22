@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
-# simple forward to Node CLI
-node "$(dirname "$0")/../src/cli.js" "$@"
+# CLI entry point for js-tmpl
+node "$(dirname "$0")/../src/cli/main.js" "$@"

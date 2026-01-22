@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { parseArgs } from "./args.js";
 import { resolveConfig } from "../config/resolver.js";
 import { renderDirectory } from "../engine/renderDirectory.js";
+import { parseArgs } from "./args.js";
 
 export async function main() {
   const cli = parseArgs(process.argv);
@@ -19,4 +19,10 @@ export async function main() {
   console.log("✔ js-tmpl completed.");
 }
 
-main();
+// Execute main function if this file is run directly
+try {
+  await main();
+} catch (error) {
+  console.error("Error:", error);
+  process.exit(1);
+}

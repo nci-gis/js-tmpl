@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import YAML from "js-yaml";
 
 /**
@@ -41,7 +42,7 @@ export function loadProjectConfig(cwd, explicitFile) {
 
   for (const rel of candidates) {
     const abs = path.isAbsolute(rel) ? rel : path.join(cwd, rel);
-    if (!fs.existsSync(abs)) continue;
+    if (!fs.existsSync(abs)) {continue;}
 
     const raw = fs.readFileSync(abs, "utf8");
 

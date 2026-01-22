@@ -16,7 +16,7 @@ export async function walkTemplateTree(rootDir, ext = ".hbs", ignore = []) {
     if (stat.isDirectory()) {
       const items = await fs.readdir(abs);
       for (const name of items) {
-        if (ignore.some((i) => matchIgnore(name, i))) continue;
+        if (ignore.some((i) => matchIgnore(name, i))) {continue;}
         queue.push(rel ? path.join(rel, name) : name);
       }
     } else if (path.extname(abs) === ext) {

@@ -1,0 +1,4 @@
+templateDir: templates
+partialsDir: templates.partials
+outDir: dist
+extname: .hbs

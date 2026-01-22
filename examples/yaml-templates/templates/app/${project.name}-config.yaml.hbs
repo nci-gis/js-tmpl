@@ -1,0 +1,22 @@
+{{> header}}
+
+{{> common.metadata}}
+
+application:
+  name: {{project.name}}
+  version: {{project.version}}
+  environment: {{project.environment}}
+
+{{#if features.authentication}}
+auth:
+  enabled: true
+  service_url: {{services.1.url}}
+{{/if}}
+
+{{#if features.api_gateway}}
+api:
+  enabled: true
+  service_url: {{services.0.url}}
+{{/if}}
+
+{{> footer}}

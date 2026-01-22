@@ -15,6 +15,9 @@
     "test": "node --test $(find tests -name '*.test.js')",
     "test:watch": "node --test --watch $(find tests -name '*.test.js')",
     "test:coverage": "node --experimental-test-coverage --test $(find tests -name '*.test.js')",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint src/ tests/ --fix",
+    "build": "echo 'No build step required for pure JS library'",
     "start": "node src/cli/main.js",
     "help": "node src/cli/main.js --help",
     "dev": "node src/cli/main.js",
@@ -28,10 +31,33 @@
   ],
   "author": "pasxd245",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nci-gis/js-tmpl.git"
+  },
+  "homepage": "https://github.com/nci-gis/js-tmpl#readme",
+  "bugs": {
+    "url": "https://github.com/nci-gis/js-tmpl/issues"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  },
   "packageManager": "pnpm@10.22.0",
   "dependencies": {
     "config": "^4.1.1",
     "handlebars": "^4.7.8",
     "js-yaml": "^4.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "eslint-plugin-simple-import-sort": "^12.1.1"
   }
 }

@@ -1,0 +1,17 @@
+{{> header}}
+
+database:
+  type: {{database.type}}
+  connection:
+    host: {{database.host}}
+    port: {{database.port}}
+    database: {{database.name}}
+
+  {{> common.credentials}}
+
+  pool:
+    min: {{database.pool.min}}
+    max: {{database.pool.max}}
+    timeout: {{database.pool.timeout}}
+
+{{> footer}}

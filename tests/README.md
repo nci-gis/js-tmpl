@@ -11,7 +11,7 @@ Comprehensive test coverage for the js-tmpl JavaScript templating engine.
 
 ## Test Structure
 
-```
+```text
 tests/
 ├── unit/                    # Unit tests for individual modules
 │   ├── config/             # Config layer (46 tests)
@@ -42,6 +42,7 @@ pnpm test:coverage
 ### Unit Tests
 
 #### Utils Layer (31 tests)
+
 - `tests/unit/utils/object.test.js` - Tests for `getNested()` function
   - Simple and nested property access
   - Edge cases (null, undefined, empty strings, falsy values)
@@ -51,12 +52,14 @@ pnpm test:coverage
   - Path resolution (`resolvePath`, `safeResolvePath`)
 
 #### Config Layer (46 tests)
+
 - `tests/unit/config/defaults.test.js` - Default configuration values
 - `tests/unit/config/view.test.js` - View object building
 - `tests/unit/config/loader.test.js` - YAML/JSON loading and project config discovery
 - `tests/unit/config/resolver.test.js` - Config resolution with precedence rules
 
 #### Engine Layer (68 tests)
+
 - `tests/unit/engine/pathRenderer.test.js` - Dynamic path rendering with `${var}` syntax
 - `tests/unit/engine/contentRenderer.test.js` - Handlebars template rendering
 - `tests/unit/engine/treeWalker.test.js` - BFS directory traversal
@@ -66,6 +69,7 @@ pnpm test:coverage
 ### Integration Tests (11 tests)
 
 #### Full Rendering Flow (8 tests)
+
 - `tests/integration/full-render.test.js`
   - Complete project structure rendering
   - Partials and dynamic paths
@@ -74,6 +78,7 @@ pnpm test:coverage
   - Conditionals and loops
 
 #### Fixture-based Tests (3 tests)
+
 - `tests/integration/fixture-render.test.js`
   - Realistic project rendering from fixtures
   - Custom value overrides
@@ -82,20 +87,25 @@ pnpm test:coverage
 ## Test Fixtures
 
 ### Config Fixtures
+
 Located in `tests/fixtures/config/`:
+
 - `values.yaml`, `values.json` - Sample value files
 - `js-tmpl.config.yaml`, `js-tmpl.config.json` - Sample project configs
 
 ### Project Template Fixture
+
 Located in `tests/fixtures/project-template/`:
 
 A complete, realistic project template demonstrating all features:
+
 - **Templates**: README, package.json, source code, configs, docs
 - **Partials**: Root partials (`_header.hbs`) and namespaced (`@components/nav.hbs`)
 - **Values**: Comprehensive default values with nested structures
 - **Features**: Conditionals, loops, dynamic paths, multiple file types
 
 Structure:
+
 ```
 project-template/
 ├── templates/
@@ -122,6 +132,7 @@ project-template/
 ## Test Helpers
 
 ### `withTempDir(callback)`
+
 Creates and automatically cleans up a temporary directory for test isolation.
 
 ```javascript
@@ -134,6 +145,7 @@ await withTempDir(async (tmpDir) => {
 ```
 
 ### `getFixturePath(name)`
+
 Returns absolute path to a fixture.
 
 ```javascript
@@ -143,6 +155,7 @@ const valuesPath = getFixturePath("config/values.yaml");
 ```
 
 ### `loadFixture(fixturePath)`
+
 Loads fixture file contents as text.
 
 ```javascript
@@ -156,6 +169,7 @@ const content = await loadFixture("config/values.yaml");
 ### Source Code Coverage (100%)
 
 All core modules have 100% line and function coverage:
+
 - ✅ `src/config/defaults.js` - 100%
 - ✅ `src/config/loader.js` - 100%
 - ✅ `src/config/resolver.js` - 100%
@@ -171,6 +185,7 @@ All core modules have 100% line and function coverage:
 ### What's Tested
 
 #### Configuration System
+
 - [x] Default values
 - [x] YAML and JSON loading
 - [x] Project config discovery (5 file locations)
@@ -179,6 +194,7 @@ All core modules have 100% line and function coverage:
 - [x] View building with environment variables
 
 #### Engine
+
 - [x] Template discovery (BFS tree walking)
 - [x] File extension filtering
 - [x] Ignore patterns (strings and regex)
@@ -189,6 +205,7 @@ All core modules have 100% line and function coverage:
 - [x] Full orchestration flow
 
 #### Edge Cases
+
 - [x] Empty directories
 - [x] Missing values (undefined handling)
 - [x] Null values
@@ -246,6 +263,7 @@ describe("Integration: Feature Name", () => {
 ## Continuous Integration
 
 Tests run automatically on:
+
 - Every commit
 - Pull requests
 - Pre-commit hooks (if configured)
@@ -255,6 +273,7 @@ All tests must pass before merging.
 ## Future Improvements
 
 Potential test additions for future phases:
+
 - [ ] CLI integration tests (when CLI is implemented)
 - [ ] Performance benchmarks
 - [ ] Error message clarity tests

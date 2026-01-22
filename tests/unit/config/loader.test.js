@@ -1,14 +1,15 @@
-import { describe, it } from "node:test";
 import assert from "node:assert";
+import fs from "node:fs/promises";
 import path from "node:path";
+import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
+
 import {
-  loadYamlOrJson,
   loadProjectConfig,
+  loadYamlOrJson,
 } from "../../../src/config/loader.js";
 import { getFixturePath } from "../../helpers/fixtures.js";
 import { withTempDir } from "../../helpers/tempDir.js";
-import fs from "node:fs/promises";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

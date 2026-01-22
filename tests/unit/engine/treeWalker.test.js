@@ -1,7 +1,8 @@
-import { describe, it } from "node:test";
 import assert from "node:assert";
-import path from "node:path";
 import fs from "node:fs/promises";
+import path from "node:path";
+import { describe, it } from "node:test";
+
 import { walkTemplateTree } from "../../../src/engine/treeWalker.js";
 import { withTempDir } from "../../helpers/tempDir.js";
 

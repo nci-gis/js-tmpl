@@ -1,8 +1,10 @@
-import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
-import path from "node:path";
 import fs from "node:fs/promises";
+import path from "node:path";
+import { beforeEach,describe, it } from "node:test";
+
 import Handlebars from "handlebars";
+
 import { renderDirectory } from "../../src/engine/renderDirectory.js";
 import { withTempDir } from "../helpers/tempDir.js";
 

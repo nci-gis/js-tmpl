@@ -1,7 +1,8 @@
-import { describe, it } from "node:test";
 import assert from "node:assert";
-import path from "node:path";
 import fs from "node:fs/promises";
+import path from "node:path";
+import { describe, it } from "node:test";
+
 import { renderContent } from "../../../src/engine/contentRenderer.js";
 import { withTempDir } from "../../helpers/tempDir.js";
 

@@ -461,6 +461,53 @@ When contributing to js-tmpl:
 4. **Preserve engine-first design** - CLI is secondary
 5. **Follow existing patterns** - consistency over cleverness
 
+### Commit Message Convention
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org) for changelog generation via [git-cliff](cliff.toml).
+
+**Format:**
+
+```text
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Types and their changelog groups:**
+
+| Type       | Changelog Group | Description                                      |
+| ---------- | --------------- | ------------------------------------------------ |
+| `feat`     | Added           | New features                                     |
+| `fix`      | Fixed           | Bug fixes                                        |
+| `docs`     | Documentation   | Documentation changes                            |
+| `perf`     | Performance     | Performance improvements                         |
+| `refactor` | Changed         | Code refactoring (no feature/fix)                |
+| `style`    | Styling         | Code style changes (formatting, whitespace)      |
+| `test`     | Testing         | Adding or updating tests                         |
+| `build`    | Build           | Build system or external dependency changes      |
+| `ci`       | CI/CD           | CI/CD configuration changes                      |
+| `chore`    | Miscellaneous   | Other changes (except release/pr commits)        |
+
+**Examples:**
+
+```bash
+feat: add watch mode for template hot-reload
+fix(pathRenderer): handle empty placeholder values
+docs: update API documentation for renderDirectory
+refactor(treeWalker): simplify BFS queue logic
+test: add integration tests for partial system
+chore(deps): update handlebars to 4.7.9
+```
+
+**Notes:**
+
+- Use lowercase for type and scope
+- Keep the description concise (50 chars or less preferred)
+- Use imperative mood: "add" not "added" or "adds"
+- `chore(release)` and `chore(pr)` commits are excluded from changelog
+
 ## Questions & Clarifications
 
 When working on js-tmpl, always ask:

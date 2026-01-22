@@ -1,0 +1,60 @@
+project:
+  name: my-app
+  version: 1.0.0
+  description: Example application configuration
+  author: DevOps Team
+  environment: production
+
+database:
+  type: postgresql
+  host: db.example.com
+  port: 5432
+  name: myapp_db
+  username: app_user
+  pool:
+    min: 2
+    max: 10
+    timeout: 30000
+
+logging:
+  level: info
+  format: json
+  outputs:
+    - type: file
+      path: /var/log/app.log
+      maxSize: 100mb
+      maxFiles: 5
+    - type: console
+      colorize: true
+
+services:
+  - name: api
+    url: https://api.example.com
+    port: 8080
+    enabled: true
+    replicas: 3
+    resources:
+      cpu: 500m
+      memory: 512Mi
+  - name: auth
+    url: https://auth.example.com
+    port: 8081
+    enabled: true
+    replicas: 2
+    resources:
+      cpu: 250m
+      memory: 256Mi
+  - name: worker
+    url: https://worker.example.com
+    port: 8082
+    enabled: false
+    replicas: 1
+    resources:
+      cpu: 1000m
+      memory: 1Gi
+
+features:
+  authentication: true
+  api_gateway: true
+  monitoring: true
+  caching: false
