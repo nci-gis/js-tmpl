@@ -1,0 +1,22 @@
+{{> header}}
+
+services:
+{{#each services}}
+{{#if enabled}}
+  - name: {{name}}
+    url: {{url}}
+    port: {{port}}
+    replicas: {{replicas}}
+    resources:
+      cpu: {{resources.cpu}}
+      memory: {{resources.memory}}
+{{/if}}
+{{/each}}
+
+features:
+  authentication: {{features.authentication}}
+  api_gateway: {{features.api_gateway}}
+  monitoring: {{features.monitoring}}
+  caching: {{features.caching}}
+
+{{> footer}}

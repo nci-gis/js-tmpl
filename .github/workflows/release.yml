@@ -1,0 +1,174 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Release channel'
+        required: true
+        type: choice
+        options:
+          - stable
+          - beta
+          - alpha
+        default: 'stable'
+      version-type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - custom
+        default: 'patch'
+      custom-version:
+        description: 'Custom version (only used if version-type is custom, e.g., 1.2.3)'
+        required: false
+        type: string
+      prerelease-number:
+        description: 'Prerelease number (only for alpha/beta, e.g., 1 for v1.2.3-beta.1)'
+        required: false
+        type: string
+        default: '1'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@git-cliff
+
+      - name: Calculate new version
+        id: version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          CHANNEL="${{ github.event.inputs.channel }}"
+          VERSION_TYPE="${{ github.event.inputs.version-type }}"
+          CUSTOM_VERSION="${{ github.event.inputs.custom-version }}"
+          PRERELEASE_NUM="${{ github.event.inputs.prerelease-number }}"
+
+          # Get base version (strip any prerelease suffix)
+          BASE_VERSION=$(echo "$CURRENT_VERSION" | sed 's/-.*$//')
+
+          if [ "$VERSION_TYPE" == "custom" ]; then
+            NEW_BASE="$CUSTOM_VERSION"
+          else
+            # Parse current version
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
+
+            case "$VERSION_TYPE" in
+              major)
+                NEW_BASE="$((MAJOR + 1)).0.0"
+                ;;
+              minor)
+                NEW_BASE="${MAJOR}.$((MINOR + 1)).0"
+                ;;
+              patch)
+                NEW_BASE="${MAJOR}.${MINOR}.$((PATCH + 1))"
+                ;;
+            esac
+          fi
+
+          # Build full version with channel suffix
+          case "$CHANNEL" in
+            stable)
+              NEW_VERSION="$NEW_BASE"
+              TAG_NAME="v${NEW_BASE}"
+              IS_PRERELEASE="false"
+              ;;
+            beta)
+              NEW_VERSION="${NEW_BASE}-beta.${PRERELEASE_NUM}"
+              TAG_NAME="v${NEW_BASE}-beta.${PRERELEASE_NUM}"
+              IS_PRERELEASE="true"
+              ;;
+            alpha)
+              NEW_VERSION="${NEW_BASE}-alpha.${PRERELEASE_NUM}"
+              TAG_NAME="v${NEW_BASE}-alpha.${PRERELEASE_NUM}"
+              IS_PRERELEASE="true"
+              ;;
+          esac
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
+
+          echo "📦 New version: $NEW_VERSION"
+          echo "🏷️  Tag: $TAG_NAME"
+          echo "📢 Channel: $CHANNEL"
+          echo "🔖 Prerelease: $IS_PRERELEASE"
+
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.version.outputs.new_version }} --no-git-tag-version
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Generate changelog for this release
+          git-cliff --tag ${{ steps.version.outputs.tag_name }} -o CHANGELOG.md
+
+          # Also generate release notes for GitHub Release body
+          git-cliff --tag ${{ steps.version.outputs.tag_name }} --unreleased --strip header > RELEASE_NOTES.md
+
+          echo "📝 Changelog updated"
+
+      - name: Commit version bump and changelog
+        run: |
+          git add package.json CHANGELOG.md
+          git commit -m "chore: release ${{ steps.version.outputs.tag_name }}"
+
+      - name: Create git tag
+        run: |
+          git tag "${{ steps.version.outputs.tag_name }}"
+
+      - name: Push changes and tag
+        run: |
+          git push origin main
+          git push origin "${{ steps.version.outputs.tag_name }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag_name }}
+          name: Release ${{ steps.version.outputs.tag_name }}
+          body_path: RELEASE_NOTES.md
+          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
+
+      - name: Report success
+        run: |
+          echo "✅ Release ${{ steps.version.outputs.tag_name }} created"
+          echo "✅ GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag_name }}"
+          echo "📦 npm publish will be triggered automatically by the publish workflow"
