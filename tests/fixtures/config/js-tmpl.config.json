@@ -1,0 +1,5 @@
+{
+  "templateDir": "json-templates",
+  "outDir": "json-output",
+  "extname": ".tmpl"
+}

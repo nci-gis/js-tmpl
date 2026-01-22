@@ -1,0 +1,30 @@
+project:
+  name: example-app
+  version: 1.0.0
+  description: An example application generated from templates
+  author: John Doe
+  license: MIT
+
+config:
+  port: 3000
+  host: localhost
+  debug: false
+
+database:
+  type: postgresql
+  host: localhost
+  port: 5432
+  name: mydb
+
+features:
+  auth: true
+  api: true
+  frontend: true
+
+services:
+  - name: api
+    url: https://api.example.com
+    enabled: true
+  - name: auth
+    url: https://auth.example.com
+    enabled: true

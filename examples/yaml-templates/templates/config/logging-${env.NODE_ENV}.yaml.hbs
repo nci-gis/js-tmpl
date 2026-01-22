@@ -1,0 +1,20 @@
+{{> header}}
+
+logging:
+  level: {{logging.level}}
+  format: {{logging.format}}
+
+  outputs:
+{{#each logging.outputs}}
+    - type: {{type}}
+{{#if path}}
+      path: {{path}}
+      maxSize: {{maxSize}}
+      maxFiles: {{maxFiles}}
+{{/if}}
+{{#if colorize}}
+      colorize: {{colorize}}
+{{/if}}
+{{/each}}
+
+{{> footer}}

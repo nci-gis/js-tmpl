@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# CLI entry point for js-tmpl
+node "$(dirname "$0")/../src/cli/main.js" "$@"

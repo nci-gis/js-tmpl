@@ -1,0 +1,79 @@
+name: Publish to NPM
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate tag matches package.json version
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+
+          echo "Tag version: $TAG_VERSION"
+          echo "Package.json version: $PACKAGE_VERSION"
+
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "❌ ERROR: Tag version ($TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
+            exit 1
+          fi
+
+          echo "✅ Version match confirmed"
+
+      - name: Determine npm dist-tag
+        id: dist-tag
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+
+          if [[ "$TAG_VERSION" == *"-alpha"* ]]; then
+            DIST_TAG="alpha"
+          elif [[ "$TAG_VERSION" == *"-beta"* ]]; then
+            DIST_TAG="beta"
+          else
+            DIST_TAG="latest"
+          fi
+
+          echo "dist_tag=$DIST_TAG" >> $GITHUB_OUTPUT
+          echo "📦 Publishing with dist-tag: $DIST_TAG"
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Publish to NPM
+        run: pnpm publish --tag ${{ steps.dist-tag.outputs.dist_tag }} --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Report success
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "✅ Published js-tmpl@${TAG_VERSION} to npm with '${{ steps.dist-tag.outputs.dist_tag }}' tag"
+          echo "📦 https://www.npmjs.com/package/@nci-gis/js-tmpl/v/${TAG_VERSION}"

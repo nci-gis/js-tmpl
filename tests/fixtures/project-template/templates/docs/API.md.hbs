@@ -1,0 +1,17 @@
+# {{project.name}} API Documentation
+
+## Services
+
+{{#each services}}
+### {{name}}
+
+- URL: {{url}}
+- Status: {{#if enabled}}✓ Enabled{{else}}✗ Disabled{{/if}}
+
+{{/each}}
+
+## Configuration
+
+Host: `{{config.host}}`
+Port: `{{config.port}}`
+Debug Mode: `{{config.debug}}`

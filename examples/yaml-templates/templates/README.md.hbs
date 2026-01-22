@@ -1,0 +1,29 @@
+# {{project.name}}
+
+{{project.description}}
+
+**Version:** {{project.version}}
+**Author:** {{project.author}}
+**Environment:** {{env.NODE_ENV}}
+
+## Services
+
+{{#each services}}
+{{#if enabled}}
+- **{{name}}**: {{url}} ({{replicas}} replicas)
+{{/if}}
+{{/each}}
+
+## Database
+
+- **Type:** {{database.type}}
+- **Host:** {{database.host}}:{{database.port}}
+- **Database:** {{database.name}}
+
+## Logging
+
+- **Level:** {{logging.level}}
+- **Format:** {{logging.format}}
+
+---
+Generated with js-tmpl
