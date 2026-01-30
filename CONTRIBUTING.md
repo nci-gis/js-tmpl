@@ -241,7 +241,7 @@ When reporting bugs, include:
 
 When proposing changes that affect architecture:
 
-1. Read [docs/00-Motivation.md](docs/00-Motivation.md) to understand the vision
+1. Read [docs/Motivation.md](docs/Motivation.md) to understand the vision
 2. Review [docs/PRINCIPLES.md](docs/PRINCIPLES.md) for decision framework
 3. Ensure changes maintain:
    - Determinism (same input → same output)

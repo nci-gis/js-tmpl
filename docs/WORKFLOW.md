@@ -311,5 +311,8 @@ Each step is **explicit**, **deterministic**, and **composable**.
 
 ## See Also
 
-- [PRINCIPLES.md](PRINCIPLES.md) - Development philosophy
-- [Motivation](00-Motivation.md) - Why js-tmpl exists
+- **[📚 Documentation Hub](ToC.md)** - Complete documentation index
+- [API.md](API.md) - Function signatures and programmatic usage
+- [PRINCIPLES.md](PRINCIPLES.md) - Design philosophy and decision framework
+- [README.md](../README.md) - Quick start and overview
+- [Motivation](Motivation.md) - Why js-tmpl exists and our vision

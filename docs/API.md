@@ -429,7 +429,9 @@ declare module '@nci-gis/js-tmpl' {
 
 ## See Also
 
+- **[📚 Documentation Hub](ToC.md)** - Complete documentation index
 - [README.md](../README.md) - Quick start and overview
-- [WORKFLOW.md](WORKFLOW.md) - Visual workflow diagrams
-- [PRINCIPLES.md](PRINCIPLES.md) - Design principles
-- [examples/yaml-templates/](../examples/yaml-templates/) - Working example
+- [WORKFLOW.md](WORKFLOW.md) - Visual workflow diagrams with rendering pipeline
+- [Configuration Rules](../README.md#fixed-rules-for-minimal-auto-discovery) - Auto-discovery behavior
+- [PRINCIPLES.md](PRINCIPLES.md) - Design principles and philosophy
+- [examples/yaml-templates/](../examples/yaml-templates/) - Complete working example
