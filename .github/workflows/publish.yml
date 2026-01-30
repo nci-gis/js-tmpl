@@ -4,26 +4,48 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (e.g. v1.2.3)"
+        required: true
+        type: string
+
+concurrency:
+  group: publish-${{ github.ref_name || inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
+      - name: Resolve tag
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            TAG="${{ inputs.tag }}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          case "$TAG" in v*) ;; *) echo "Not v* tag"; exit 1;; esac
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ steps.resolve.outputs.tag }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          # OIDC requires Node.js 20+ (npm@^11.5.1)
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -35,7 +57,8 @@ jobs:
 
       - name: Validate tag matches package.json version
         run: |
-          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          TAG_VERSION="${{ steps.resolve.outputs.tag }}"
+          TAG_VERSION="${TAG_VERSION#v}"
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
 
           echo "Tag version: $TAG_VERSION"
@@ -51,7 +74,8 @@ jobs:
       - name: Determine npm dist-tag
         id: dist-tag
         run: |
-          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          TAG_VERSION="${{ steps.resolve.outputs.tag }}"
+          TAG_VERSION="${TAG_VERSION#v}"
 
           if [[ "$TAG_VERSION" == *"-alpha"* ]]; then
             DIST_TAG="alpha"
@@ -67,11 +91,14 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      # use `npm publish` instead of using `pnpm publish`
+      # which has better OIDC support.
       - name: Publish to NPM (via OIDC Trusted Publishing)
-        run: pnpm publish --tag ${{ steps.dist-tag.outputs.dist_tag }} --access public --no-git-checks --provenance
+        run: npm publish --verbose --tag ${{ steps.dist-tag.outputs.dist_tag }} --access public --provenance
 
       - name: Report success
         run: |
-          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          TAG_VERSION="${{ steps.resolve.outputs.tag }}"
+          TAG_VERSION="${TAG_VERSION#v}"
           echo "✅ Published js-tmpl@${TAG_VERSION} to npm with '${{ steps.dist-tag.outputs.dist_tag }}' tag"
           echo "📦 https://www.npmjs.com/package/@nci-gis/js-tmpl/v/${TAG_VERSION}"
