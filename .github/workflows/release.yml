@@ -20,6 +20,7 @@ on:
           - patch
           - minor
           - major
+          - prerelease
           - custom
         default: 'patch'
       custom-version:
@@ -79,26 +80,58 @@ jobs:
           CUSTOM_VERSION="${{ github.event.inputs.custom-version }}"
           PRERELEASE_NUM="${{ github.event.inputs.prerelease-number }}"
 
-          # Get base version (strip any prerelease suffix)
-          BASE_VERSION=$(echo "$CURRENT_VERSION" | sed 's/-.*$//')
+          # Handle prerelease version type
+          if [ "$VERSION_TYPE" == "prerelease" ]; then
+            # Extract current prerelease info from CURRENT_VERSION
+            # Example: 0.0.1-beta.1 → base=0.0.1, type=beta, num=1
 
-          if [ "$VERSION_TYPE" == "custom" ]; then
-            NEW_BASE="$CUSTOM_VERSION"
+            if [[ "$CURRENT_VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-(alpha|beta)\.([0-9]+)$ ]]; then
+              BASE_VERSION="${BASH_REMATCH[1]}"
+              CURRENT_PRERELEASE_TYPE="${BASH_REMATCH[2]}"
+              CURRENT_PRERELEASE_NUM="${BASH_REMATCH[3]}"
+
+              # Validate channel matches current prerelease type
+              if [ "$CHANNEL" != "$CURRENT_PRERELEASE_TYPE" ]; then
+                echo "❌ ERROR: Cannot use 'prerelease' version type with mismatched channel"
+                echo "   Current version: $CURRENT_VERSION (is $CURRENT_PRERELEASE_TYPE)"
+                echo "   Selected channel: $CHANNEL"
+                exit 1
+              fi
+
+              # Increment prerelease number
+              NEW_PRERELEASE_NUM=$((CURRENT_PRERELEASE_NUM + 1))
+              NEW_BASE="$BASE_VERSION"
+              PRERELEASE_NUM="$NEW_PRERELEASE_NUM"
+
+              echo "🔢 Incrementing $CURRENT_PRERELEASE_TYPE prerelease: $CURRENT_PRERELEASE_NUM → $NEW_PRERELEASE_NUM"
+            else
+              echo "❌ ERROR: 'prerelease' version type requires current version to be a prerelease"
+              echo "   Current version: $CURRENT_VERSION"
+              echo "   Expected format: X.Y.Z-alpha.N or X.Y.Z-beta.N"
+              exit 1
+            fi
           else
-            # Parse current version
-            IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
+            # Get base version (strip any prerelease suffix)
+            BASE_VERSION=$(echo "$CURRENT_VERSION" | sed 's/-.*$//')
 
-            case "$VERSION_TYPE" in
-              major)
-                NEW_BASE="$((MAJOR + 1)).0.0"
-                ;;
-              minor)
-                NEW_BASE="${MAJOR}.$((MINOR + 1)).0"
-                ;;
-              patch)
-                NEW_BASE="${MAJOR}.${MINOR}.$((PATCH + 1))"
-                ;;
-            esac
+            if [ "$VERSION_TYPE" == "custom" ]; then
+              NEW_BASE="$CUSTOM_VERSION"
+            else
+              # Parse current version
+              IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
+
+              case "$VERSION_TYPE" in
+                major)
+                  NEW_BASE="$((MAJOR + 1)).0.0"
+                  ;;
+                minor)
+                  NEW_BASE="${MAJOR}.$((MINOR + 1)).0"
+                  ;;
+                patch)
+                  NEW_BASE="${MAJOR}.${MINOR}.$((PATCH + 1))"
+                  ;;
+              esac
+            fi
           fi
 
           # Build full version with channel suffix
