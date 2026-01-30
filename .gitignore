@@ -142,4 +142,6 @@ vite.config.ts.timestamp-*
 
 # Others
 tmp/
+.tmp/
 temp/
+.temp/

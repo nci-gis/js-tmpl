@@ -90,6 +90,8 @@ Handlebars (Content Engine)
 
 js-tmpl sits at the right level of abstraction. It's low-level enough to be flexible, high-level enough to be useful.
 
+js-tmpl is not designed to stand alone. It is intentionally built to be embedded inside higher-level systems, generators, and orchestration layers, where it serves as a stable and predictable foundation.
+
 **4. Explicit**  
 
 ```yaml
@@ -128,6 +130,22 @@ js-tmpl handles **both**:
 
 - **Content**: Handlebars templates with full expression support
 - **Structure**: `${var}` path placeholders that render dynamically
+
+## The Telos
+
+js-tmpl exists to be a **trustworthy transformation layer**.
+
+Its purpose is not to maximize convenience, features, or speed of adoption, but to maximize **confidence**:
+
+- confidence that the output is correct
+- confidence that behavior is predictable
+- confidence that nothing happens unless explicitly stated
+
+When js-tmpl is used in critical systems, developers should never have to ask:
+
+> “What is it doing behind the scenes?”
+
+If that question exists, js-tmpl has failed its purpose.
 
 ## The Use Cases
 
@@ -233,6 +251,9 @@ What js-tmpl intentionally **does not** try to be:
 - We don't require you to organize code a certain way
 - We don't provide opinions about architecture
 
+js-tmpl intentionally avoids being “helpful” in ambiguous situations.
+If a decision cannot be made explicitly, js-tmpl prefers to fail loudly rather than guess silently.
+
 ## The Path Forward
 
 js-tmpl v0.0.1 is intentionally minimal. It proves the concept:
@@ -304,3 +325,13 @@ Everything else is built on top.
 **Welcome to js-tmpl.**
 
 Let's build something predictable.
+
+---
+
+## See Also
+
+- **[📚 Documentation Hub](ToC.md)** - Complete documentation index
+- [PRINCIPLES.md](PRINCIPLES.md) - Core design philosophy from these motivations
+- [WORKFLOW.md](WORKFLOW.md) - How js-tmpl implements these principles
+- [README.md](../README.md) - Get started with js-tmpl
+- [API.md](API.md) - Complete programmatic API reference

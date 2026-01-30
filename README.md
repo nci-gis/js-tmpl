@@ -1,13 +1,14 @@
 # js-tmpl
 
-> A lightweight, deterministic file templating engine built on Handlebars
+> A lightweight, deterministic file templating engine built on Handlebars.
+> An explicit file templating engine for developers who care about **control, predictability, and composability**.
 
 [![npm version](https://img.shields.io/npm/v/@nci-gis/js-tmpl.svg)](https://www.npmjs.com/package/@nci-gis/js-tmpl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## What is js-tmpl?
 
-js-tmpl is a **pure transformation layer** that generates files and directory structures from templates with predictable, explicit behavior.
+js-tmpl is a **pure transformation layer** that turns **templates + data → files**, nothing more, nothing less.
 
 It's designed for:
 
@@ -18,17 +19,32 @@ It's designed for:
 
 **Not a framework. Not a workflow tool. Just a focused rendering engine.**
 
+## Is js-tmpl for you?
+
+js-tmpl is a good fit if you:
+
+- embed templating inside other tools or pipelines
+- want **the same input to always produce the same output**
+- prefer explicit configuration over conventions
+- need programmatic control, not just a CLI
+
+It may **not** be a good fit if you want:
+
+- opinionated project generators
+- convention-based magic
+- interactive scaffolding workflows
+
 ## Why js-tmpl?
 
-Most template tools are either too simple (basic string replacement) or too complex (opinionated frameworks). js-tmpl fills the gap:
+Most templating tools fail in one of two ways:
 
-- ✅ **Engine-First**: Programmatic API, CLI is secondary
-- ✅ **Deterministic**: Same input → same output, always
-- ✅ **Explicit**: No magic defaults or hidden conventions
-- ✅ **Composable**: Small, focused layers
-- ✅ **Embeddable**: Designed to integrate into larger tools
+- they are too simple to scale beyond string replacement
+- or too opinionated to embed safely in larger systems
 
-See [docs/00-Motivation.md](docs/00-Motivation.md) for the full story.
+js-tmpl sits intentionally in between.
+
+See [Motivation](docs/Motivation.md) - The full story.
+See [Design Principles](docs/PRINCIPLES.md) - Core philosophy guiding all decisions.
 
 ## Features
 
@@ -39,6 +55,52 @@ See [docs/00-Motivation.md](docs/00-Motivation.md) for the full story.
 - 🌲 **BFS Tree Walking** - Async, non-blocking template discovery
 - 🔒 **No Global State** - Isolated render passes, no pollution
 - 📝 **YAML/JSON Support** - Load values from either format
+
+## Fixed Rules for Minimal Auto-Discovery
+
+js-tmpl follows the principle **"Explicit Over Implicit"** - most configuration must be provided explicitly. However, for developer convenience, exactly **ONE** type of auto-discovery is allowed:
+
+### Project Configuration File (Optional)
+
+js-tmpl will search for a project config file in **exactly these locations**, in this order, relative to the current working directory:
+
+1. `js-tmpl.config.yaml` (highest priority)
+2. `js-tmpl.config.yml`
+3. `js-tmpl.config.json`
+4. `config/js-tmpl.yaml`
+5. `config/js-tmpl.json` (lowest priority)
+
+**First match wins.** If no config file is found, internal defaults are used.
+
+### What is NOT Auto-Discovered
+
+Everything else must be **explicitly specified**:
+
+- ✅ **Values file** - Required via `--values` flag or `valuesFile` config
+- ✅ **Template directory** - Must be in config or defaults to `templates/`
+- ✅ **Output directory** - Must be in config or defaults to `dist/`
+- ✅ **Partials directory** - Must be in config or defaults to `templates.partials/`
+
+### Override Auto-Discovery
+
+You can bypass auto-discovery entirely:
+
+```bash
+# Explicit config file (no auto-discovery)
+js-tmpl render --values data.yaml --config-file /path/to/custom-config.yaml
+
+# No config file (use defaults only)
+js-tmpl render --values data.yaml --template-dir ./templates --out ./dist
+```
+
+### Why These Rules?
+
+1. **Predictable** - Fixed search order, no magic
+2. **Minimal** - Only config file location is auto-discovered
+3. **Overridable** - Always use `--config-file` for explicit control
+4. **Documented** - You're reading the complete list right now
+
+**These are the ONLY auto-discovery rules. Nothing else is implicit.**
 
 ## Installation
 
@@ -172,6 +234,20 @@ templates.partials/
 └── @common/
     └── metadata.hbs  → {{> common.metadata}}
 ```
+
+## Mental Model
+
+> ⚠️ Design note
+> js-tmpl prefers failing loudly over guessing silently.
+
+Think of js-tmpl as a function:
+
+```text
+(input templates, data, config) → output files
+```
+
+There is no hidden state, no lifecycle, and no side effects.
+If you need orchestration, state, or interactivity, build it **around** js-tmpl — not inside it.
 
 ## CLI Reference
 
@@ -340,9 +416,18 @@ For security concerns, see [SECURITY.md](SECURITY.md).
 
 MIT © pasxd245
 
-## Links
+## Learn More
 
-- [Documentation](docs/)
-- [Examples](examples/)
-- [Issue Tracker](https://github.com/nci-gis/js-tmpl/issues)
-- [NPM Package](https://www.npmjs.com/package/@nci-gis/js-tmpl)
+### 📚 Documentation
+
+- **[📖 Documentation Hub](docs/ToC.md)** - Complete documentation index with learning paths
+- [Design Principles](docs/PRINCIPLES.md) - Core philosophy guiding all decisions
+- [Workflow Overview](docs/WORKFLOW.md) - Visual diagrams of the rendering pipeline
+- [API Reference](docs/API.md) - Complete programmatic API documentation
+- [Motivation](docs/Motivation.md) - Why js-tmpl exists and our vision
+
+### 🔗 Others
+
+- [Examples](examples/) - Working examples and templates
+- [Issue Tracker](https://github.com/nci-gis/js-tmpl/issues) - Report bugs or request features
+- [NPM Package](https://www.npmjs.com/package/@nci-gis/js-tmpl) - Package registry
