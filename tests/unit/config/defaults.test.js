@@ -18,7 +18,7 @@ describe("DEFAULTS", () => {
   });
 
   it("has valuesDir property", () => {
-    assert.strictEqual(DEFAULTS.valuesDir, "templates.values");
+    assert.strictEqual(DEFAULTS.valuesDir, "");
   });
 
   it("has valuesFile property as empty string", () => {

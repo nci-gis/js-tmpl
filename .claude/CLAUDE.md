@@ -122,6 +122,8 @@ Implemented in [src/config/defaults.js](src/config/defaults.js):
 {
   templateDir: "templates",
   partialsDir: "templates.partials",
+  valuesDir: "",
+  valuesFile: "",
   outDir: "dist",
   extname: ".hbs"
 }
@@ -129,9 +131,42 @@ Implemented in [src/config/defaults.js](src/config/defaults.js):
 
 ### Required Configuration
 
-- **valuesFile**: Must be provided via `--values` CLI flag or config file
-  - Supports YAML or JSON
-  - Contains data for template rendering
+#### `valuesFile` (required)
+
+- **Must be provided** via `--values` CLI flag or config file
+- Supports YAML or JSON
+- Contains data for template rendering
+
+**Path Resolution (simple logic):**
+
+- If `valuesDir` is set → `valuesFile` resolves relative to `valuesDir`
+- If `valuesDir` is NOT set → `valuesFile` resolves relative to `cwd`
+- Absolute paths always used as-is
+
+**Examples:**
+
+```yaml
+# Without valuesDir (resolves from cwd)
+valuesFile: "config/prod.yaml"
+# Resolves to: <cwd>/config/prod.yaml
+
+# With valuesDir (organized values directory)
+valuesDir: "templates.values"
+valuesFile: "prod.yaml"
+# Resolves to: <cwd>/templates.values/prod.yaml
+
+# Absolute path (ignores valuesDir)
+valuesFile: "/absolute/path/values.yaml"
+# Resolves to: /absolute/path/values.yaml
+```
+
+#### `valuesDir` (optional)
+
+- Default: `""` (empty string)
+- When set: Used as base directory for `valuesFile`
+- When NOT set: `valuesFile` resolves from `cwd`
+- Cannot be set via CLI (config file only)
+- Explicit opt-in for organizing values in a dedicated directory
 
 ## View Model
 
@@ -477,18 +512,18 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org) fo
 
 **Types and their changelog groups:**
 
-| Type       | Changelog Group | Description                                      |
-| ---------- | --------------- | ------------------------------------------------ |
-| `feat`     | Added           | New features                                     |
-| `fix`      | Fixed           | Bug fixes                                        |
-| `docs`     | Documentation   | Documentation changes                            |
-| `perf`     | Performance     | Performance improvements                         |
-| `refactor` | Changed         | Code refactoring (no feature/fix)                |
-| `style`    | Styling         | Code style changes (formatting, whitespace)      |
-| `test`     | Testing         | Adding or updating tests                         |
-| `build`    | Build           | Build system or external dependency changes      |
-| `ci`       | CI/CD           | CI/CD configuration changes                      |
-| `chore`    | Miscellaneous   | Other changes (except release/pr commits)        |
+| Type       | Changelog Group | Description                                 |
+| ---------- | --------------- | ------------------------------------------- |
+| `feat`     | Added           | New features                                |
+| `fix`      | Fixed           | Bug fixes                                   |
+| `docs`     | Documentation   | Documentation changes                       |
+| `perf`     | Performance     | Performance improvements                    |
+| `refactor` | Changed         | Code refactoring (no feature/fix)           |
+| `style`    | Styling         | Code style changes (formatting, whitespace) |
+| `test`     | Testing         | Adding or updating tests                    |
+| `build`    | Build           | Build system or external dependency changes |
+| `ci`       | CI/CD           | CI/CD configuration changes                 |
+| `chore`    | Miscellaneous   | Other changes (except release/pr commits)   |
 
 **Examples:**
 
