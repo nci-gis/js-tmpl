@@ -29,11 +29,44 @@ Resolves configuration by merging user options with project config and defaults.
 | Property      | Type   | Required | Default                | Description                     |
 | ------------- | ------ | -------- | ---------------------- | ------------------------------- |
 | `valuesFile`  | string | **Yes**  | -                      | Path to values file (YAML/JSON) |
+| `valuesDir`   | string | No       | `""`                   | Base directory for valuesFile   |
 | `templateDir` | string | No       | `"templates"`          | Path to template directory      |
 | `partialsDir` | string | No       | `"templates.partials"` | Path to partials directory      |
 | `outDir`      | string | No       | `"dist"`               | Path to output directory        |
 | `extname`     | string | No       | `".hbs"`               | Template file extension         |
 | `configFile`  | string | No       | Auto-discovered        | Explicit config file path       |
+
+#### Path Resolution for valuesFile
+
+The `valuesFile` path is resolved based on whether `valuesDir` is set:
+
+- **If `valuesDir` is set**: `valuesFile` resolves as `valuesDir/valuesFile`
+- **If `valuesDir` is empty** (default): `valuesFile` resolves from `process.cwd()`
+- **Absolute paths**: Always used as-is, ignoring `valuesDir`
+
+**Examples:**
+
+```javascript
+// Without valuesDir (resolves from cwd)
+resolveConfig({
+  valuesFile: 'config/prod.yaml'
+})
+// Resolves to: <cwd>/config/prod.yaml
+
+// With valuesDir (organized values directory)
+resolveConfig({
+  valuesDir: 'templates.values',
+  valuesFile: 'prod.yaml'
+})
+// Resolves to: <cwd>/templates.values/prod.yaml
+
+// Absolute path (ignores valuesDir)
+resolveConfig({
+  valuesDir: 'templates.values',
+  valuesFile: '/absolute/path/values.yaml'
+})
+// Resolves to: /absolute/path/values.yaml
+```
 
 #### Returns
 
@@ -135,6 +168,7 @@ If `configFile` is not specified, js-tmpl searches for config in this order:
 ```yaml
 templateDir: templates
 partialsDir: templates.partials
+valuesDir: ""
 outDir: dist
 extname: .hbs
 ```
@@ -145,6 +179,7 @@ extname: .hbs
 {
   "templateDir": "templates",
   "partialsDir": "templates.partials",
+  "valuesDir": "",
   "outDir": "dist",
   "extname": ".hbs"
 }

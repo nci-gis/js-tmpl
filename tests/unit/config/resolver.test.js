@@ -13,7 +13,7 @@ describe("resolveConfig", () => {
 
       assert.throws(
         () => resolveConfig(cli, tmpDir),
-        /Missing valuesFile/
+        /Missing required configuration: valuesFile/
       );
     });
   });
@@ -210,7 +210,7 @@ describe("resolveConfig", () => {
 
       assert.throws(
         () => resolveConfig(cli, tmpDir),
-        /ENOENT/
+        /Values file not found/
       );
     });
   });
@@ -246,100 +246,114 @@ describe("resolveConfig", () => {
     });
   });
 
-  it("auto-discovers default.yaml in valuesDir when valuesFile not specified", async () => {
+  // Path resolution tests
+  it("resolves valuesFile from cwd when valuesDir is empty", async () => {
     await withTempDir(async (tmpDir) => {
-      // Create valuesDir with default.yaml
-      const valuesDir = path.join(tmpDir, "templates.values");
-      await fs.mkdir(valuesDir, { recursive: true });
-      await fs.writeFile(
-        path.join(valuesDir, "default.yaml"),
-        "name: auto-discovered\nversion: 1.0.0",
-        "utf8"
-      );
+      const valuesFile = path.join(tmpDir, "config", "values.yaml");
+      await fs.mkdir(path.join(tmpDir, "config"), { recursive: true });
+      await fs.writeFile(valuesFile, "name: from-cwd", "utf8");
 
-      const cli = {}; // No valuesFile specified
+      const cli = { valuesFile: "config/values.yaml" };
       const config = resolveConfig(cli, tmpDir);
 
-      assert.strictEqual(config.view.name, "auto-discovered");
-      assert.strictEqual(config.view.version, "1.0.0");
+      assert.strictEqual(config.view.name, "from-cwd");
     });
   });
 
-  it("auto-discovers default.yml in valuesDir when valuesFile not specified", async () => {
+  it("resolves valuesFile from valuesDir when set", async () => {
     await withTempDir(async (tmpDir) => {
-      // Create valuesDir with default.yml
+      // Create valuesDir and file
       const valuesDir = path.join(tmpDir, "templates.values");
       await fs.mkdir(valuesDir, { recursive: true });
       await fs.writeFile(
-        path.join(valuesDir, "default.yml"),
-        "app: yml-test",
+        path.join(valuesDir, "prod.yaml"),
+        "environment: production",
         "utf8"
       );
 
-      const cli = {}; // No valuesFile specified
-      const config = resolveConfig(cli, tmpDir);
-
-      assert.strictEqual(config.view.app, "yml-test");
-    });
-  });
-
-  it("prefers default.yaml over default.yml", async () => {
-    await withTempDir(async (tmpDir) => {
-      // Create valuesDir with both files
-      const valuesDir = path.join(tmpDir, "templates.values");
-      await fs.mkdir(valuesDir, { recursive: true });
-      await fs.writeFile(
-        path.join(valuesDir, "default.yaml"),
-        "source: yaml",
-        "utf8"
-      );
-      await fs.writeFile(
-        path.join(valuesDir, "default.yml"),
-        "source: yml",
-        "utf8"
-      );
-
-      const cli = {}; // No valuesFile specified
-      const config = resolveConfig(cli, tmpDir);
-
-      assert.strictEqual(config.view.source, "yaml");
-    });
-  });
-
-  it("uses custom valuesDir from config for default file lookup", async () => {
-    await withTempDir(async (tmpDir) => {
-      // Create custom valuesDir
-      const customValuesDir = path.join(tmpDir, "custom-values");
-      await fs.mkdir(customValuesDir, { recursive: true });
-      await fs.writeFile(
-        path.join(customValuesDir, "default.yaml"),
-        "location: custom",
-        "utf8"
-      );
-
-      // Create project config with custom valuesDir
+      // Set valuesDir in config
       const projectConfigFile = path.join(tmpDir, "js-tmpl.config.yaml");
       await fs.writeFile(
         projectConfigFile,
-        "valuesDir: custom-values",
+        "valuesDir: templates.values",
         "utf8"
       );
 
-      const cli = {}; // No valuesFile specified
+      const cli = { valuesFile: "prod.yaml" };
       const config = resolveConfig(cli, tmpDir);
 
-      assert.strictEqual(config.view.location, "custom");
+      assert.strictEqual(config.view.environment, "production");
     });
   });
 
-  it("throws descriptive error when no default values file found", async () => {
+  it("absolute valuesFile paths are used as-is, ignoring valuesDir", async () => {
     await withTempDir(async (tmpDir) => {
-      const cli = {}; // No valuesFile specified, no default file exists
+      const absoluteValuesFile = path.join(tmpDir, "absolute-values.yaml");
+      await fs.writeFile(absoluteValuesFile, "type: absolute", "utf8");
 
-      assert.throws(
-        () => resolveConfig(cli, tmpDir),
-        /Missing valuesFile.*--values.*default\.yaml/
+      const projectConfigFile = path.join(tmpDir, "js-tmpl.config.yaml");
+      await fs.writeFile(
+        projectConfigFile,
+        "valuesDir: templates.values",
+        "utf8"
       );
+
+      const cli = { valuesFile: absoluteValuesFile };
+      const config = resolveConfig(cli, tmpDir);
+
+      assert.strictEqual(config.view.type, "absolute");
+    });
+  });
+
+  it("absolute valuesDir is resolved correctly", async () => {
+    await withTempDir(async (tmpDir) => {
+      const absoluteValuesDir = path.join(tmpDir, "absolute-values");
+      await fs.mkdir(absoluteValuesDir, { recursive: true });
+      await fs.writeFile(
+        path.join(absoluteValuesDir, "data.yaml"),
+        "location: absolute-dir",
+        "utf8"
+      );
+
+      const projectConfigFile = path.join(tmpDir, "js-tmpl.config.yaml");
+      await fs.writeFile(
+        projectConfigFile,
+        `valuesDir: ${absoluteValuesDir}`,
+        "utf8"
+      );
+
+      const cli = { valuesFile: "data.yaml" };
+      const config = resolveConfig(cli, tmpDir);
+
+      assert.strictEqual(config.view.location, "absolute-dir");
+    });
+  });
+
+  it("CLI valuesFile overrides config valuesFile", async () => {
+    await withTempDir(async (tmpDir) => {
+      // Create two values files
+      await fs.writeFile(
+        path.join(tmpDir, "config.yaml"),
+        "source: config",
+        "utf8"
+      );
+      await fs.writeFile(
+        path.join(tmpDir, "cli.yaml"),
+        "source: cli",
+        "utf8"
+      );
+
+      const projectConfigFile = path.join(tmpDir, "js-tmpl.config.yaml");
+      await fs.writeFile(
+        projectConfigFile,
+        "valuesFile: config.yaml",
+        "utf8"
+      );
+
+      const cli = { valuesFile: "cli.yaml" };
+      const config = resolveConfig(cli, tmpDir);
+
+      assert.strictEqual(config.view.source, "cli");
     });
   });
 });

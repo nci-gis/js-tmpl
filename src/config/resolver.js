@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
@@ -7,23 +6,28 @@ import { loadProjectConfig,loadYamlOrJson } from "./loader.js";
 import { buildView } from "./view.js";
 
 /**
- * Lookup default values file in valuesDir.
- * Searches for: default.yaml, default.yml
- *
- * @param {string} valuesDir - Absolute path to values directory
- * @returns {string|null} - Path to default values file or null if not found
+ * Resolve valuesFile path based on valuesDir
+ * @param {string} valuesFile - The values file name or path
+ * @param {string} valuesDir - Values directory (may be empty string)
+ * @param {string} cwd - Current working directory
+ * @returns {string} Absolute path to values file
  */
-function lookupDefaultValuesFile(valuesDir) {
-  const candidates = ["default.yaml", "default.yml"];
-
-  for (const filename of candidates) {
-    const filepath = path.join(valuesDir, filename);
-    if (fs.existsSync(filepath)) {
-      return filepath;
-    }
+function resolveValuesFilePath(valuesFile, valuesDir, cwd) {
+  // If absolute, use as-is
+  if (path.isAbsolute(valuesFile)) {
+    return valuesFile;
   }
 
-  return null;
+  // If valuesDir is set (truthy), use it as base
+  if (valuesDir) {
+    const absoluteValuesDir = path.isAbsolute(valuesDir)
+      ? valuesDir
+      : path.join(cwd, valuesDir);
+    return path.join(absoluteValuesDir, valuesFile);
+  }
+
+  // Otherwise, resolve from cwd
+  return path.join(cwd, valuesFile);
 }
 
 /**
@@ -45,20 +49,24 @@ export function resolveConfig(cli, cwd = process.cwd()) {
 
   const abs = (p) => (path.isAbsolute(p) ? p : path.join(cwd, p));
 
-  // If valuesFile not specified, try to find default.yaml in valuesDir
-  let valuesFile = mergedConfig.valuesFile;
-  if (!valuesFile) {
-    const valuesDir = abs(mergedConfig.valuesDir);
-    valuesFile = lookupDefaultValuesFile(valuesDir);
-
-    if (!valuesFile) {
-      throw new Error(
-        `Missing valuesFile. Use --values or create ${mergedConfig.valuesDir}/default.yaml`
-      );
-    }
+  // Validate valuesFile is provided
+  if (!mergedConfig.valuesFile) {
+    throw new Error(
+      'Missing required configuration: valuesFile\n' +
+      'Provide via:\n' +
+      '  - CLI: --values path/to/values.yaml\n' +
+      '  - Config: valuesFile: "path/to/values.yaml" in js-tmpl.config.yaml'
+    );
   }
 
-  const values = loadYamlOrJson(abs(valuesFile));
+  // Resolve path - simple logic based on valuesDir presence
+  const valuesFilePath = resolveValuesFilePath(
+    mergedConfig.valuesFile,
+    mergedConfig.valuesDir,
+    cwd
+  );
+
+  const values = loadYamlOrJson(valuesFilePath);
 
   return {
     templateDir: abs(mergedConfig.templateDir),

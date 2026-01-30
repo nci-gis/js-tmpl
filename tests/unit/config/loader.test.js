@@ -66,7 +66,7 @@ describe("loadYamlOrJson", () => {
   it("throws error for non-existent file", () => {
     assert.throws(
       () => loadYamlOrJson("/non/existent/file.yaml"),
-      /ENOENT/
+      /Values file not found/
     );
   });
 

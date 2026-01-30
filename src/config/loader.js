@@ -10,6 +10,14 @@ import YAML from "js-yaml";
  * @returns {object} Parsed values.
  */
 export function loadYamlOrJson(filePath) {
+  // Check if file exists before attempting to read
+  if (!fs.existsSync(filePath)) {
+    throw new Error(
+      `Values file not found: ${filePath}\n` +
+      "Check that the file exists and the path is correct."
+    );
+  }
+
   const raw = fs.readFileSync(filePath, "utf8");
 
   if (/\.ya?ml$/i.test(filePath)) {
@@ -46,10 +54,11 @@ export function loadProjectConfig(cwd, explicitFile) {
 
     const raw = fs.readFileSync(abs, "utf8");
 
-    if (/\.ya?ml$/.test(abs)) {
+    if (/\.ya?ml$/i.test(abs)) {
       return YAML.load(raw) || {};
     }
-    if (/\.json$/.test(abs)) {
+
+    if (/\.json$/i.test(abs)) {
       return JSON.parse(raw);
     }
   }
