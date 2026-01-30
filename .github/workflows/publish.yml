@@ -67,10 +67,8 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-      - name: Publish to NPM
-        run: pnpm publish --tag ${{ steps.dist-tag.outputs.dist_tag }} --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to NPM (via OIDC Trusted Publishing)
+        run: pnpm publish --tag ${{ steps.dist-tag.outputs.dist_tag }} --access public --no-git-checks --provenance
 
       - name: Report success
         run: |
