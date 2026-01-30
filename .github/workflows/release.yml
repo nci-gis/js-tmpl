@@ -39,6 +39,7 @@ jobs:
 
     permissions:
       contents: write
+      actions: write
 
     steps:
       - name: Checkout code
@@ -192,6 +193,13 @@ jobs:
           git push origin main
           git push origin "${{ steps.version.outputs.tag_name }}"
 
+      - name: Trigger Publish workflow for this tag
+        run: |
+          TAG="${{ steps.version.outputs.tag_name }}"
+          gh workflow run "Publish to NPM" --ref "$TAG" -f tag="$TAG"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -204,4 +212,4 @@ jobs:
         run: |
           echo "✅ Release ${{ steps.version.outputs.tag_name }} created"
           echo "✅ GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag_name }}"
-          echo "📦 npm publish will be triggered automatically by the publish workflow"
+          echo "📦 npm publish will be triggered by dispatching the Publish workflow for this tag"
