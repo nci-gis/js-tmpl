@@ -1,6 +1,7 @@
 # js-tmpl
 
 > A lightweight, deterministic file templating engine built on Handlebars.
+>
 > An explicit file templating engine for developers who care about **control, predictability, and composability**.
 
 [![npm version](https://img.shields.io/npm/v/@nci-gis/js-tmpl.svg)](https://www.npmjs.com/package/@nci-gis/js-tmpl)
@@ -44,6 +45,7 @@ Most templating tools fail in one of two ways:
 js-tmpl sits intentionally in between.
 
 See [Motivation](docs/Motivation.md) - The full story.
+
 See [Design Principles](docs/PRINCIPLES.md) - Core philosophy guiding all decisions.
 
 ## Features
