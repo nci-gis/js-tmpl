@@ -1,6 +1,6 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
  * @returns {string} Path to fixture
  */
 export function getFixturePath(name) {
-  return path.join(__dirname, "..", "fixtures", name);
+  return path.join(__dirname, '..', 'fixtures', name);
 }
 
 /**
@@ -20,8 +20,8 @@ export function getFixturePath(name) {
  * @returns {Promise<string>} File contents
  */
 export async function loadFixture(fixturePath) {
-  const fullPath = path.join(__dirname, "..", "fixtures", fixturePath);
-  return await fs.readFile(fullPath, "utf8");
+  const fullPath = path.join(__dirname, '..', 'fixtures', fixturePath);
+  return await fs.readFile(fullPath, 'utf8');
 }
 
 /**

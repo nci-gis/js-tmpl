@@ -1,10 +1,10 @@
-import path from "node:path";
+import path from 'node:path';
 
-import { ensureDir, writeFileSafe } from "../utils/fs.js";
-import { renderContent } from "./contentRenderer.js";
-import { registerPartials } from "./partials.js";
-import { renderPath } from "./pathRenderer.js";
-import { walkTemplateTree } from "./treeWalker.js";
+import { ensureDir, writeFileSafe } from '../utils/fs.js';
+import { renderContent } from './contentRenderer.js';
+import { registerPartials } from './partials.js';
+import { renderPath } from './pathRenderer.js';
+import { walkTemplateTree } from './treeWalker.js';
 
 /**
  * Main rendering orchestrator.
@@ -20,7 +20,7 @@ export async function renderDirectory(cfg) {
     const relRendered = renderPath(file.relPath, view);
     const target = path.join(
       outDir,
-      relRendered.replace(new RegExp(`${extname}$`), "")
+      relRendered.replace(new RegExp(`${extname}$`), ''),
     );
 
     const content = await renderContent(file.absPath, view);

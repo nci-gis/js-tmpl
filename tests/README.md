@@ -136,7 +136,7 @@ project-template/
 Creates and automatically cleans up a temporary directory for test isolation.
 
 ```javascript
-import { withTempDir } from "../helpers/tempDir.js";
+import { withTempDir } from '../helpers/tempDir.js';
 
 await withTempDir(async (tmpDir) => {
   // Use tmpDir for testing
@@ -149,9 +149,9 @@ await withTempDir(async (tmpDir) => {
 Returns absolute path to a fixture.
 
 ```javascript
-import { getFixturePath } from "../helpers/fixtures.js";
+import { getFixturePath } from '../helpers/fixtures.js';
 
-const valuesPath = getFixturePath("config/values.yaml");
+const valuesPath = getFixturePath('config/values.yaml');
 ```
 
 ### `loadFixture(fixturePath)`
@@ -159,9 +159,9 @@ const valuesPath = getFixturePath("config/values.yaml");
 Loads fixture file contents as text.
 
 ```javascript
-import { loadFixture } from "../helpers/fixtures.js";
+import { loadFixture } from '../helpers/fixtures.js';
 
-const content = await loadFixture("config/values.yaml");
+const content = await loadFixture('config/values.yaml');
 ```
 
 ## Coverage Details
@@ -228,12 +228,12 @@ All core modules have 100% line and function coverage:
 ### Unit Test Template
 
 ```javascript
-import { describe, it } from "node:test";
-import assert from "node:assert";
-import { functionToTest } from "../../src/module.js";
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import { functionToTest } from '../../src/module.js';
 
-describe("functionToTest", () => {
-  it("does something expected", () => {
+describe('functionToTest', () => {
+  it('does something expected', () => {
     const result = functionToTest(input);
     assert.strictEqual(result, expected);
   });
@@ -243,16 +243,16 @@ describe("functionToTest", () => {
 ### Integration Test Template
 
 ```javascript
-import { describe, it, beforeEach } from "node:test";
-import Handlebars from "handlebars";
-import { withTempDir } from "../helpers/tempDir.js";
+import { describe, it, beforeEach } from 'node:test';
+import Handlebars from 'handlebars';
+import { withTempDir } from '../helpers/tempDir.js';
 
-describe("Integration: Feature Name", () => {
+describe('Integration: Feature Name', () => {
   beforeEach(() => {
     Handlebars.unregisterPartial(/.*/);
   });
 
-  it("tests end-to-end flow", async () => {
+  it('tests end-to-end flow', async () => {
     await withTempDir(async (tmpDir) => {
       // Setup templates, run renderDirectory, verify output
     });

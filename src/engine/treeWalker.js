@@ -1,12 +1,12 @@
-import fs from "node:fs/promises";
-import path from "node:path";
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 /**
  * BFS async folder walker.
  */
-export async function walkTemplateTree(rootDir, ext = ".hbs", ignore = []) {
+export async function walkTemplateTree(rootDir, ext = '.hbs', ignore = []) {
   const results = [];
-  const queue = [""];
+  const queue = [''];
 
   while (queue.length) {
     const rel = queue.shift();
@@ -16,7 +16,9 @@ export async function walkTemplateTree(rootDir, ext = ".hbs", ignore = []) {
     if (stat.isDirectory()) {
       const items = await fs.readdir(abs);
       for (const name of items) {
-        if (ignore.some((i) => matchIgnore(name, i))) {continue;}
+        if (ignore.some((i) => matchIgnore(name, i))) {
+          continue;
+        }
         queue.push(rel ? path.join(rel, name) : name);
       }
     } else if (path.extname(abs) === ext) {

@@ -1,13 +1,13 @@
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 
 /**
  * Create a temporary directory for tests
  * @returns {Promise<string>} Path to temporary directory
  */
 export async function createTempDir() {
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "js-tmpl-test-"));
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'js-tmpl-test-'));
   return tmpDir;
 }
 

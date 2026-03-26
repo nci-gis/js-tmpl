@@ -1,9 +1,9 @@
-import path from "node:path";
-import process from "node:process";
+import path from 'node:path';
+import process from 'node:process';
 
-import { DEFAULTS } from "./defaults.js";
-import { loadProjectConfig,loadYamlOrJson } from "./loader.js";
-import { buildView } from "./view.js";
+import { DEFAULTS } from './defaults.js';
+import { loadProjectConfig, loadYamlOrJson } from './loader.js';
+import { buildView } from './view.js';
 
 /**
  * Resolve valuesFile path based on valuesDir
@@ -53,9 +53,9 @@ export function resolveConfig(cli, cwd = process.cwd()) {
   if (!mergedConfig.valuesFile) {
     throw new Error(
       'Missing required configuration: valuesFile\n' +
-      'Provide via:\n' +
-      '  - CLI: --values path/to/values.yaml\n' +
-      '  - Config: valuesFile: "path/to/values.yaml" in js-tmpl.config.yaml'
+        'Provide via:\n' +
+        '  - CLI: --values path/to/values.yaml\n' +
+        '  - Config: valuesFile: "path/to/values.yaml" in js-tmpl.config.yaml',
     );
   }
 
@@ -63,7 +63,7 @@ export function resolveConfig(cli, cwd = process.cwd()) {
   const valuesFilePath = resolveValuesFilePath(
     mergedConfig.valuesFile,
     mergedConfig.valuesDir,
-    cwd
+    cwd,
   );
 
   const values = loadYamlOrJson(valuesFilePath);

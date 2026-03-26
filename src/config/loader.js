@@ -1,7 +1,7 @@
-import fs from "node:fs";
-import path from "node:path";
+import fs from 'node:fs';
+import path from 'node:path';
 
-import YAML from "js-yaml";
+import YAML from 'js-yaml';
 
 /**
  * Load YAML or JSON values.
@@ -14,11 +14,11 @@ export function loadYamlOrJson(filePath) {
   if (!fs.existsSync(filePath)) {
     throw new Error(
       `Values file not found: ${filePath}\n` +
-      "Check that the file exists and the path is correct."
+        'Check that the file exists and the path is correct.',
     );
   }
 
-  const raw = fs.readFileSync(filePath, "utf8");
+  const raw = fs.readFileSync(filePath, 'utf8');
 
   if (/\.ya?ml$/i.test(filePath)) {
     return YAML.load(raw) || {};
@@ -41,18 +41,20 @@ export function loadProjectConfig(cwd, explicitFile) {
   const candidates = explicitFile
     ? [explicitFile]
     : [
-        "js-tmpl.config.yaml",
-        "js-tmpl.config.yml",
-        "js-tmpl.config.json",
-        path.join("config", "js-tmpl.yaml"),
-        path.join("config", "js-tmpl.json"),
+        'js-tmpl.config.yaml',
+        'js-tmpl.config.yml',
+        'js-tmpl.config.json',
+        path.join('config', 'js-tmpl.yaml'),
+        path.join('config', 'js-tmpl.json'),
       ];
 
   for (const rel of candidates) {
     const abs = path.isAbsolute(rel) ? rel : path.join(cwd, rel);
-    if (!fs.existsSync(abs)) {continue;}
+    if (!fs.existsSync(abs)) {
+      continue;
+    }
 
-    const raw = fs.readFileSync(abs, "utf8");
+    const raw = fs.readFileSync(abs, 'utf8');
 
     if (/\.ya?ml$/i.test(abs)) {
       return YAML.load(raw) || {};
