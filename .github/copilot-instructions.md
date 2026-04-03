@@ -1,4 +1,4 @@
-# CLAUDE.md — Project Instructions
+# copilot-instructions.md — Project Instructions
 
 ## General instructions
 
