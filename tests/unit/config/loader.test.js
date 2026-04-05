@@ -201,6 +201,22 @@ describe('loadProjectConfig', () => {
     });
   });
 
+  it('throws when explicit config file does not exist (absolute path)', () => {
+    assert.throws(
+      () => loadProjectConfig('/tmp', '/tmp/nonexistent-config.yaml'),
+      /Config file not found/,
+    );
+  });
+
+  it('throws when explicit config file is relative and does not exist', async () => {
+    await withTempDir(async (tmpDir) => {
+      assert.throws(
+        () => loadProjectConfig(tmpDir, 'missing.yaml'),
+        /Config file not found/,
+      );
+    });
+  });
+
   it('prioritizes js-tmpl.config.yaml over other candidates', async () => {
     await withTempDir(async (tmpDir) => {
       // Create multiple config files

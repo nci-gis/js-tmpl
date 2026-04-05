@@ -33,6 +33,14 @@ describe('DEFAULTS', () => {
     assert.strictEqual(DEFAULTS.extname, '.hbs');
   });
 
+  it('has envKeys property as empty array', () => {
+    assert.deepStrictEqual(DEFAULTS.envKeys, []);
+  });
+
+  it('has envPrefix property as empty string', () => {
+    assert.strictEqual(DEFAULTS.envPrefix, '');
+  });
+
   it('contains all expected keys', () => {
     const expectedKeys = [
       'templateDir',
@@ -41,6 +49,8 @@ describe('DEFAULTS', () => {
       'valuesFile',
       'outDir',
       'extname',
+      'envKeys',
+      'envPrefix',
     ];
     const actualKeys = Object.keys(DEFAULTS);
     assert.deepStrictEqual(actualKeys.sort(), expectedKeys.sort());

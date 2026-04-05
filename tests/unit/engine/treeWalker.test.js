@@ -190,6 +190,43 @@ describe('walkTemplateTree', () => {
     });
   });
 
+  it('returns files in sorted codepoint order within a directory', async () => {
+    await withTempDir(async (tmpDir) => {
+      // Create files in non-alphabetical order
+      await fs.writeFile(path.join(tmpDir, 'c.hbs'), 'c', 'utf8');
+      await fs.writeFile(path.join(tmpDir, 'a.hbs'), 'a', 'utf8');
+      await fs.writeFile(path.join(tmpDir, 'b.hbs'), 'b', 'utf8');
+
+      const results = await walkTemplateTree(tmpDir);
+
+      // Must be sorted — not dependent on filesystem enumeration order
+      assert.deepStrictEqual(
+        results.map((r) => r.relPath),
+        ['a.hbs', 'b.hbs', 'c.hbs'],
+      );
+    });
+  });
+
+  it('returns subdirectories in sorted order during BFS', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'z'), { recursive: true });
+      await fs.mkdir(path.join(tmpDir, 'a'), { recursive: true });
+      await fs.mkdir(path.join(tmpDir, 'm'), { recursive: true });
+      await fs.writeFile(path.join(tmpDir, 'root.hbs'), 'root', 'utf8');
+      await fs.writeFile(path.join(tmpDir, 'z', 'z.hbs'), 'z', 'utf8');
+      await fs.writeFile(path.join(tmpDir, 'a', 'a.hbs'), 'a', 'utf8');
+      await fs.writeFile(path.join(tmpDir, 'm', 'm.hbs'), 'm', 'utf8');
+
+      const results = await walkTemplateTree(tmpDir);
+
+      // BFS: root first, then subdirs in sorted order
+      assert.deepStrictEqual(
+        results.map((r) => r.relPath),
+        ['root.hbs', 'a/a.hbs', 'm/m.hbs', 'z/z.hbs'],
+      );
+    });
+  });
+
   it('handles mixed file extensions in nested structure', async () => {
     await withTempDir(async (tmpDir) => {
       await fs.mkdir(path.join(tmpDir, 'templates'), { recursive: true });

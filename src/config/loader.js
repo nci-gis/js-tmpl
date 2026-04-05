@@ -38,6 +38,18 @@ export function loadYamlOrJson(filePath) {
  * @returns {Record<string, unknown> | null} Parsed config object or null if not found.
  */
 export function loadProjectConfig(cwd, explicitFile) {
+  if (explicitFile) {
+    const abs = path.isAbsolute(explicitFile)
+      ? explicitFile
+      : path.join(cwd, explicitFile);
+    if (!fs.existsSync(abs)) {
+      throw new Error(
+        `Config file not found: ${abs}\n` +
+          'The --config-file path was explicitly provided but does not exist.',
+      );
+    }
+  }
+
   const candidates = explicitFile
     ? [explicitFile]
     : [

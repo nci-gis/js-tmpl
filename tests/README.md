@@ -4,10 +4,8 @@ Comprehensive test coverage for the js-tmpl JavaScript templating engine.
 
 ## Overview
 
-- **Total Tests**: 156
-- **Line Coverage**: 99.80%
-- **Branch Coverage**: 99.74%
-- **Function Coverage**: 99.36%
+- **Coverage**: Maintained at very high levels across the source modules
+- **Scope**: Unit and integration tests cover config resolution, rendering, partials, CLI parsing, and filesystem behavior
 
 ## Test Structure
 
@@ -166,20 +164,20 @@ const content = await loadFixture('config/values.yaml');
 
 ## Coverage Details
 
-### Source Code Coverage (100%)
+### Source Code Coverage
 
-All core modules have 100% line and function coverage:
+Core modules maintain effectively complete line coverage with very high branch and function coverage:
 
 - ✅ `src/config/defaults.js` - 100%
 - ✅ `src/config/loader.js` - 100%
-- ✅ `src/config/resolver.js` - 100%
+- ✅ `src/config/resolver.js` - 100% lines, high branch coverage
 - ✅ `src/config/view.js` - 100%
 - ✅ `src/engine/contentRenderer.js` - 100%
 - ✅ `src/engine/partials.js` - 100%
 - ✅ `src/engine/pathRenderer.js` - 100%
 - ✅ `src/engine/renderDirectory.js` - 100%
 - ✅ `src/engine/treeWalker.js` - 100%
-- ✅ `src/utils/fs.js` - 100% lines, 90% branches
+- ✅ `src/utils/fs.js` - 100% lines
 - ✅ `src/utils/object.js` - 100%
 
 ### What's Tested
@@ -191,7 +189,7 @@ All core modules have 100% line and function coverage:
 - [x] Project config discovery (5 file locations)
 - [x] Precedence: CLI > Project > Defaults
 - [x] Path resolution (absolute/relative)
-- [x] View building with environment variables
+- [x] View building with explicit allowlisted environment variables
 
 #### Engine
 

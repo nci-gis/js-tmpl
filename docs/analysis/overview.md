@@ -175,7 +175,7 @@ The view is the object passed to the template engine:
 ```javascript
 view = {
   ...valuesFromYamlOrJson, // User-provided data
-  env: process.env, // Environment variables
+  env: {}, // Environment variables (process.env), depends on "envKeys" and "envPrefix"
 };
 ```
 
@@ -414,7 +414,7 @@ Simple merge pattern in [src/config/view.js](src/config/view.js):
 export function buildView(values) {
   return {
     ...values,
-    env: process.env,
+    env: {}, // Environment variables (process.env), depends on "envKeys" and "envPrefix"
   };
 }
 ```

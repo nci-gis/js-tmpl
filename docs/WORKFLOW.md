@@ -77,7 +77,7 @@ graph LR
 ```mermaid
 graph LR
     A[Values File<br/>YAML/JSON] --> C[View Object]
-    B[process.env] --> C
+    B[Allowlisted Env Vars<br/>envKeys + envPrefix] --> C
 
     C --> D{View Content}
     D --> E[User Data:<br/>service, tables, etc.]
@@ -90,7 +90,7 @@ graph LR
     style F fill:#b0bec5
 ```
 
-**Result:** `view = { ...values, env: process.env }`
+**Result:** `view = { ...values, env: pickEnv({keys, prefix}) }` — only explicitly allowlisted variables are included
 
 ---
 

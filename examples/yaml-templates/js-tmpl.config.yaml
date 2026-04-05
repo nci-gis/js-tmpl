@@ -2,3 +2,5 @@ templateDir: templates
 partialsDir: templates.partials
 outDir: dist
 extname: .hbs
+envKeys:
+  - NODE_ENV

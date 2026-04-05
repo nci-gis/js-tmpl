@@ -5,4 +5,6 @@ export const DEFAULTS = {
   valuesFile: '',
   outDir: 'dist',
   extname: '.hbs',
+  envKeys: [],
+  envPrefix: '',
 };

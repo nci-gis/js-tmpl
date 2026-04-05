@@ -26,15 +26,17 @@ Resolves configuration by merging user options with project config and defaults.
 
 `options` (Object):
 
-| Property      | Type   | Required | Default                | Description                     |
-| ------------- | ------ | -------- | ---------------------- | ------------------------------- |
-| `valuesFile`  | string | **Yes**  | -                      | Path to values file (YAML/JSON) |
-| `valuesDir`   | string | No       | `""`                   | Base directory for valuesFile   |
-| `templateDir` | string | No       | `"templates"`          | Path to template directory      |
-| `partialsDir` | string | No       | `""` (skipped)         | Path to partials directory      |
-| `outDir`      | string | No       | `"dist"`               | Path to output directory        |
-| `extname`     | string | No       | `".hbs"`               | Template file extension         |
-| `configFile`  | string | No       | Auto-discovered        | Explicit config file path       |
+| Property      | Type     | Required | Default         | Description                       |
+| ------------- | -------- | -------- | --------------- | --------------------------------- |
+| `valuesFile`  | string   | **Yes**  | -               | Path to values file (YAML/JSON)   |
+| `valuesDir`   | string   | No       | `""`            | Base directory for valuesFile     |
+| `templateDir` | string   | No       | `"templates"`   | Path to template directory        |
+| `partialsDir` | string   | No       | `""` (skipped)  | Path to partials directory        |
+| `outDir`      | string   | No       | `"dist"`        | Path to output directory          |
+| `extname`     | string   | No       | `".hbs"`        | Template file extension           |
+| `configFile`  | string   | No       | Auto-discovered | Explicit config file path         |
+| `envKeys`     | string[] | No       | `[]`            | Env var names to expose           |
+| `envPrefix`   | string   | No       | `""`            | Auto-include env vars with prefix |
 
 #### Path Resolution for valuesFile
 
@@ -49,22 +51,22 @@ The `valuesFile` path is resolved based on whether `valuesDir` is set:
 ```javascript
 // Without valuesDir (resolves from cwd)
 resolveConfig({
-  valuesFile: 'config/prod.yaml'
-})
+  valuesFile: 'config/prod.yaml',
+});
 // Resolves to: <cwd>/config/prod.yaml
 
 // With valuesDir (organized values directory)
 resolveConfig({
   valuesDir: 'templates.values',
-  valuesFile: 'prod.yaml'
-})
+  valuesFile: 'prod.yaml',
+});
 // Resolves to: <cwd>/templates.values/prod.yaml
 
 // Absolute path (ignores valuesDir)
 resolveConfig({
   valuesDir: 'templates.values',
-  valuesFile: '/absolute/path/values.yaml'
-})
+  valuesFile: '/absolute/path/values.yaml',
+});
 // Resolves to: /absolute/path/values.yaml
 ```
 
@@ -85,7 +87,7 @@ import { resolveConfig } from '@nci-gis/js-tmpl';
 const config = resolveConfig({
   valuesFile: './data/production.yaml',
   templateDir: './my-templates',
-  outDir: './output'
+  outDir: './output',
 });
 
 console.log(config);
@@ -107,7 +109,7 @@ Executes the complete rendering process.
 **Process:**
 
 1. Load values file (YAML/JSON)
-2. Build view object (`{...values, env: process.env}`)
+2. Build view object (`{...values, env: pickEnv({keys, prefix})}`) — only allowlisted env vars
 3. Create a scoped Handlebars instance (`Handlebars.create()`)
 4. Register partials from `partialsDir` (if configured)
 5. Discover templates via BFS tree walk
@@ -139,7 +141,7 @@ async function generate() {
   const config = resolveConfig({
     valuesFile: './values.yaml',
     templateDir: './templates',
-    outDir: './dist'
+    outDir: './dist',
   });
 
   await renderDirectory(config);
@@ -167,10 +169,13 @@ If `configFile` is not specified, js-tmpl searches for config in this order:
 
 ```yaml
 templateDir: templates
-partialsDir: templates.partials  # optional — omit to skip partials
-valuesDir: ""
+partialsDir: templates.partials # optional — omit to skip partials
+valuesDir: ''
 outDir: dist
 extname: .hbs
+envKeys: # optional — env var names to expose
+  - NODE_ENV
+envPrefix: JS_TMPL_ # optional — auto-include vars with this prefix
 ```
 
 **JSON:**
@@ -181,7 +186,9 @@ extname: .hbs
   "partialsDir": "templates.partials",
   "valuesDir": "",
   "outDir": "dist",
-  "extname": ".hbs"
+  "extname": ".hbs",
+  "envKeys": ["NODE_ENV"],
+  "envPrefix": "JS_TMPL_"
 }
 ```
 
@@ -192,9 +199,52 @@ The view object is passed to all templates and contains:
 ```javascript
 {
   ...valuesData,     // All data from values file
-  env: process.env   // Environment variables
+  env: { ... }       // Allowlisted environment variables (reserved key)
 }
 ```
+
+> **Security:** js-tmpl does not automatically expose the host environment to templates.
+> If environment data is needed, it must be allowlisted via `envKeys` or `envPrefix`.
+>
+> **Reserved key:** `env` is always reserved for environment data.
+> If your values file contains a top-level `env` key, a warning is logged and it will be overwritten.
+
+### Exposing Environment Variables
+
+Use `envKeys` for explicit variable names, and/or `envPrefix` to include all variables matching a prefix. Both combine (union).
+
+**Config file:**
+
+```yaml
+envKeys:
+  - NODE_ENV
+  - APP_NAME
+envPrefix: JS_TMPL_
+```
+
+**CLI:**
+
+```bash
+js-tmpl render --values data.yaml --env-keys NODE_ENV,APP_NAME
+js-tmpl render --values data.yaml --env-prefix JS_TMPL_
+```
+
+**Programmatic:**
+
+```javascript
+const config = resolveConfig({
+  valuesFile: './values.yaml',
+  envKeys: ['NODE_ENV', 'APP_NAME'],
+  envPrefix: 'JS_TMPL_',
+});
+```
+
+Without `envKeys` or `envPrefix`, `env` is an empty object `{}`.
+
+**Recommended conventions:**
+
+- Use `NODE_ENV` via `envKeys` for environment-aware rendering
+- Use `JS_TMPL_` as a prefix for project-specific variables (e.g. `JS_TMPL_PORT`, `JS_TMPL_REGION`)
 
 ### Example
 
@@ -206,6 +256,8 @@ project:
   version: 1.0.0
 ```
 
+**Config with `envKeys: [NODE_ENV]`:**
+
 **Resulting view:**
 
 ```javascript
@@ -215,9 +267,7 @@ project:
     version: '1.0.0'
   },
   env: {
-    NODE_ENV: 'production',
-    PATH: '...',
-    // ... all process.env variables
+    NODE_ENV: 'production'   // only allowlisted keys
   }
 }
 ```
@@ -273,7 +323,7 @@ Templates use full Handlebars syntax.
 ```handlebars
 {{variableName}}
 {{nested.object.path}}
-{{array.0.property}}
+{{array.[0].property}}
 ```
 
 ### Conditionals
@@ -395,7 +445,7 @@ import { resolveConfig, renderDirectory } from '@nci-gis/js-tmpl';
 async function safeRender() {
   try {
     const config = resolveConfig({
-      valuesFile: './values.yaml'
+      valuesFile: './values.yaml',
     });
 
     await renderDirectory(config);
@@ -419,7 +469,7 @@ import process from 'node:process';
 process.chdir('/path/to/project');
 
 const config = resolveConfig({
-  valuesFile: './values.yaml'
+  valuesFile: './values.yaml',
 });
 
 await renderDirectory(config);
@@ -431,11 +481,10 @@ await renderDirectory(config);
 const environments = ['development', 'staging', 'production'];
 
 for (const env of environments) {
-  process.env.NODE_ENV = env;
-
   const config = resolveConfig({
     valuesFile: `./values-${env}.yaml`,
-    outDir: `./dist/${env}`
+    outDir: `./dist/${env}`,
+    envKeys: ['NODE_ENV'],
   });
 
   await renderDirectory(config);
@@ -450,7 +499,7 @@ import { resolveConfig, renderDirectory } from '@nci-gis/js-tmpl';
 
 export async function generateConfigs() {
   const config = resolveConfig({
-    valuesFile: process.env.VALUES_FILE || './values.yaml'
+    valuesFile: process.env.VALUES_FILE || './values.yaml',
   });
 
   await renderDirectory(config);

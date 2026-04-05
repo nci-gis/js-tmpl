@@ -3,7 +3,7 @@ import process from 'node:process';
 
 import { DEFAULTS } from './defaults.js';
 import { loadProjectConfig, loadYamlOrJson } from './loader.js';
-import { buildView } from './view.js';
+import { buildView, pickEnv } from './view.js';
 
 /**
  * Resolve valuesFile path based on valuesDir
@@ -69,11 +69,19 @@ export function resolveConfig(cli, cwd = process.cwd()) {
 
   const values = loadYamlOrJson(valuesFilePath);
 
+  const hasEnvConfig = mergedConfig.envKeys?.length || mergedConfig.envPrefix;
+  const env = hasEnvConfig
+    ? pickEnv({
+        keys: mergedConfig.envKeys || [],
+        prefix: mergedConfig.envPrefix || '',
+      })
+    : {};
+
   return {
     templateDir: abs(mergedConfig.templateDir),
     partialsDir: mergedConfig.partialsDir ? abs(mergedConfig.partialsDir) : '',
     outDir: abs(mergedConfig.outDir),
     extname: mergedConfig.extname,
-    view: buildView(values),
+    view: buildView(values, env),
   };
 }

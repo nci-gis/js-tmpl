@@ -137,7 +137,7 @@ describe('resolveConfig', () => {
     });
   });
 
-  it('includes process.env in view', async () => {
+  it('env defaults to empty object when no envKeys or envPrefix', async () => {
     await withTempDir(async (tmpDir) => {
       const valuesFile = path.join(tmpDir, 'values.yaml');
       await fs.writeFile(valuesFile, 'data: test', 'utf8');
@@ -145,8 +145,117 @@ describe('resolveConfig', () => {
       const cli = { valuesFile: 'values.yaml' };
       const config = resolveConfig(cli, tmpDir);
 
-      assert.ok(config.view.env);
-      assert.strictEqual(config.view.env, process.env);
+      assert.deepStrictEqual(config.view.env, {});
+    });
+  });
+
+  it('injects only envKeys from process.env when configured', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'test-envkeys';
+
+    try {
+      await withTempDir(async (tmpDir) => {
+        const valuesFile = path.join(tmpDir, 'values.yaml');
+        await fs.writeFile(valuesFile, 'data: test', 'utf8');
+
+        const configFile = path.join(tmpDir, 'js-tmpl.config.yaml');
+        await fs.writeFile(configFile, 'envKeys:\n  - NODE_ENV', 'utf8');
+
+        const cli = { valuesFile: 'values.yaml' };
+        const config = resolveConfig(cli, tmpDir);
+
+        assert.strictEqual(config.view.env.NODE_ENV, 'test-envkeys');
+        assert.strictEqual(Object.keys(config.view.env).length, 1);
+      });
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  it('envPrefix picks matching vars from process.env', async () => {
+    process.env.JS_TMPL_TEST_VAR = 'hello';
+
+    try {
+      await withTempDir(async (tmpDir) => {
+        const valuesFile = path.join(tmpDir, 'values.yaml');
+        await fs.writeFile(valuesFile, 'data: test', 'utf8');
+
+        const configFile = path.join(tmpDir, 'js-tmpl.config.yaml');
+        await fs.writeFile(configFile, 'envPrefix: JS_TMPL_', 'utf8');
+
+        const cli = { valuesFile: 'values.yaml' };
+        const config = resolveConfig(cli, tmpDir);
+
+        assert.strictEqual(config.view.env.JS_TMPL_TEST_VAR, 'hello');
+      });
+    } finally {
+      delete process.env.JS_TMPL_TEST_VAR;
+    }
+  });
+
+  it('envKeys + envPrefix combine results', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'combined-test';
+    process.env.JS_TMPL_COMBO = 'combo';
+
+    try {
+      await withTempDir(async (tmpDir) => {
+        const valuesFile = path.join(tmpDir, 'values.yaml');
+        await fs.writeFile(valuesFile, 'data: test', 'utf8');
+
+        const configFile = path.join(tmpDir, 'js-tmpl.config.yaml');
+        await fs.writeFile(
+          configFile,
+          'envKeys:\n  - NODE_ENV\nenvPrefix: JS_TMPL_',
+          'utf8',
+        );
+
+        const cli = { valuesFile: 'values.yaml' };
+        const config = resolveConfig(cli, tmpDir);
+
+        assert.strictEqual(config.view.env.NODE_ENV, 'combined-test');
+        assert.strictEqual(config.view.env.JS_TMPL_COMBO, 'combo');
+      });
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+      delete process.env.JS_TMPL_COMBO;
+    }
+  });
+
+  it('envPrefix works when envKeys property is absent', async () => {
+    process.env.JS_TMPL_ONLY_PREFIX = 'yes';
+
+    try {
+      await withTempDir(async (tmpDir) => {
+        const valuesFile = path.join(tmpDir, 'values.yaml');
+        await fs.writeFile(valuesFile, 'data: test', 'utf8');
+
+        // CLI provides envPrefix but no envKeys property at all
+        const cli = {
+          valuesFile: 'values.yaml',
+          envPrefix: 'JS_TMPL_ONLY_',
+        };
+        const config = resolveConfig(cli, tmpDir);
+
+        assert.strictEqual(config.view.env.JS_TMPL_ONLY_PREFIX, 'yes');
+      });
+    } finally {
+      delete process.env.JS_TMPL_ONLY_PREFIX;
+    }
+  });
+
+  it('missing envKeys entries are silently omitted', async () => {
+    await withTempDir(async (tmpDir) => {
+      const valuesFile = path.join(tmpDir, 'values.yaml');
+      await fs.writeFile(valuesFile, 'data: test', 'utf8');
+
+      const cli = {
+        valuesFile: 'values.yaml',
+        envKeys: ['NONEXISTENT_KEY_12345'],
+      };
+      const config = resolveConfig(cli, tmpDir);
+
+      assert.deepStrictEqual(config.view.env, {});
     });
   });
 

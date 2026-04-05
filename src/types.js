@@ -8,6 +8,8 @@
  * @property {string} [configFile]
  * @property {string} [extname]
  * @property {string} [valuesDir]
+ * @property {string[]} [envKeys]
+ * @property {string} [envPrefix]
  */
 
 /**

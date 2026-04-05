@@ -13,6 +13,11 @@ export function parseArgs(args) {
     const a = args[i];
 
     switch (a) {
+      case '-h':
+      case '--help':
+        opts.command = 'help';
+        break;
+
       case 'render':
         opts.command = 'render';
         break;
@@ -44,6 +49,17 @@ export function parseArgs(args) {
       case '-x':
       case '--ext':
         opts.extname = args[++i];
+        break;
+
+      case '--env-keys':
+        opts.envKeys = args[++i]
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        break;
+
+      case '--env-prefix':
+        opts.envPrefix = args[++i];
         break;
     }
     // next argument:
