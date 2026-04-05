@@ -24,7 +24,10 @@
     "start": "node src/cli/main.js",
     "help": "node src/cli/main.js --help",
     "dev": "node src/cli/main.js",
-    "tool": "node src/cli/main.js"
+    "tool": "node src/cli/main.js",
+    "docs:check-links": "remark --frail --quiet *.md docs/*.md tests/README.md examples/**/*.md",
+    "docs:check-exports": "node scripts/check-doc-exports.js",
+    "docs:check": "pnpm docs:check-links && pnpm docs:check-exports"
   },
   "keywords": [
     "js",
@@ -64,7 +67,9 @@
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "remark-cli": "^12.0.1",
+    "remark-validate-links": "^13.1.0"
   },
   "lint-staged": {
     "src/**/*.js": [
@@ -74,6 +79,9 @@
     "tests/**/*.js": [
       "prettier --write",
       "eslint --fix"
+    ],
+    "**/*.md": [
+      "prettier --write"
     ]
   }
 }

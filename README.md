@@ -139,14 +139,9 @@ templates/
 **Template content** (`templates/${project.name}/config.json.hbs`):
 
 ```handlebars
-{
-  "name": "{{project.name}}",
-  "version": "{{project.version}}",
-  "server": {
-    "port": {{config.port}},
-    "host": "{{config.host}}"
-  }
-}
+{ "name": "{{project.name}}", "version": "{{project.version}}", "server": {
+"port":
+{{config.port}}, "host": "{{config.host}}" } }
 ```
 
 ### 3. Render templates
@@ -165,7 +160,7 @@ import { resolveConfig, renderDirectory } from '@nci-gis/js-tmpl';
 const config = resolveConfig({
   valuesFile: './values.yaml',
   templateDir: './templates',
-  outDir: './dist'
+  outDir: './dist',
 });
 
 await renderDirectory(config);
@@ -264,14 +259,14 @@ js-tmpl render [options]
 
 ### Options
 
-| Option                   | Description             | Default              |
-| ------------------------ | ----------------------- | -------------------- |
-| `-c, --values FILE`      | Values file (YAML/JSON) | **Required**         |
-| `-t, --template-dir DIR` | Template directory      | `templates`          |
-| `-o, --out DIR`          | Output directory        | `dist`               |
-| `-p, --partials-dir DIR` | Partials directory      | None (skipped)       |
-| `-x, --ext EXT`          | Template extension      | `.hbs`               |
-| `--config-file FILE`     | Explicit config file    | Auto-discovered      |
+| Option                   | Description             | Default         |
+| ------------------------ | ----------------------- | --------------- |
+| `-c, --values FILE`      | Values file (YAML/JSON) | **Required**    |
+| `-t, --template-dir DIR` | Template directory      | `templates`     |
+| `-o, --out DIR`          | Output directory        | `dist`          |
+| `-p, --partials-dir DIR` | Partials directory      | None (skipped)  |
+| `-x, --ext EXT`          | Template extension      | `.hbs`          |
+| `--config-file FILE`     | Explicit config file    | Auto-discovered |
 
 ### Examples of Usage
 
@@ -291,73 +286,7 @@ NODE_ENV=production js-tmpl render --values prod-values.yaml
 
 ## Programmatic API
 
-See [docs/API.md](docs/API.md) for comprehensive API documentation.
-
-### Import
-
-```javascript
-import { resolveConfig, renderDirectory } from '@nci-gis/js-tmpl';
-```
-
-### resolveConfig(options)
-
-Resolves configuration with proper precedence.
-
-**Parameters:**
-
-- `options.valuesFile` (string, required) - Path to values file
-- `options.templateDir` (string) - Template directory path
-- `options.partialsDir` (string, optional) - Partials directory path (skipped if not set)
-- `options.outDir` (string) - Output directory path
-- `options.extname` (string) - Template file extension
-- `options.configFile` (string) - Explicit config file path
-
-**Returns:** Resolved configuration object
-
-### renderDirectory(config)
-
-Executes the rendering process.
-
-**Parameters:**
-
-- `config` (object) - Configuration from `resolveConfig`
-
-**Returns:** Promise that resolves when rendering completes
-
-### Example
-
-```javascript
-import { resolveConfig, renderDirectory } from '@nci-gis/js-tmpl';
-
-const config = resolveConfig({
-  valuesFile: './values.yaml',
-  templateDir: './templates',
-  partialsDir: './partials',
-  outDir: './dist'
-});
-
-await renderDirectory(config);
-console.log('✅ Rendering complete');
-```
-
-## Project Configuration
-
-Create `js-tmpl.config.yaml` in your project root:
-
-```yaml
-templateDir: templates
-partialsDir: templates.partials  # optional — omit to skip partials
-outDir: dist
-extname: .hbs
-```
-
-Auto-discovered config files (in order):
-
-1. `js-tmpl.config.yaml`
-2. `js-tmpl.config.yml`
-3. `js-tmpl.config.json`
-4. `config/js-tmpl.yaml`
-5. `config/js-tmpl.json`
+See [docs/API.md](docs/API.md) for the complete API reference — parameters, return types, config file format, and advanced usage.
 
 ## Examples
 
@@ -372,7 +301,7 @@ See [examples/yaml-templates/](examples/yaml-templates/) for a complete working 
 
 This project has comprehensive test coverage:
 
-- 177 tests
+- ~177 tests
 - 99.8% line coverage
 - 99.7% branch coverage
 
@@ -380,16 +309,7 @@ See [tests/README.md](tests/README.md) for testing documentation.
 
 ## Development Principles
 
-js-tmpl follows strict design principles:
-
-1. **Engine First, CLI Second** - Programmatic API is primary
-2. **Explicit Over Implicit** - No magic or hidden conventions
-3. **Deterministic Over Clever** - Predictable behavior
-4. **Separation of Concerns** - Each layer has one responsibility
-5. **Composable Over Monolithic** - Small, focused functions
-6. **Simple Over Feature-Rich** - Minimal API surface
-
-See [docs/PRINCIPLES.md](docs/PRINCIPLES.md) for details.
+js-tmpl follows six core design principles — engine-first, explicit, deterministic, separated, composable, and simple. See [docs/PRINCIPLES.md](docs/PRINCIPLES.md) for the full philosophy.
 
 ## Roadmap
 
