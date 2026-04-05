@@ -12,7 +12,9 @@ import { withTempDir } from '../helpers/tempDir.js';
 
 describe('Integration: Fixture-based Rendering', () => {
   beforeEach(() => {
-    Handlebars.unregisterPartial(/.*/);
+    for (const name of Object.keys(Handlebars.partials)) {
+      Handlebars.unregisterPartial(name);
+    }
   });
 
   it('renders complete project from fixture templates', async () => {

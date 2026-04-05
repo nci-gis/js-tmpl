@@ -25,8 +25,8 @@ yaml-templates/
 │   │   └── ${project.name}-config.yaml.hbs
 │   └── README.md.hbs
 └── templates.partials/         # Reusable components
-    ├── _header.hbs
-    ├── _footer.hbs
+    ├── header.hbs
+    ├── footer.hbs
     └── @common/
         ├── metadata.hbs
         └── credentials.hbs
@@ -132,13 +132,13 @@ With `NODE_ENV=production`, outputs: `database-production.yaml`
 
 ### 2. Root Partials
 
-Defined as: `_header.hbs`
+Defined as: `header.hbs`
 Used as: `{{> header}}`
 
-### 3. Namespaced Partials
+### 3. Flattened Partials (`@`)
 
 Defined as: `@common/metadata.hbs`
-Used as: `{{> common.metadata}}`
+Used as: `{{> metadata}}` (filename only, directory structure ignored)
 
 ### 4. Conditionals
 

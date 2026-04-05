@@ -31,7 +31,7 @@ Resolves configuration by merging user options with project config and defaults.
 | `valuesFile`  | string | **Yes**  | -                      | Path to values file (YAML/JSON) |
 | `valuesDir`   | string | No       | `""`                   | Base directory for valuesFile   |
 | `templateDir` | string | No       | `"templates"`          | Path to template directory      |
-| `partialsDir` | string | No       | `"templates.partials"` | Path to partials directory      |
+| `partialsDir` | string | No       | `""` (skipped)         | Path to partials directory      |
 | `outDir`      | string | No       | `"dist"`               | Path to output directory        |
 | `extname`     | string | No       | `".hbs"`               | Template file extension         |
 | `configFile`  | string | No       | Auto-discovered        | Explicit config file path       |
@@ -92,7 +92,7 @@ console.log(config);
 // {
 //   valuesFile: '/absolute/path/to/data/production.yaml',
 //   templateDir: '/absolute/path/to/my-templates',
-//   partialsDir: '/absolute/path/to/templates.partials',
+//   partialsDir: '',
 //   outDir: '/absolute/path/to/output',
 //   extname: '.hbs'
 // }
@@ -108,13 +108,13 @@ Executes the complete rendering process.
 
 1. Load values file (YAML/JSON)
 2. Build view object (`{...values, env: process.env}`)
-3. Register partials from `partialsDir`
-4. Discover templates via BFS tree walk
-5. For each template:
+3. Create a scoped Handlebars instance (`Handlebars.create()`)
+4. Register partials from `partialsDir` (if configured)
+5. Discover templates via BFS tree walk
+6. For each template:
    - Render path placeholders (`${var}`)
-   - Render content (Handlebars)
+   - Render content (Handlebars, scoped instance)
    - Write to `outDir`
-6. Unregister partials
 
 #### Parameters
 
@@ -167,7 +167,7 @@ If `configFile` is not specified, js-tmpl searches for config in this order:
 
 ```yaml
 templateDir: templates
-partialsDir: templates.partials
+partialsDir: templates.partials  # optional — omit to skip partials
 valuesDir: ""
 outDir: dist
 extname: .hbs
@@ -307,41 +307,62 @@ See [Handlebars documentation](https://handlebarsjs.com/) for complete syntax.
 
 ## Partial System
 
-### Root Partials
+Each `renderDirectory()` call creates an isolated Handlebars instance. All partials are scoped to that render pass — no global state, no cross-render leakage.
 
-**File:** `templates.partials/_name.hbs`
-**Usage:** `{{> name}}`
+### Naming Conventions
 
-**Example:**
-
-```text
-templates.partials/
-├── _header.hbs  → {{> header}}
-├── _footer.hbs  → {{> footer}}
-└── _nav.hbs     → {{> nav}}
-```
-
-### Namespaced Partials
-
-**File:** `templates.partials/@group/name.hbs`
-**Usage:** `{{> group.name}}`
-
-**Example:**
+**Default — namespaced by directory structure:**
 
 ```text
 templates.partials/
-└── @components/
-    ├── button.hbs  → {{> components.button}}
-    ├── form.hbs    → {{> components.form}}
-    └── input.hbs   → {{> components.input}}
+├── header.hbs                → {{> header}}
+├── components/
+│   ├── button.hbs           → {{> components.button}}
+│   └── forms/
+│       └── login.hbs        → {{> components.forms.login}}
 ```
+
+**`@` directory (root level) — flatten entire subtree:**
+
+Files inside `@` directories register by filename only, ignoring directory structure:
+
+```text
+templates.partials/
+└── @helpers/
+    ├── date.hbs             → {{> date}}
+    └── deep/
+        └── nested.hbs       → {{> nested}}
+```
+
+### Complete Example
+
+```text
+templates.partials/
+├── header.hbs                    → "header"              (root file)
+├── components/
+│   ├── button.hbs               → "components.button"   (namespaced)
+│   └── forms/
+│       └── login.hbs            → "components.forms.login"
+├── @helpers/                                              (@ flattens all)
+│   ├── date.hbs                 → "date"
+│   └── deep/
+│       └── nested.hbs           → "nested"
+```
+
+### Name Validation
+
+Partial name segments (directory names and file basenames) must match `/^\w+$/` — only alphanumeric characters and underscores. Invalid names throw an error at registration time.
+
+### Duplicate Detection
+
+If two partials resolve to the same name (e.g., `_date.hbs` and `@helpers/date.hbs` both → `"date"`), `registerPartials` throws an error identifying both source files.
 
 ### Lifecycle
 
-- Registered before rendering starts
-- Available to all templates
-- Unregistered after rendering completes
-- Scoped to render pass (no global pollution)
+- A scoped Handlebars instance is created per `renderDirectory()` call
+- All partials are registered on the scoped instance only
+- No global Handlebars state is modified
+- The scoped instance is garbage-collected when the render pass completes
 
 ## Error Handling
 

@@ -14,7 +14,7 @@ describe('DEFAULTS', () => {
   });
 
   it('has partialsDir property', () => {
-    assert.strictEqual(DEFAULTS.partialsDir, 'templates.partials');
+    assert.strictEqual(DEFAULTS.partialsDir, '');
   });
 
   it('has valuesDir property', () => {

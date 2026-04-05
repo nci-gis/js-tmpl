@@ -81,7 +81,7 @@ Everything else must be **explicitly specified**:
 - ✅ **Values file** - Required via `--values` flag or `valuesFile` config
 - ✅ **Template directory** - Must be in config or defaults to `templates/`
 - ✅ **Output directory** - Must be in config or defaults to `dist/`
-- ✅ **Partials directory** - Must be in config or defaults to `templates.partials/`
+- ✅ **Partials directory** - Must be in config; not loaded if omitted
 
 ### Override Auto-Discovery
 
@@ -222,20 +222,25 @@ templates/
 
 ### Partial System
 
-**Root partials** (`_name.hbs`):
+Each render pass uses an isolated Handlebars instance. Directory structure maps to partial names:
 
 ```text
 templates.partials/
-└── _header.hbs  → {{> header}}
+├── header.hbs                → {{> header}}
+├── components/
+│   ├── button.hbs           → {{> components.button}}
+│   └── forms/
+│       └── login.hbs        → {{> components.forms.login}}
 ```
 
-**Namespaced partials** (`@group/name.hbs`):
+**`@` directories** flatten their contents (filename only, no namespace):
 
 ```text
-templates.partials/
-└── @common/
-    └── metadata.hbs  → {{> common.metadata}}
+├── @helpers/
+│   └── date.hbs             → {{> date}}
 ```
+
+Duplicate partial names throw an error. Names must be alphanumeric + underscore only. See [API docs](docs/API.md#partial-system) for details.
 
 ## Mental Model
 
@@ -264,7 +269,7 @@ js-tmpl render [options]
 | `-c, --values FILE`      | Values file (YAML/JSON) | **Required**         |
 | `-t, --template-dir DIR` | Template directory      | `templates`          |
 | `-o, --out DIR`          | Output directory        | `dist`               |
-| `-p, --partials-dir DIR` | Partials directory      | `templates.partials` |
+| `-p, --partials-dir DIR` | Partials directory      | None (skipped)       |
 | `-x, --ext EXT`          | Template extension      | `.hbs`               |
 | `--config-file FILE`     | Explicit config file    | Auto-discovered      |
 
@@ -302,7 +307,7 @@ Resolves configuration with proper precedence.
 
 - `options.valuesFile` (string, required) - Path to values file
 - `options.templateDir` (string) - Template directory path
-- `options.partialsDir` (string) - Partials directory path
+- `options.partialsDir` (string, optional) - Partials directory path (skipped if not set)
 - `options.outDir` (string) - Output directory path
 - `options.extname` (string) - Template file extension
 - `options.configFile` (string) - Explicit config file path
@@ -341,7 +346,7 @@ Create `js-tmpl.config.yaml` in your project root:
 
 ```yaml
 templateDir: templates
-partialsDir: templates.partials
+partialsDir: templates.partials  # optional — omit to skip partials
 outDir: dist
 extname: .hbs
 ```
@@ -367,7 +372,7 @@ See [examples/yaml-templates/](examples/yaml-templates/) for a complete working 
 
 This project has comprehensive test coverage:
 
-- 156 tests
+- 177 tests
 - 99.8% line coverage
 - 99.7% branch coverage
 

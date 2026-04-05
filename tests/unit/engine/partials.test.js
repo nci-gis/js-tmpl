@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { beforeEach, describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 
 import Handlebars from 'handlebars';
 
@@ -9,125 +9,167 @@ import { registerPartials } from '../../../src/engine/partials.js';
 import { withTempDir } from '../../helpers/tempDir.js';
 
 describe('registerPartials', () => {
-  beforeEach(() => {
-    // Clear all registered partials before each test
-    Handlebars.unregisterPartial(/.*/);
-  });
+  // ── Root files ─────────────────────────────────────────────────────
 
-  it('registers root partial with underscore prefix', async () => {
+  it('registers root file by filename', async () => {
     await withTempDir(async (tmpDir) => {
-      await fs.writeFile(
-        path.join(tmpDir, '_header.hbs'),
-        'Header Content',
-        'utf8',
-      );
+      const hbs = Handlebars.create();
+      await fs.writeFile(path.join(tmpDir, 'header.hbs'), 'Header', 'utf8');
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      const partial = Handlebars.partials['header'];
-      assert.ok(partial);
-      assert.strictEqual(partial, 'Header Content');
+      assert.strictEqual(hbs.partials['header'], 'Header');
     });
   });
 
-  it('registers multiple root partials', async () => {
+  it('registers multiple root files', async () => {
     await withTempDir(async (tmpDir) => {
-      await fs.writeFile(path.join(tmpDir, '_header.hbs'), 'Header', 'utf8');
-      await fs.writeFile(path.join(tmpDir, '_footer.hbs'), 'Footer', 'utf8');
+      const hbs = Handlebars.create();
+      await fs.writeFile(path.join(tmpDir, 'header.hbs'), 'Header', 'utf8');
+      await fs.writeFile(path.join(tmpDir, 'footer.hbs'), 'Footer', 'utf8');
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(Handlebars.partials['header'], 'Header');
-      assert.strictEqual(Handlebars.partials['footer'], 'Footer');
+      assert.strictEqual(hbs.partials['header'], 'Header');
+      assert.strictEqual(hbs.partials['footer'], 'Footer');
     });
   });
 
-  it('registers namespaced partial in @group directory', async () => {
+  // ── Namespaced directories ─────────────────────────────────────────
+
+  it('registers files in subdirectory as namespaced', async () => {
     await withTempDir(async (tmpDir) => {
-      await fs.mkdir(path.join(tmpDir, '@components'), { recursive: true });
+      const hbs = Handlebars.create();
+      await fs.mkdir(path.join(tmpDir, 'components'), { recursive: true });
       await fs.writeFile(
-        path.join(tmpDir, '@components', 'button.hbs'),
+        path.join(tmpDir, 'components', 'button.hbs'),
         'Button',
         'utf8',
       );
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      const partial = Handlebars.partials['components.button'];
-      assert.ok(partial);
-      assert.strictEqual(partial, 'Button');
+      assert.strictEqual(hbs.partials['components.button'], 'Button');
     });
   });
 
-  it('registers multiple partials in same @group', async () => {
+  it('registers deeply nested files with full namespace', async () => {
     await withTempDir(async (tmpDir) => {
-      await fs.mkdir(path.join(tmpDir, '@ui'), { recursive: true });
+      const hbs = Handlebars.create();
+      await fs.mkdir(path.join(tmpDir, 'components', 'forms'), {
+        recursive: true,
+      });
       await fs.writeFile(
-        path.join(tmpDir, '@ui', 'button.hbs'),
+        path.join(tmpDir, 'components', 'forms', 'login.hbs'),
+        'Login',
+        'utf8',
+      );
+
+      await registerPartials(tmpDir, '.hbs', hbs);
+
+      assert.strictEqual(hbs.partials['components.forms.login'], 'Login');
+    });
+  });
+
+  it('registers multiple files in same directory', async () => {
+    await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
+      await fs.mkdir(path.join(tmpDir, 'ui'), { recursive: true });
+      await fs.writeFile(
+        path.join(tmpDir, 'ui', 'button.hbs'),
         'Button',
         'utf8',
       );
+      await fs.writeFile(path.join(tmpDir, 'ui', 'input.hbs'), 'Input', 'utf8');
+
+      await registerPartials(tmpDir, '.hbs', hbs);
+
+      assert.strictEqual(hbs.partials['ui.button'], 'Button');
+      assert.strictEqual(hbs.partials['ui.input'], 'Input');
+    });
+  });
+
+  // ── @ flatten directories ──────────────────────────────────────────
+
+  it('@ directory flattens files to filename only', async () => {
+    await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
+      await fs.mkdir(path.join(tmpDir, '@helpers'), { recursive: true });
       await fs.writeFile(
-        path.join(tmpDir, '@ui', 'input.hbs'),
-        'Input',
+        path.join(tmpDir, '@helpers', 'date.hbs'),
+        'Date',
         'utf8',
       );
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(Handlebars.partials['ui.button'], 'Button');
-      assert.strictEqual(Handlebars.partials['ui.input'], 'Input');
+      assert.strictEqual(hbs.partials['date'], 'Date');
+      assert.ok(!hbs.partials['helpers.date']);
     });
   });
 
-  it('registers partials from multiple @group directories', async () => {
+  it('@ directory flattens deeply nested files', async () => {
     await withTempDir(async (tmpDir) => {
-      await fs.mkdir(path.join(tmpDir, '@components'), { recursive: true });
-      await fs.mkdir(path.join(tmpDir, '@layouts'), { recursive: true });
+      const hbs = Handlebars.create();
+      await fs.mkdir(path.join(tmpDir, '@helpers', 'deep'), {
+        recursive: true,
+      });
       await fs.writeFile(
-        path.join(tmpDir, '@components', 'card.hbs'),
-        'Card',
-        'utf8',
-      );
-      await fs.writeFile(
-        path.join(tmpDir, '@layouts', 'main.hbs'),
-        'Main',
+        path.join(tmpDir, '@helpers', 'deep', 'nested.hbs'),
+        'Nested',
         'utf8',
       );
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(Handlebars.partials['components.card'], 'Card');
-      assert.strictEqual(Handlebars.partials['layouts.main'], 'Main');
+      assert.strictEqual(hbs.partials['nested'], 'Nested');
+      assert.ok(!hbs.partials['deep.nested']);
+      assert.ok(!hbs.partials['helpers.deep.nested']);
     });
   });
 
-  it('ignores non-underscore files in root', async () => {
+  it('@ directory with multiple levels flattens all', async () => {
     await withTempDir(async (tmpDir) => {
-      await fs.writeFile(path.join(tmpDir, 'regular.hbs'), 'Regular', 'utf8');
-      await fs.writeFile(path.join(tmpDir, '_partial.hbs'), 'Partial', 'utf8');
+      const hbs = Handlebars.create();
+      await fs.mkdir(path.join(tmpDir, '@lib', 'a', 'b'), { recursive: true });
+      await fs.writeFile(path.join(tmpDir, '@lib', 'top.hbs'), 'Top', 'utf8');
+      await fs.writeFile(
+        path.join(tmpDir, '@lib', 'a', 'mid.hbs'),
+        'Mid',
+        'utf8',
+      );
+      await fs.writeFile(
+        path.join(tmpDir, '@lib', 'a', 'b', 'bot.hbs'),
+        'Bot',
+        'utf8',
+      );
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.ok(Handlebars.partials['partial']);
-      assert.ok(!Handlebars.partials['regular']);
+      assert.strictEqual(hbs.partials['top'], 'Top');
+      assert.strictEqual(hbs.partials['mid'], 'Mid');
+      assert.strictEqual(hbs.partials['bot'], 'Bot');
     });
   });
 
-  it('ignores non-.hbs files in root', async () => {
+  // ── Filtering ──────────────────────────────────────────────────────
+
+  it('ignores non-matching extension files', async () => {
     await withTempDir(async (tmpDir) => {
-      await fs.writeFile(path.join(tmpDir, '_readme.md'), 'Readme', 'utf8');
-      await fs.writeFile(path.join(tmpDir, '_partial.hbs'), 'Partial', 'utf8');
+      const hbs = Handlebars.create();
+      await fs.writeFile(path.join(tmpDir, 'readme.md'), 'Readme', 'utf8');
+      await fs.writeFile(path.join(tmpDir, 'partial.hbs'), 'Partial', 'utf8');
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.ok(Handlebars.partials['partial']);
-      assert.ok(!Handlebars.partials['readme']);
+      assert.ok(hbs.partials['partial']);
+      assert.ok(!hbs.partials['readme']);
     });
   });
 
-  it('ignores non-extension files in @group', async () => {
+  it('ignores non-matching extension in directories', async () => {
     await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
       await fs.mkdir(path.join(tmpDir, '@components'), { recursive: true });
       await fs.writeFile(
         path.join(tmpDir, '@components', 'button.hbs'),
@@ -140,111 +182,237 @@ describe('registerPartials', () => {
         'utf8',
       );
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.ok(Handlebars.partials['components.button']);
-      assert.ok(!Handlebars.partials['components.readme']);
+      assert.ok(hbs.partials['button']);
+      assert.ok(!hbs.partials['readme']);
     });
   });
 
   it('uses custom extension', async () => {
     await withTempDir(async (tmpDir) => {
-      await fs.writeFile(path.join(tmpDir, '_header.tmpl'), 'Header', 'utf8');
+      const hbs = Handlebars.create();
+      await fs.writeFile(path.join(tmpDir, 'header.tmpl'), 'Header', 'utf8');
 
-      await registerPartials(tmpDir, '.tmpl');
+      await registerPartials(tmpDir, '.tmpl', hbs);
 
-      assert.strictEqual(Handlebars.partials['header'], 'Header');
-    });
-  });
-
-  it('ignores regular directories without @ prefix', async () => {
-    await withTempDir(async (tmpDir) => {
-      await fs.mkdir(path.join(tmpDir, 'regular'), { recursive: true });
-      await fs.writeFile(
-        path.join(tmpDir, 'regular', 'file.hbs'),
-        'File',
-        'utf8',
-      );
-
-      await registerPartials(tmpDir);
-
-      assert.ok(!Handlebars.partials['regular.file']);
+      assert.strictEqual(hbs.partials['header'], 'Header');
     });
   });
 
   it('handles empty partials directory', async () => {
     await withTempDir(async (tmpDir) => {
-      await registerPartials(tmpDir);
-      // Should not throw, just register nothing
-      assert.ok(true);
+      const hbs = Handlebars.create();
+      await registerPartials(tmpDir, '.hbs', hbs);
+      assert.deepStrictEqual(hbs.partials, {});
     });
+  });
+
+  it('throws when partialsDir does not exist', async () => {
+    const hbs = Handlebars.create();
+    await assert.rejects(
+      async () => registerPartials('/non/existent/path', '.hbs', hbs),
+      /ENOENT/,
+    );
+  });
+
+  it('skips registration when partialsDir is empty string', async () => {
+    const hbs = Handlebars.create();
+    await registerPartials('', '.hbs', hbs);
+    assert.deepStrictEqual(hbs.partials, {});
   });
 
   it('strips extension from partial name', async () => {
     await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
       await fs.writeFile(
-        path.join(tmpDir, '_component.hbs'),
+        path.join(tmpDir, 'component.hbs'),
         'Component',
         'utf8',
       );
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      // Should be registered as "component", not "component.hbs"
-      assert.strictEqual(Handlebars.partials['component'], 'Component');
-      assert.ok(!Handlebars.partials['component.hbs']);
+      assert.strictEqual(hbs.partials['component'], 'Component');
+      assert.ok(!hbs.partials['component.hbs']);
     });
   });
 
-  it('can use registered partials in templates', async () => {
+  // ── Name validation ────────────────────────────────────────────────
+
+  it('throws on invalid file name with dashes', async () => {
     await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
       await fs.writeFile(
-        path.join(tmpDir, '_greeting.hbs'),
+        path.join(tmpDir, 'my-component.hbs'),
+        'Content',
+        'utf8',
+      );
+
+      await assert.rejects(
+        async () => registerPartials(tmpDir, '.hbs', hbs),
+        /Invalid partial name segment 'my-component'/,
+      );
+    });
+  });
+
+  it('throws on invalid directory name with dashes', async () => {
+    await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
+      await fs.mkdir(path.join(tmpDir, 'my-group'), { recursive: true });
+      await fs.writeFile(
+        path.join(tmpDir, 'my-group', 'file.hbs'),
+        'Content',
+        'utf8',
+      );
+
+      await assert.rejects(
+        async () => registerPartials(tmpDir, '.hbs', hbs),
+        /Invalid partial name segment 'my-group>file'/,
+      );
+    });
+  });
+
+  it('accepts valid names with alphanumeric and underscore', async () => {
+    await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
+      await fs.writeFile(
+        path.join(tmpDir, 'my_partial_2.hbs'),
+        'Content',
+        'utf8',
+      );
+
+      await registerPartials(tmpDir, '.hbs', hbs);
+
+      assert.strictEqual(hbs.partials['my_partial_2'], 'Content');
+    });
+  });
+
+  // ── Duplicate detection ────────────────────────────────────────────
+
+  it('throws on duplicate partial names', async () => {
+    await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
+      // date.hbs → "date" and @helpers/date.hbs → "date"
+      await fs.mkdir(path.join(tmpDir, '@helpers'), { recursive: true });
+      await fs.writeFile(path.join(tmpDir, 'date.hbs'), 'Date1', 'utf8');
+      await fs.writeFile(
+        path.join(tmpDir, '@helpers', 'date.hbs'),
+        'Date2',
+        'utf8',
+      );
+
+      await assert.rejects(
+        async () => registerPartials(tmpDir, '.hbs', hbs),
+        /Duplicate partial name 'date'/,
+      );
+    });
+  });
+
+  it('throws on duplicate from @ flatten and root file', async () => {
+    await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
+      await fs.mkdir(path.join(tmpDir, '@helpers'), { recursive: true });
+      await fs.writeFile(path.join(tmpDir, 'shared.hbs'), 'Root', 'utf8');
+      await fs.writeFile(
+        path.join(tmpDir, '@helpers', 'shared.hbs'),
+        'Flat',
+        'utf8',
+      );
+
+      await assert.rejects(
+        async () => registerPartials(tmpDir, '.hbs', hbs),
+        /Duplicate partial name 'shared'/,
+      );
+    });
+  });
+
+  it('allows same filename in different namespaces (no collision)', async () => {
+    await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
+      await fs.mkdir(path.join(tmpDir, 'auth'), { recursive: true });
+      await fs.mkdir(path.join(tmpDir, 'contact'), { recursive: true });
+      await fs.writeFile(
+        path.join(tmpDir, 'auth', 'form.hbs'),
+        'Auth Form',
+        'utf8',
+      );
+      await fs.writeFile(
+        path.join(tmpDir, 'contact', 'form.hbs'),
+        'Contact Form',
+        'utf8',
+      );
+
+      await registerPartials(tmpDir, '.hbs', hbs);
+
+      assert.strictEqual(hbs.partials['auth.form'], 'Auth Form');
+      assert.strictEqual(hbs.partials['contact.form'], 'Contact Form');
+    });
+  });
+
+  // ── Isolation ──────────────────────────────────────────────────────
+
+  it('does not register anything on global Handlebars', async () => {
+    const before = { ...Handlebars.partials };
+
+    await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
+      await fs.writeFile(path.join(tmpDir, 'test.hbs'), 'Test', 'utf8');
+
+      await registerPartials(tmpDir, '.hbs', hbs);
+
+      assert.deepStrictEqual(Handlebars.partials, before);
+    });
+  });
+
+  // ── Template compilation ───────────────────────────────────────────
+
+  it('registered partials work in compiled templates', async () => {
+    await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
+      await fs.writeFile(
+        path.join(tmpDir, 'greeting.hbs'),
         'Hello {{name}}!',
         'utf8',
       );
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      const template = Handlebars.compile('{{> greeting}}');
-      const result = template({ name: 'World' });
-
-      assert.strictEqual(result, 'Hello World!');
+      const template = hbs.compile('{{> greeting}}');
+      assert.strictEqual(template({ name: 'World' }), 'Hello World!');
     });
   });
 
-  it('can use namespaced partials in templates', async () => {
+  it('namespaced partials work in compiled templates', async () => {
     await withTempDir(async (tmpDir) => {
-      await fs.mkdir(path.join(tmpDir, '@ui'), { recursive: true });
+      const hbs = Handlebars.create();
+      await fs.mkdir(path.join(tmpDir, 'ui'), { recursive: true });
       await fs.writeFile(
-        path.join(tmpDir, '@ui', 'alert.hbs'),
+        path.join(tmpDir, 'ui', 'alert.hbs'),
         'Alert: {{message}}',
         'utf8',
       );
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      const template = Handlebars.compile('{{> ui.alert}}');
-      const result = template({ message: 'Success' });
-
-      assert.strictEqual(result, 'Alert: Success');
+      const template = hbs.compile('{{> ui.alert}}');
+      assert.strictEqual(template({ message: 'OK' }), 'Alert: OK');
     });
   });
 
   it('handles partials with complex handlebars syntax', async () => {
     await withTempDir(async (tmpDir) => {
+      const hbs = Handlebars.create();
       await fs.writeFile(
-        path.join(tmpDir, '_list.hbs'),
+        path.join(tmpDir, 'list.hbs'),
         '{{#each items}}{{this}},{{/each}}',
         'utf8',
       );
 
-      await registerPartials(tmpDir);
+      await registerPartials(tmpDir, '.hbs', hbs);
 
-      const template = Handlebars.compile('Items: {{> list}}');
-      const result = template({ items: ['a', 'b', 'c'] });
-
-      assert.strictEqual(result, 'Items: a,b,c,');
+      const template = hbs.compile('Items: {{> list}}');
+      assert.strictEqual(template({ items: ['a', 'b', 'c'] }), 'Items: a,b,c,');
     });
   });
 });

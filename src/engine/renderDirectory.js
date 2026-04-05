@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+import Handlebars from 'handlebars';
+
 import { ensureDir, writeFileSafe } from '../utils/fs.js';
 import { renderContent } from './contentRenderer.js';
 import { registerPartials } from './partials.js';
@@ -12,7 +14,8 @@ import { walkTemplateTree } from './treeWalker.js';
 export async function renderDirectory(cfg) {
   const { templateDir, partialsDir, outDir, view, extname } = cfg;
 
-  await registerPartials(partialsDir, extname);
+  const hbs = Handlebars.create();
+  await registerPartials(partialsDir, extname, hbs);
 
   const files = await walkTemplateTree(templateDir, extname);
 
@@ -23,7 +26,7 @@ export async function renderDirectory(cfg) {
       relRendered.replace(new RegExp(`${extname}$`), ''),
     );
 
-    const content = await renderContent(file.absPath, view);
+    const content = await renderContent(file.absPath, view, hbs);
 
     await ensureDir(path.dirname(target));
     await writeFileSafe(target, content);

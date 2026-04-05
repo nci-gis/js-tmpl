@@ -10,7 +10,9 @@ import { withTempDir } from '../helpers/tempDir.js';
 
 describe('Integration: Full Rendering Flow', () => {
   beforeEach(() => {
-    Handlebars.unregisterPartial(/.*/);
+    for (const name of Object.keys(Handlebars.partials)) {
+      Handlebars.unregisterPartial(name);
+    }
   });
 
   it('renders complete project structure', async () => {
@@ -83,7 +85,7 @@ describe('Integration: Full Rendering Flow', () => {
 
       // Setup structure
       await fs.mkdir(path.join(templateDir, '${env}'), { recursive: true });
-      await fs.mkdir(path.join(partialsDir, '@components'), {
+      await fs.mkdir(path.join(partialsDir, 'components'), {
         recursive: true,
       });
 
@@ -96,7 +98,7 @@ describe('Integration: Full Rendering Flow', () => {
 
       // Create partial
       await fs.writeFile(
-        path.join(partialsDir, '@components', 'settings.hbs'),
+        path.join(partialsDir, 'components', 'settings.hbs'),
         'port: {{app.port}}\ndebug: {{app.debug}}',
         'utf8',
       );
@@ -171,36 +173,36 @@ describe('Integration: Full Rendering Flow', () => {
       await fs.mkdir(path.join(templateDir, 'docs', 'api'), {
         recursive: true,
       });
-      await fs.mkdir(path.join(partialsDir, '@layouts'), { recursive: true });
-      await fs.mkdir(path.join(partialsDir, '@components'), {
+      await fs.mkdir(path.join(partialsDir, 'layouts'), { recursive: true });
+      await fs.mkdir(path.join(partialsDir, 'components'), {
         recursive: true,
       });
       await fs.writeFile(
-        path.join(partialsDir, '_header.hbs'),
+        path.join(partialsDir, 'header.hbs'),
         '=== HEADER ===',
         'utf8',
       );
       await fs.writeFile(
-        path.join(partialsDir, '_footer.hbs'),
+        path.join(partialsDir, 'footer.hbs'),
         '=== FOOTER ===',
         'utf8',
       );
 
       // Root partial
       await fs.writeFile(
-        path.join(partialsDir, '_header.hbs'),
+        path.join(partialsDir, 'header.hbs'),
         '# {{title}}',
         'utf8',
       );
 
       // Namespaced partials
       await fs.writeFile(
-        path.join(partialsDir, '@layouts', 'page.hbs'),
+        path.join(partialsDir, 'layouts', 'page.hbs'),
         '{{> header}}\n{{content}}',
         'utf8',
       );
       await fs.writeFile(
-        path.join(partialsDir, '@components', 'toc.hbs'),
+        path.join(partialsDir, 'components', 'toc.hbs'),
         '## Table of Contents\n{{#each sections}}{{this}}\n{{/each}}',
         'utf8',
       );

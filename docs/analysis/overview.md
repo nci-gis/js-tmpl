@@ -64,7 +64,7 @@ Each layer has **one responsibility only**:
 | **Tree Walker**      | Discover template files (BFS, async)         | [src/engine/treeWalker.js](src/engine/treeWalker.js)           |
 | **Path Renderer**    | Render `${var}` in file/folder paths         | [src/engine/pathRenderer.js](src/engine/pathRenderer.js)       |
 | **Content Renderer** | Render Handlebars content                    | [src/engine/contentRenderer.js](src/engine/contentRenderer.js) |
-| **Partials Manager** | Register/unregister Handlebars partials      | [src/engine/partials.js](src/engine/partials.js)               |
+| **Partials Manager** | Register Handlebars partials                 | [src/engine/partials.js](src/engine/partials.js)               |
 | **Orchestrator**     | Coordinate the entire render pass            | [src/engine/renderDirectory.js](src/engine/renderDirectory.js) |
 
 ### Folder Structure
@@ -121,7 +121,7 @@ Implemented in [src/config/defaults.js](src/config/defaults.js):
 ```javascript
 {
   templateDir: "templates",
-  partialsDir: "templates.partials",
+  partialsDir: "",  // optional — set to enable partials
   valuesDir: "",
   valuesFile: "",
   outDir: "dist",
@@ -222,31 +222,39 @@ templates/
 
 ### Partial System
 
-Located under `partialsDir` (default: `templates.partials/`)
+Located under `partialsDir` (optional — skipped if not configured)
 
 **Naming Conventions:**
 
-1. **Root partials**: `_name.hbs` → `{{> name}}`
+1. **Root partials**: `name.hbs` → `{{> name}}`
 
    ```plaintext
    templates.partials/
-   └── _header.hbs  → {{> header}}
+   └── header.hbs  → {{> header}}
    ```
 
-2. **Namespaced partials**: `@group/name.hbs` → `{{> group.name}}`
+2. **Namespaced partials**: `dir/name.hbs` → `{{> dir.name}}`
 
    ```plaintext
    templates.partials/
-   └── @components/
+   └── components/
        ├── button.hbs    → {{> components.button}}
        └── input.hbs     → {{> components.input}}
    ```
 
+3. **Flattened partials**: `@dir/name.hbs` → `{{> name}}` (filename only)
+
+   ```plaintext
+   templates.partials/
+   └── @helpers/
+       └── date.hbs      → {{> date}}
+   ```
+
 **Lifecycle:**
 
-- Registered before rendering starts
+- Isolated Handlebars instance created per render pass
 - Scoped to the render lifecycle
-- Engine-managed (not globally polluted)
+- No global state pollution
 
 ## Rendering Process
 

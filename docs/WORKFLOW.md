@@ -21,19 +21,19 @@ graph TD
     ConfigResolve --> LoadValues[Load Values File<br/>YAML or JSON]
     LoadValues --> BuildView[View Builder<br/>values + env → view]
 
-    BuildView --> RegisterPartials[Partials Manager<br/>Register all partials]
+    BuildView --> CreateHbs[Create Scoped Instance<br/>Handlebars.create]
+    CreateHbs --> RegisterPartials[Partials Manager<br/>Register partials]
     RegisterPartials --> TreeWalk[Tree Walker<br/>BFS discovery of templates]
 
     TreeWalk --> ForEach{For each<br/>template file}
 
     ForEach -->|Next file| PathRender[Path Renderer<br/>Render placeholders in paths]
     PathRender --> StripExt[Strip Extension<br/>Remove .hbs]
-    StripExt --> ContentRender[Content Renderer<br/>Handlebars processing]
+    StripExt --> ContentRender[Content Renderer<br/>Handlebars scoped instance]
     ContentRender --> WriteFile[File Writer<br/>Create output file]
 
     WriteFile -->|More files?| ForEach
-    ForEach -->|Done| Cleanup[Cleanup<br/>Unregister partials]
-    Cleanup --> End([Rendering Complete])
+    ForEach -->|Done| End([Rendering Complete<br/>Scoped instance GC'd])
 
     style Start fill:#e1f5e1
     style End fill:#e1f5e1
@@ -173,31 +173,34 @@ graph TD
 
 ---
 
-### 6️⃣ **Partial System**
+### 6️⃣ **Partial System (Isolated)**
 
 ```mermaid
 graph TD
-    A[Partials Directory] --> B{Scan Files}
+    A[Partials Directory] --> B{Scan Recursively}
 
-    B --> C["Root Partial<br/>_header.hbs"]
-    B --> D["Namespaced<br/>@components/button.hbs"]
+    B --> C["name.hbs<br/>Register by filename"]
+    B --> D["dir/<br/>Namespaced recursive"]
+    B --> E["@dir/<br/>Flatten to filename"]
 
-    C --> E["Register as:<br/>{{> header}}"]
-    D --> F["Register as:<br/>{{> components.button}}"]
+    C --> F[Collect All Entries]
+    D --> F
+    E --> F
 
-    E --> G[Handlebars Registry]
-    F --> G
+    F --> G{Duplicate Check}
+    G -->|Pass| H[Register on<br/>Scoped Instance]
+    G -->|Fail| I[Throw Error]
 
-    G --> H[Available in Templates]
+    H --> J[Available in Templates]
 
     style A fill:#b39ddb
     style C fill:#90caf9
-    style D fill:#81c784
-    style G fill:#ffab91
-    style H fill:#a5d6a7
+    style D fill:#90caf9
+    style E fill:#81c784
+    style H fill:#ffab91
 ```
 
-**Lifecycle:** Registered before rendering, unregistered after completion
+**Lifecycle:** Scoped instance created per render pass, garbage-collected after completion. No global state modified.
 
 ---
 
@@ -268,16 +271,17 @@ sequenceDiagram
     Config->>Config: Build view = {...values, env}
 
     Config->>Engine: renderDirectory(config)
+    Engine->>Engine: Create scoped Handlebars instance
     Engine->>FS: Register partials
     Engine->>FS: Walk template tree (BFS)
 
     loop For each template
         Engine->>Engine: Render path with view
-        Engine->>Engine: Render content with Handlebars
+        Engine->>Engine: Render content (scoped instance)
         Engine->>FS: Write output file
     end
 
-    Engine->>FS: Unregister partials
+    Note over Engine: Scoped instance garbage-collected
     Engine->>CLI: Success
     CLI->>User: ✓ Rendering complete
 ```
@@ -304,8 +308,8 @@ Each step is **explicit**, **deterministic**, and **composable**.
 - **What data is available in templates?** → Everything in values file + `env`
 - **How are templates discovered?** → BFS walk of `templateDir`
 - **How are paths transformed?** → `${var}` rendering, then extension stripping
-- **How is content rendered?** → Handlebars with registered partials
-- **When are partials available?** → Registered before, unregistered after rendering
+- **How is content rendered?** → Handlebars with registered partials (scoped instance)
+- **When are partials available?** → Registered on a scoped instance per render pass, available to all templates within that pass
 
 ---
 

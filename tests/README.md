@@ -100,7 +100,7 @@ Located in `tests/fixtures/project-template/`:
 A complete, realistic project template demonstrating all features:
 
 - **Templates**: README, package.json, source code, configs, docs
-- **Partials**: Root partials (`_header.hbs`) and namespaced (`@components/nav.hbs`)
+- **Partials**: Root partials (`header.hbs`) and namespaced (`components/nav.hbs`)
 - **Values**: Comprehensive default values with nested structures
 - **Features**: Conditionals, loops, dynamic paths, multiple file types
 
@@ -119,11 +119,11 @@ project-template/
 │   └── docs/
 │       └── API.md.hbs
 ├── partials/
-│   ├── _header.hbs
-│   ├── _footer.hbs
-│   ├── @components/
+│   ├── header.hbs
+│   ├── footer.hbs
+│   ├── components/
 │   │   └── nav.hbs
-│   └── @layouts/
+│   └── layouts/
 │       └── base.hbs
 └── values/
     └── defaults.yaml
@@ -249,7 +249,8 @@ import { withTempDir } from '../helpers/tempDir.js';
 
 describe('Integration: Feature Name', () => {
   beforeEach(() => {
-    Handlebars.unregisterPartial(/.*/);
+    // Each renderDirectory() call creates its own scoped Handlebars instance,
+    // so no global cleanup is needed between tests.
   });
 
   it('tests end-to-end flow', async () => {

@@ -70,7 +70,7 @@ export function resolveConfig(cli, cwd = process.cwd()) {
 
   return {
     templateDir: abs(mergedConfig.templateDir),
-    partialsDir: abs(mergedConfig.partialsDir),
+    partialsDir: mergedConfig.partialsDir ? abs(mergedConfig.partialsDir) : '',
     outDir: abs(mergedConfig.outDir),
     extname: mergedConfig.extname,
     view: buildView(values),

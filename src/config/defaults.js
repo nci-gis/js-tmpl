@@ -1,6 +1,6 @@
 export const DEFAULTS = {
   templateDir: 'templates',
-  partialsDir: 'templates.partials',
+  partialsDir: '',
   valuesDir: '',
   valuesFile: '',
   outDir: 'dist',

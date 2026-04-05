@@ -27,10 +27,7 @@ describe('resolveConfig', () => {
       const config = resolveConfig(cli, tmpDir);
 
       assert.strictEqual(config.templateDir, path.join(tmpDir, 'templates'));
-      assert.strictEqual(
-        config.partialsDir,
-        path.join(tmpDir, 'templates.partials'),
-      );
+      assert.strictEqual(config.partialsDir, '');
       assert.strictEqual(config.outDir, path.join(tmpDir, 'dist'));
       assert.strictEqual(config.extname, '.hbs');
       assert.ok(config.view);
