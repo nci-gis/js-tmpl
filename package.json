@@ -12,16 +12,22 @@
     }
   },
   "scripts": {
+    "prepare": "husky",
     "test": "node --test $(find tests -name '*.test.js')",
     "test:watch": "node --test --watch $(find tests -name '*.test.js')",
     "test:coverage": "node --experimental-test-coverage --test $(find tests -name '*.test.js')",
+    "format": "prettier --write src/ tests/",
+    "format:check": "prettier --check src/ tests/",
     "lint": "eslint src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
     "build": "echo 'No build step required for pure JS library'",
     "start": "node src/cli/main.js",
     "help": "node src/cli/main.js --help",
     "dev": "node src/cli/main.js",
-    "tool": "node src/cli/main.js"
+    "tool": "node src/cli/main.js",
+    "docs:check-links": "remark --frail --quiet *.md docs/*.md tests/README.md examples/**/*.md",
+    "docs:check-exports": "node scripts/check-doc-exports.js",
+    "docs:check": "pnpm docs:check-links && pnpm docs:check-exports"
   },
   "keywords": [
     "js",
@@ -57,7 +63,28 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^25.5.2",
     "eslint": "^9.39.2",
-    "eslint-plugin-simple-import-sort": "^12.1.1"
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1",
+    "remark-cli": "^12.0.1",
+    "remark-validate-links": "^13.1.0",
+    "typescript": "^6.0.2"
+  },
+  "lint-staged": {
+    "src/**/*.js": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "tests/**/*.js": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "**/*.md": [
+      "prettier --write"
+    ]
   }
 }

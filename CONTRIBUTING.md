@@ -8,14 +8,7 @@ This project adheres to the Contributor Covenant [Code of Conduct](CODE_OF_CONDU
 
 ## Development Principles
 
-Before contributing, please read [docs/PRINCIPLES.md](docs/PRINCIPLES.md) to understand the project's core philosophy:
-
-1. **Engine First, CLI Second** - The engine is the primary product
-2. **Explicit Over Implicit** - No magic defaults or hidden conventions
-3. **Deterministic Over Clever** - Same input always produces same output
-4. **Separation of Concerns** - Each layer has one responsibility
-5. **Composable Over Monolithic** - Small, focused functions
-6. **Simple Over Feature-Rich** - Only add complexity when clearly needed
+Before contributing, please read [docs/PRINCIPLES.md](docs/PRINCIPLES.md) to understand the project's core philosophy.
 
 **Key Question:** When evaluating changes, ask: "Does this maintain determinism, explicitness, and separation of concerns?"
 
@@ -359,8 +352,8 @@ Note: Unpublishing is discouraged and only works within 72 hours of publish.
 
 - **`main`** - Production releases, protected branch
 - **`dev`** - Integration branch for development
-- **feature/*** - Feature branches, merge to `dev` via PR
-- **fix/*** - Bug fix branches, merge to `dev` via PR
+- **feat/\*** - Feature branches, merge to `dev` via PR
+- **fix/\*** - Bug fix branches, merge to `dev` via PR
 
 ### Security
 

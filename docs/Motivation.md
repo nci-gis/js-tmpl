@@ -59,7 +59,7 @@ js-tmpl was created to be that missing layer.
 
 ### It Should Be
 
-**1. Engine-First**  
+**1. Engine-First**
 
 ```javascript
 // This should always be possible
@@ -69,7 +69,7 @@ await renderDirectory(config);
 
 The CLI is just a convenience wrapper. The real product is the engine.
 
-**2. Deterministic**  
+**2. Deterministic**
 
 ```text
 Same templates + Same data = Same output
@@ -78,7 +78,7 @@ Every. Single. Time.
 
 No surprises. No "intelligent" behavior that breaks in production. No "it worked on my machine" moments.
 
-**3. Composable**  
+**3. Composable**
 
 ```text
 Higher-level tools (x-devops, CoSF-AWF)
@@ -92,14 +92,14 @@ js-tmpl sits at the right level of abstraction. It's low-level enough to be flex
 
 js-tmpl is not designed to stand alone. It is intentionally built to be embedded inside higher-level systems, generators, and orchestration layers, where it serves as a stable and predictable foundation.
 
-**4. Explicit**  
+**4. Explicit**
 
 ```yaml
 # Configuration is explicit
-templateDir: "./templates"
-partialsDir: "./templates.partials"
-outDir: "./dist"
-valuesFile: "./values.yaml"
+templateDir: './templates'
+partialsDir: './templates.partials'
+outDir: './dist'
+valuesFile: './values.yaml'
 ```
 
 No auto-detection. No scanning parent directories. No inferring project structure. You tell it what to do.
@@ -114,7 +114,8 @@ Most template engines solve content templating:
 
 ```handlebars
 {{#each users}}
-  Hello {{name}}!
+  Hello
+  {{name}}!
 {{/each}}
 ```
 
@@ -201,27 +202,7 @@ Generate API documentation from OpenAPI specs or code annotations.
 
 ## The Design Principles
 
-From day one, js-tmpl was built on five principles:
-
-### 1. Engine > CLI
-
-The engine is the product. The CLI is just one way to use it.
-
-### 2. Explicit > Implicit
-
-If it's not in the config or data, it doesn't happen. No magic.
-
-### 3. Composable > Monolithic
-
-Small, focused layers. Each does one thing. No mixing concerns.
-
-### 4. Deterministic > Smart
-
-Predictable beats clever. Every time.
-
-### 5. Embeddable > Standalone
-
-Built to be integrated, not just run standalone.
+From day one, js-tmpl was built on core principles: engine-first, explicit, composable, deterministic, and embeddable. See [PRINCIPLES.md](PRINCIPLES.md) for the full treatment.
 
 ## The Non-Goals
 

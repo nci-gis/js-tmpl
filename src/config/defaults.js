@@ -1,8 +1,10 @@
 export const DEFAULTS = {
-  templateDir: "templates",
-  partialsDir: "templates.partials",
-  valuesDir: "",
-  valuesFile: "",
-  outDir: "dist",
-  extname: ".hbs",
+  templateDir: 'templates',
+  partialsDir: '',
+  valuesDir: '',
+  valuesFile: '',
+  outDir: 'dist',
+  extname: '.hbs',
+  envKeys: [],
+  envPrefix: '',
 };

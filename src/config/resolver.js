@@ -1,9 +1,9 @@
-import path from "node:path";
-import process from "node:process";
+import path from 'node:path';
+import process from 'node:process';
 
-import { DEFAULTS } from "./defaults.js";
-import { loadProjectConfig,loadYamlOrJson } from "./loader.js";
-import { buildView } from "./view.js";
+import { DEFAULTS } from './defaults.js';
+import { loadProjectConfig, loadYamlOrJson } from './loader.js';
+import { buildView, pickEnv } from './view.js';
 
 /**
  * Resolve valuesFile path based on valuesDir
@@ -34,9 +34,9 @@ function resolveValuesFilePath(valuesFile, valuesDir, cwd) {
  * Resolve final config using:
  * defaults < projectConfig < cliArgs
  *
- * @param {object} cli - CLI arguments
- * @param {string} cwd - Current working directory
- * @returns {object} - Resolved configuration
+ * @param {import('../types.js').CliArgs} cli - CLI arguments
+ * @param {string} [cwd] - Current working directory
+ * @returns {import('../types.js').TemplateConfig} - Resolved configuration
  */
 export function resolveConfig(cli, cwd = process.cwd()) {
   const projectConfig = loadProjectConfig(cwd, cli.configFile);
@@ -47,15 +47,16 @@ export function resolveConfig(cli, cwd = process.cwd()) {
     ...cli,
   };
 
+  /** @param {string} p */
   const abs = (p) => (path.isAbsolute(p) ? p : path.join(cwd, p));
 
   // Validate valuesFile is provided
   if (!mergedConfig.valuesFile) {
     throw new Error(
       'Missing required configuration: valuesFile\n' +
-      'Provide via:\n' +
-      '  - CLI: --values path/to/values.yaml\n' +
-      '  - Config: valuesFile: "path/to/values.yaml" in js-tmpl.config.yaml'
+        'Provide via:\n' +
+        '  - CLI: --values path/to/values.yaml\n' +
+        '  - Config: valuesFile: "path/to/values.yaml" in js-tmpl.config.yaml',
     );
   }
 
@@ -63,16 +64,24 @@ export function resolveConfig(cli, cwd = process.cwd()) {
   const valuesFilePath = resolveValuesFilePath(
     mergedConfig.valuesFile,
     mergedConfig.valuesDir,
-    cwd
+    cwd,
   );
 
   const values = loadYamlOrJson(valuesFilePath);
 
+  const hasEnvConfig = mergedConfig.envKeys?.length || mergedConfig.envPrefix;
+  const env = hasEnvConfig
+    ? pickEnv({
+        keys: mergedConfig.envKeys || [],
+        prefix: mergedConfig.envPrefix || '',
+      })
+    : {};
+
   return {
     templateDir: abs(mergedConfig.templateDir),
-    partialsDir: abs(mergedConfig.partialsDir),
+    partialsDir: mergedConfig.partialsDir ? abs(mergedConfig.partialsDir) : '',
     outDir: abs(mergedConfig.outDir),
     extname: mergedConfig.extname,
-    view: buildView(values),
+    view: buildView(values, env),
   };
 }

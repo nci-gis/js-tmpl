@@ -1,48 +1,65 @@
 /**
  * Parse CLI arguments.
- * 
+ *
  * @param {string[]} args
- * @returns {Record<string, any>}
+ * @returns {import('../types.js').CliArgs}
  */
 export function parseArgs(args) {
-  const opts = { command: "render" };
+  /** @type {import('../types.js').CliArgs} */
+  const opts = { command: 'render' };
 
   let i = 0;
   while (i < args.length) {
     const a = args[i];
 
     switch (a) {
-      case "render":
-        opts.command = "render";
+      case '-h':
+      case '--help':
+        opts.command = 'help';
         break;
 
-      case "-t":
-      case "--template-dir":
+      case 'render':
+        opts.command = 'render';
+        break;
+
+      case '-t':
+      case '--template-dir':
         opts.templateDir = args[++i];
         break;
 
-      case "-c":
-      case "--values":
+      case '-c':
+      case '--values':
         opts.valuesFile = args[++i];
         break;
 
-      case "-o":
-      case "--out":
+      case '-o':
+      case '--out':
         opts.outDir = args[++i];
         break;
 
-      case "-p":
-      case "--partials-dir":
+      case '-p':
+      case '--partials-dir':
         opts.partialsDir = args[++i];
         break;
 
-      case "--config-file":
+      case '--config-file':
         opts.configFile = args[++i];
         break;
 
-      case "-x":
-      case "--ext":
+      case '-x':
+      case '--ext':
         opts.extname = args[++i];
+        break;
+
+      case '--env-keys':
+        opts.envKeys = args[++i]
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        break;
+
+      case '--env-prefix':
+        opts.envPrefix = args[++i];
         break;
     }
     // next argument:

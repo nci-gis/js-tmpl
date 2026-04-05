@@ -25,8 +25,8 @@ yaml-templates/
 │   │   └── ${project.name}-config.yaml.hbs
 │   └── README.md.hbs
 └── templates.partials/         # Reusable components
-    ├── _header.hbs
-    ├── _footer.hbs
+    ├── header.hbs
+    ├── footer.hbs
     └── @common/
         ├── metadata.hbs
         └── credentials.hbs
@@ -40,7 +40,7 @@ If you have js-tmpl installed globally or in your project:
 
 ```bash
 cd examples/yaml-templates
-NODE_ENV=production js-tmpl render --values values.yaml
+NODE_ENV=production js-tmpl render --values values.yaml --env-keys NODE_ENV
 ```
 
 Or from the repository root:
@@ -50,7 +50,8 @@ NODE_ENV=production js-tmpl render \
   --values examples/yaml-templates/values.yaml \
   --template-dir examples/yaml-templates/templates \
   --partials-dir examples/yaml-templates/templates.partials \
-  --out examples/yaml-templates/dist
+  --out examples/yaml-templates/dist \
+  --env-keys NODE_ENV
 ```
 
 ### Option 2: Using Local Development Command
@@ -59,7 +60,7 @@ For development or if js-tmpl is not installed:
 
 ```bash
 cd examples/yaml-templates
-NODE_ENV=production node ../../src/cli/main.js render --values values.yaml
+NODE_ENV=production node ../../src/cli/main.js render --values values.yaml --env-keys NODE_ENV
 ```
 
 Or from the repository root:
@@ -69,7 +70,8 @@ NODE_ENV=production node src/cli/main.js render \
   --values examples/yaml-templates/values.yaml \
   --template-dir examples/yaml-templates/templates \
   --partials-dir examples/yaml-templates/templates.partials \
-  --out examples/yaml-templates/dist
+  --out examples/yaml-templates/dist \
+  --env-keys NODE_ENV
 ```
 
 ### Option 3: Using js-tmpl as an API
@@ -84,14 +86,15 @@ NODE_ENV=production node index.js
 The `index.js` demonstrates programmatic usage:
 
 ```javascript
-import { resolveConfig, renderDirectory } from "js-tmpl";
+import { resolveConfig, renderDirectory } from 'js-tmpl';
 
 // Configuration options (equivalent to CLI arguments)
 const options = {
-  valuesFile: "./values.yaml",
-  templateDir: "./templates",
-  partialsDir: "./templates.partials",
-  outDir: "./dist",
+  valuesFile: './values.yaml',
+  templateDir: './templates',
+  partialsDir: './templates.partials',
+  outDir: './dist',
+  envKeys: ['NODE_ENV'],
 };
 
 // Resolve configuration (merges: defaults < project config < options)
@@ -132,20 +135,19 @@ With `NODE_ENV=production`, outputs: `database-production.yaml`
 
 ### 2. Root Partials
 
-Defined as: `_header.hbs`
+Defined as: `header.hbs`
 Used as: `{{> header}}`
 
-### 3. Namespaced Partials
+### 3. Flattened Partials (`@`)
 
 Defined as: `@common/metadata.hbs`
-Used as: `{{> common.metadata}}`
+Used as: `{{> metadata}}` (filename only, directory structure ignored)
 
 ### 4. Conditionals
 
 ```handlebars
 {{#if features.authentication}}
-auth:
-  enabled: true
+  auth: enabled: true
 {{/if}}
 ```
 
@@ -153,7 +155,8 @@ auth:
 
 ```handlebars
 {{#each services}}
-  - name: {{name}}
+  - name:
+  {{name}}
 {{/each}}
 ```
 
@@ -161,7 +164,7 @@ auth:
 
 ```handlebars
 {{database.pool.timeout}}
-{{services.0.resources.cpu}}
+{{services.[0].resources.cpu}}
 ```
 
 ## Customization

@@ -1,18 +1,24 @@
-import path from "node:path";
+import path from 'node:path';
 
-import { ensureDir, writeFileSafe } from "../utils/fs.js";
-import { renderContent } from "./contentRenderer.js";
-import { registerPartials } from "./partials.js";
-import { renderPath } from "./pathRenderer.js";
-import { walkTemplateTree } from "./treeWalker.js";
+import Handlebars from 'handlebars';
+
+import { ensureDir, writeFileSafe } from '../utils/fs.js';
+import { renderContent } from './contentRenderer.js';
+import { registerPartials } from './partials.js';
+import { renderPath } from './pathRenderer.js';
+import { walkTemplateTree } from './treeWalker.js';
 
 /**
  * Main rendering orchestrator.
+ * @param {import('../types.js').TemplateConfig} cfg
+ * @param {typeof import('handlebars')} [hbs] - Optional Handlebars instance (creates an isolated one if omitted)
+ * @returns {Promise<void>}
  */
-export async function renderDirectory(cfg) {
+export async function renderDirectory(cfg, hbs) {
   const { templateDir, partialsDir, outDir, view, extname } = cfg;
 
-  await registerPartials(partialsDir, extname);
+  hbs = hbs || Handlebars.create();
+  await registerPartials(partialsDir, extname, hbs);
 
   const files = await walkTemplateTree(templateDir, extname);
 
@@ -20,10 +26,10 @@ export async function renderDirectory(cfg) {
     const relRendered = renderPath(file.relPath, view);
     const target = path.join(
       outDir,
-      relRendered.replace(new RegExp(`${extname}$`), "")
+      relRendered.replace(new RegExp(`${extname}$`), ''),
     );
 
-    const content = await renderContent(file.absPath, view);
+    const content = await renderContent(file.absPath, view, hbs);
 
     await ensureDir(path.dirname(target));
     await writeFileSafe(target, content);

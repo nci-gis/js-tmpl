@@ -81,7 +81,7 @@ Everything else must be **explicitly specified**:
 - ✅ **Values file** - Required via `--values` flag or `valuesFile` config
 - ✅ **Template directory** - Must be in config or defaults to `templates/`
 - ✅ **Output directory** - Must be in config or defaults to `dist/`
-- ✅ **Partials directory** - Must be in config or defaults to `templates.partials/`
+- ✅ **Partials directory** - Must be in config; not loaded if omitted
 
 ### Override Auto-Discovery
 
@@ -139,14 +139,9 @@ templates/
 **Template content** (`templates/${project.name}/config.json.hbs`):
 
 ```handlebars
-{
-  "name": "{{project.name}}",
-  "version": "{{project.version}}",
-  "server": {
-    "port": {{config.port}},
-    "host": "{{config.host}}"
-  }
-}
+{ "name": "{{project.name}}", "version": "{{project.version}}", "server": {
+"port":
+{{config.port}}, "host": "{{config.host}}" } }
 ```
 
 ### 3. Render templates
@@ -165,7 +160,7 @@ import { resolveConfig, renderDirectory } from '@nci-gis/js-tmpl';
 const config = resolveConfig({
   valuesFile: './values.yaml',
   templateDir: './templates',
-  outDir: './dist'
+  outDir: './dist',
 });
 
 await renderDirectory(config);
@@ -192,14 +187,11 @@ CLI arguments
 
 ### View Model
 
-Templates receive a view object:
+Templates receive a view object containing your values data plus an `env` object with allowlisted environment variables. The `env` key is reserved — if your values file contains a top-level `env` key, a warning is logged and it is overwritten.
 
-```javascript
-{
-  ...valuesFromFile,  // Your YAML/JSON data
-  env: process.env    // Environment variables
-}
-```
+Use `envKeys` and `envPrefix` in your config file or via CLI (`--env-keys`, `--env-prefix`) to control which environment variables are exposed. Without either, `env` is an empty object `{}`.
+
+See [docs/API.md](docs/API.md#view-object) for full details, examples, and recommended conventions.
 
 Access in templates:
 
@@ -222,20 +214,25 @@ templates/
 
 ### Partial System
 
-**Root partials** (`_name.hbs`):
+Each render pass uses an isolated Handlebars instance. Directory structure maps to partial names:
 
 ```text
 templates.partials/
-└── _header.hbs  → {{> header}}
+├── header.hbs                → {{> header}}
+├── components/
+│   ├── button.hbs           → {{> components.button}}
+│   └── forms/
+│       └── login.hbs        → {{> components.forms.login}}
 ```
 
-**Namespaced partials** (`@group/name.hbs`):
+**`@` directories** flatten their contents (filename only, no namespace):
 
 ```text
-templates.partials/
-└── @common/
-    └── metadata.hbs  → {{> common.metadata}}
+├── @helpers/
+│   └── date.hbs             → {{> date}}
 ```
+
+Duplicate partial names throw an error. Names must be alphanumeric + underscore only. See [API docs](docs/API.md#partial-system) for details.
 
 ## Mental Model
 
@@ -259,14 +256,16 @@ js-tmpl render [options]
 
 ### Options
 
-| Option                   | Description             | Default              |
-| ------------------------ | ----------------------- | -------------------- |
-| `-c, --values FILE`      | Values file (YAML/JSON) | **Required**         |
-| `-t, --template-dir DIR` | Template directory      | `templates`          |
-| `-o, --out DIR`          | Output directory        | `dist`               |
-| `-p, --partials-dir DIR` | Partials directory      | `templates.partials` |
-| `-x, --ext EXT`          | Template extension      | `.hbs`               |
-| `--config-file FILE`     | Explicit config file    | Auto-discovered      |
+| Option                   | Description                             | Default         |
+| ------------------------ | --------------------------------------- | --------------- |
+| `-c, --values FILE`      | Values file (YAML/JSON)                 | **Required**    |
+| `-t, --template-dir DIR` | Template directory                      | `templates`     |
+| `-o, --out DIR`          | Output directory                        | `dist`          |
+| `-p, --partials-dir DIR` | Partials directory                      | None (skipped)  |
+| `-x, --ext EXT`          | Template extension                      | `.hbs`          |
+| `--config-file FILE`     | Explicit config file                    | Auto-discovered |
+| `--env-keys KEYS`        | Comma-separated env var names to expose | None            |
+| `--env-prefix PREFIX`    | Auto-include env vars with this prefix  | None            |
 
 ### Examples of Usage
 
@@ -280,79 +279,13 @@ js-tmpl render \
   --template-dir ./my-templates \
   --out ./output
 
-# Multi-environment
-NODE_ENV=production js-tmpl render --values prod-values.yaml
+# Multi-environment (allowlist NODE_ENV to use it in templates)
+NODE_ENV=production js-tmpl render --values prod-values.yaml --env-keys NODE_ENV
 ```
 
 ## Programmatic API
 
-See [docs/API.md](docs/API.md) for comprehensive API documentation.
-
-### Import
-
-```javascript
-import { resolveConfig, renderDirectory } from '@nci-gis/js-tmpl';
-```
-
-### resolveConfig(options)
-
-Resolves configuration with proper precedence.
-
-**Parameters:**
-
-- `options.valuesFile` (string, required) - Path to values file
-- `options.templateDir` (string) - Template directory path
-- `options.partialsDir` (string) - Partials directory path
-- `options.outDir` (string) - Output directory path
-- `options.extname` (string) - Template file extension
-- `options.configFile` (string) - Explicit config file path
-
-**Returns:** Resolved configuration object
-
-### renderDirectory(config)
-
-Executes the rendering process.
-
-**Parameters:**
-
-- `config` (object) - Configuration from `resolveConfig`
-
-**Returns:** Promise that resolves when rendering completes
-
-### Example
-
-```javascript
-import { resolveConfig, renderDirectory } from '@nci-gis/js-tmpl';
-
-const config = resolveConfig({
-  valuesFile: './values.yaml',
-  templateDir: './templates',
-  partialsDir: './partials',
-  outDir: './dist'
-});
-
-await renderDirectory(config);
-console.log('✅ Rendering complete');
-```
-
-## Project Configuration
-
-Create `js-tmpl.config.yaml` in your project root:
-
-```yaml
-templateDir: templates
-partialsDir: templates.partials
-outDir: dist
-extname: .hbs
-```
-
-Auto-discovered config files (in order):
-
-1. `js-tmpl.config.yaml`
-2. `js-tmpl.config.yml`
-3. `js-tmpl.config.json`
-4. `config/js-tmpl.yaml`
-5. `config/js-tmpl.json`
+See [docs/API.md](docs/API.md) for the complete API reference — parameters, return types, config file format, and advanced usage.
 
 ## Examples
 
@@ -365,26 +298,14 @@ See [examples/yaml-templates/](examples/yaml-templates/) for a complete working 
 
 ## Testing
 
-This project has comprehensive test coverage:
-
-- 156 tests
-- 99.8% line coverage
-- 99.7% branch coverage
+This project has comprehensive automated test coverage across unit and integration suites.
+Current coverage remains above 99% line coverage with high branch coverage as well.
 
 See [tests/README.md](tests/README.md) for testing documentation.
 
 ## Development Principles
 
-js-tmpl follows strict design principles:
-
-1. **Engine First, CLI Second** - Programmatic API is primary
-2. **Explicit Over Implicit** - No magic or hidden conventions
-3. **Deterministic Over Clever** - Predictable behavior
-4. **Separation of Concerns** - Each layer has one responsibility
-5. **Composable Over Monolithic** - Small, focused functions
-6. **Simple Over Feature-Rich** - Minimal API surface
-
-See [docs/PRINCIPLES.md](docs/PRINCIPLES.md) for details.
+js-tmpl follows six core design principles — engine-first, explicit, deterministic, separated, composable, and simple. See [docs/PRINCIPLES.md](docs/PRINCIPLES.md) for the full philosophy.
 
 ## Roadmap
 

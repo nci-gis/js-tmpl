@@ -1,30 +1,30 @@
-import fs from "node:fs";
-import path from "node:path";
+import fs from 'node:fs';
+import path from 'node:path';
 
-import YAML from "js-yaml";
+import YAML from 'js-yaml';
 
 /**
  * Load YAML or JSON values.
  *
  * @param {string} filePath Path to YAML or JSON file.
- * @returns {object} Parsed values.
+ * @returns {Record<string, unknown>} Parsed values.
  */
 export function loadYamlOrJson(filePath) {
   // Check if file exists before attempting to read
   if (!fs.existsSync(filePath)) {
     throw new Error(
       `Values file not found: ${filePath}\n` +
-      "Check that the file exists and the path is correct."
+        'Check that the file exists and the path is correct.',
     );
   }
 
-  const raw = fs.readFileSync(filePath, "utf8");
+  const raw = fs.readFileSync(filePath, 'utf8');
 
   if (/\.ya?ml$/i.test(filePath)) {
-    return YAML.load(raw) || {};
+    return /** @type {Record<string, unknown>} */ (YAML.load(raw) || {});
   }
   if (/\.json$/i.test(filePath)) {
-    return JSON.parse(raw);
+    return /** @type {Record<string, unknown>} */ (JSON.parse(raw));
   }
 
   throw new Error(`Unsupported values file: ${filePath}`);
@@ -35,31 +35,45 @@ export function loadYamlOrJson(filePath) {
  *
  * @param {string} cwd Current working directory.
  * @param {string} [explicitFile] Explicit config file path.
- * @returns {object|null} Parsed config object or null if not found.
+ * @returns {Record<string, unknown> | null} Parsed config object or null if not found.
  */
 export function loadProjectConfig(cwd, explicitFile) {
+  if (explicitFile) {
+    const abs = path.isAbsolute(explicitFile)
+      ? explicitFile
+      : path.join(cwd, explicitFile);
+    if (!fs.existsSync(abs)) {
+      throw new Error(
+        `Config file not found: ${abs}\n` +
+          'The --config-file path was explicitly provided but does not exist.',
+      );
+    }
+  }
+
   const candidates = explicitFile
     ? [explicitFile]
     : [
-        "js-tmpl.config.yaml",
-        "js-tmpl.config.yml",
-        "js-tmpl.config.json",
-        path.join("config", "js-tmpl.yaml"),
-        path.join("config", "js-tmpl.json"),
+        'js-tmpl.config.yaml',
+        'js-tmpl.config.yml',
+        'js-tmpl.config.json',
+        path.join('config', 'js-tmpl.yaml'),
+        path.join('config', 'js-tmpl.json'),
       ];
 
   for (const rel of candidates) {
     const abs = path.isAbsolute(rel) ? rel : path.join(cwd, rel);
-    if (!fs.existsSync(abs)) {continue;}
+    if (!fs.existsSync(abs)) {
+      continue;
+    }
 
-    const raw = fs.readFileSync(abs, "utf8");
+    const raw = fs.readFileSync(abs, 'utf8');
 
     if (/\.ya?ml$/i.test(abs)) {
-      return YAML.load(raw) || {};
+      return /** @type {Record<string, unknown>} */ (YAML.load(raw) || {});
     }
 
     if (/\.json$/i.test(abs)) {
-      return JSON.parse(raw);
+      return /** @type {Record<string, unknown>} */ (JSON.parse(raw));
     }
   }
 

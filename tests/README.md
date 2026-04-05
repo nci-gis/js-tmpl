@@ -4,10 +4,8 @@ Comprehensive test coverage for the js-tmpl JavaScript templating engine.
 
 ## Overview
 
-- **Total Tests**: 156
-- **Line Coverage**: 99.80%
-- **Branch Coverage**: 99.74%
-- **Function Coverage**: 99.36%
+- **Coverage**: Maintained at very high levels across the source modules
+- **Scope**: Unit and integration tests cover config resolution, rendering, partials, CLI parsing, and filesystem behavior
 
 ## Test Structure
 
@@ -100,7 +98,7 @@ Located in `tests/fixtures/project-template/`:
 A complete, realistic project template demonstrating all features:
 
 - **Templates**: README, package.json, source code, configs, docs
-- **Partials**: Root partials (`_header.hbs`) and namespaced (`@components/nav.hbs`)
+- **Partials**: Root partials (`header.hbs`) and namespaced (`components/nav.hbs`)
 - **Values**: Comprehensive default values with nested structures
 - **Features**: Conditionals, loops, dynamic paths, multiple file types
 
@@ -119,11 +117,11 @@ project-template/
 │   └── docs/
 │       └── API.md.hbs
 ├── partials/
-│   ├── _header.hbs
-│   ├── _footer.hbs
-│   ├── @components/
+│   ├── header.hbs
+│   ├── footer.hbs
+│   ├── components/
 │   │   └── nav.hbs
-│   └── @layouts/
+│   └── layouts/
 │       └── base.hbs
 └── values/
     └── defaults.yaml
@@ -136,7 +134,7 @@ project-template/
 Creates and automatically cleans up a temporary directory for test isolation.
 
 ```javascript
-import { withTempDir } from "../helpers/tempDir.js";
+import { withTempDir } from '../helpers/tempDir.js';
 
 await withTempDir(async (tmpDir) => {
   // Use tmpDir for testing
@@ -149,9 +147,9 @@ await withTempDir(async (tmpDir) => {
 Returns absolute path to a fixture.
 
 ```javascript
-import { getFixturePath } from "../helpers/fixtures.js";
+import { getFixturePath } from '../helpers/fixtures.js';
 
-const valuesPath = getFixturePath("config/values.yaml");
+const valuesPath = getFixturePath('config/values.yaml');
 ```
 
 ### `loadFixture(fixturePath)`
@@ -159,27 +157,27 @@ const valuesPath = getFixturePath("config/values.yaml");
 Loads fixture file contents as text.
 
 ```javascript
-import { loadFixture } from "../helpers/fixtures.js";
+import { loadFixture } from '../helpers/fixtures.js';
 
-const content = await loadFixture("config/values.yaml");
+const content = await loadFixture('config/values.yaml');
 ```
 
 ## Coverage Details
 
-### Source Code Coverage (100%)
+### Source Code Coverage
 
-All core modules have 100% line and function coverage:
+Core modules maintain effectively complete line coverage with very high branch and function coverage:
 
 - ✅ `src/config/defaults.js` - 100%
 - ✅ `src/config/loader.js` - 100%
-- ✅ `src/config/resolver.js` - 100%
+- ✅ `src/config/resolver.js` - 100% lines, high branch coverage
 - ✅ `src/config/view.js` - 100%
 - ✅ `src/engine/contentRenderer.js` - 100%
 - ✅ `src/engine/partials.js` - 100%
 - ✅ `src/engine/pathRenderer.js` - 100%
 - ✅ `src/engine/renderDirectory.js` - 100%
 - ✅ `src/engine/treeWalker.js` - 100%
-- ✅ `src/utils/fs.js` - 100% lines, 90% branches
+- ✅ `src/utils/fs.js` - 100% lines
 - ✅ `src/utils/object.js` - 100%
 
 ### What's Tested
@@ -191,7 +189,7 @@ All core modules have 100% line and function coverage:
 - [x] Project config discovery (5 file locations)
 - [x] Precedence: CLI > Project > Defaults
 - [x] Path resolution (absolute/relative)
-- [x] View building with environment variables
+- [x] View building with explicit allowlisted environment variables
 
 #### Engine
 
@@ -228,12 +226,12 @@ All core modules have 100% line and function coverage:
 ### Unit Test Template
 
 ```javascript
-import { describe, it } from "node:test";
-import assert from "node:assert";
-import { functionToTest } from "../../src/module.js";
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import { functionToTest } from '../../src/module.js';
 
-describe("functionToTest", () => {
-  it("does something expected", () => {
+describe('functionToTest', () => {
+  it('does something expected', () => {
     const result = functionToTest(input);
     assert.strictEqual(result, expected);
   });
@@ -243,16 +241,17 @@ describe("functionToTest", () => {
 ### Integration Test Template
 
 ```javascript
-import { describe, it, beforeEach } from "node:test";
-import Handlebars from "handlebars";
-import { withTempDir } from "../helpers/tempDir.js";
+import { describe, it, beforeEach } from 'node:test';
+import Handlebars from 'handlebars';
+import { withTempDir } from '../helpers/tempDir.js';
 
-describe("Integration: Feature Name", () => {
+describe('Integration: Feature Name', () => {
   beforeEach(() => {
-    Handlebars.unregisterPartial(/.*/);
+    // Each renderDirectory() call creates its own scoped Handlebars instance,
+    // so no global cleanup is needed between tests.
   });
 
-  it("tests end-to-end flow", async () => {
+  it('tests end-to-end flow', async () => {
     await withTempDir(async (tmpDir) => {
       // Setup templates, run renderDirectory, verify output
     });

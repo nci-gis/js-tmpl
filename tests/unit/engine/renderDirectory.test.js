@@ -1,65 +1,91 @@
-import assert from "node:assert";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { beforeEach,describe, it } from "node:test";
+import assert from 'node:assert';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { beforeEach, describe, it } from 'node:test';
 
-import Handlebars from "handlebars";
+import Handlebars from 'handlebars';
 
-import { renderDirectory } from "../../../src/engine/renderDirectory.js";
-import { withTempDir } from "../../helpers/tempDir.js";
+import { renderDirectory } from '../../../src/engine/renderDirectory.js';
+import { withTempDir } from '../../helpers/tempDir.js';
 
-describe("renderDirectory", () => {
+describe('renderDirectory', () => {
   beforeEach(() => {
     // Clear registered partials before each test
-    Handlebars.unregisterPartial(/.*/)
+    for (const name of Object.keys(Handlebars.partials)) {
+      Handlebars.unregisterPartial(name);
+    }
   });
 
-  it("renders single template to output directory", async () => {
+  it('renders single template to output directory', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
 
       await fs.mkdir(templateDir, { recursive: true });
       await fs.mkdir(partialsDir, { recursive: true });
       await fs.writeFile(
-        path.join(templateDir, "file.hbs"),
-        "Hello {{name}}!",
-        "utf8"
+        path.join(templateDir, 'file.hbs'),
+        'Hello {{name}}!',
+        'utf8',
       );
 
       const cfg = {
         templateDir,
         partialsDir,
         outDir,
-        view: { name: "World" },
-        extname: ".hbs",
+        view: { name: 'World' },
+        extname: '.hbs',
       };
 
       await renderDirectory(cfg);
 
-      const output = await fs.readFile(path.join(outDir, "file"), "utf8");
-      assert.strictEqual(output, "Hello World!");
+      const output = await fs.readFile(path.join(outDir, 'file'), 'utf8');
+      assert.strictEqual(output, 'Hello World!');
     });
   });
 
-  it("renders multiple templates", async () => {
+  it('renders multiple templates', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
 
       await fs.mkdir(templateDir, { recursive: true });
       await fs.mkdir(partialsDir, { recursive: true });
+      await fs.writeFile(path.join(templateDir, 'a.hbs'), 'File A', 'utf8');
+      await fs.writeFile(path.join(templateDir, 'b.hbs'), 'File B', 'utf8');
+
+      const cfg = {
+        templateDir,
+        partialsDir,
+        outDir,
+        view: {},
+        extname: '.hbs',
+      };
+
+      await renderDirectory(cfg);
+
+      const outputA = await fs.readFile(path.join(outDir, 'a'), 'utf8');
+      const outputB = await fs.readFile(path.join(outDir, 'b'), 'utf8');
+      assert.strictEqual(outputA, 'File A');
+      assert.strictEqual(outputB, 'File B');
+    });
+  });
+
+  it('preserves directory structure', async () => {
+    await withTempDir(async (tmpDir) => {
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
+
+      await fs.mkdir(path.join(templateDir, 'subdir'), { recursive: true });
+      await fs.mkdir(partialsDir, { recursive: true });
+      await fs.writeFile(path.join(templateDir, 'root.hbs'), 'Root', 'utf8');
       await fs.writeFile(
-        path.join(templateDir, "a.hbs"),
-        "File A",
-        "utf8"
-      );
-      await fs.writeFile(
-        path.join(templateDir, "b.hbs"),
-        "File B",
-        "utf8"
+        path.join(templateDir, 'subdir', 'nested.hbs'),
+        'Nested',
+        'utf8',
       );
 
       const cfg = {
@@ -67,143 +93,104 @@ describe("renderDirectory", () => {
         partialsDir,
         outDir,
         view: {},
-        extname: ".hbs",
+        extname: '.hbs',
       };
 
       await renderDirectory(cfg);
 
-      const outputA = await fs.readFile(path.join(outDir, "a"), "utf8");
-      const outputB = await fs.readFile(path.join(outDir, "b"), "utf8");
-      assert.strictEqual(outputA, "File A");
-      assert.strictEqual(outputB, "File B");
-    });
-  });
-
-  it("preserves directory structure", async () => {
-    await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
-
-      await fs.mkdir(path.join(templateDir, "subdir"), { recursive: true });
-      await fs.mkdir(partialsDir, { recursive: true });
-      await fs.writeFile(
-        path.join(templateDir, "root.hbs"),
-        "Root",
-        "utf8"
-      );
-      await fs.writeFile(
-        path.join(templateDir, "subdir", "nested.hbs"),
-        "Nested",
-        "utf8"
-      );
-
-      const cfg = {
-        templateDir,
-        partialsDir,
-        outDir,
-        view: {},
-        extname: ".hbs",
-      };
-
-      await renderDirectory(cfg);
-
-      const rootOutput = await fs.readFile(path.join(outDir, "root"), "utf8");
+      const rootOutput = await fs.readFile(path.join(outDir, 'root'), 'utf8');
       const nestedOutput = await fs.readFile(
-        path.join(outDir, "subdir", "nested"),
-        "utf8"
+        path.join(outDir, 'subdir', 'nested'),
+        'utf8',
       );
-      assert.strictEqual(rootOutput, "Root");
-      assert.strictEqual(nestedOutput, "Nested");
+      assert.strictEqual(rootOutput, 'Root');
+      assert.strictEqual(nestedOutput, 'Nested');
     });
   });
 
-  it("renders dynamic paths", async () => {
+  it('renders dynamic paths', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
 
       await fs.mkdir(templateDir, { recursive: true });
       await fs.mkdir(partialsDir, { recursive: true });
       await fs.writeFile(
-        path.join(templateDir, "${env}.hbs"),
-        "Environment: {{env}}",
-        "utf8"
+        path.join(templateDir, '${env}.hbs'),
+        'Environment: {{env}}',
+        'utf8',
       );
 
       const cfg = {
         templateDir,
         partialsDir,
         outDir,
-        view: { env: "production" },
-        extname: ".hbs",
+        view: { env: 'production' },
+        extname: '.hbs',
       };
 
       await renderDirectory(cfg);
 
-      const output = await fs.readFile(
-        path.join(outDir, "production"),
-        "utf8"
-      );
-      assert.strictEqual(output, "Environment: production");
+      const output = await fs.readFile(path.join(outDir, 'production'), 'utf8');
+      assert.strictEqual(output, 'Environment: production');
     });
   });
 
-  it("renders dynamic nested paths", async () => {
+  it('renders dynamic nested paths', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
 
-      await fs.mkdir(path.join(templateDir, "${dir}"), { recursive: true });
+      await fs.mkdir(path.join(templateDir, '${dir}'), { recursive: true });
       await fs.mkdir(partialsDir, { recursive: true });
       await fs.writeFile(
-        path.join(templateDir, "${dir}", "${file}.hbs"),
-        "Content",
-        "utf8"
+        path.join(templateDir, '${dir}', '${file}.hbs'),
+        'Content',
+        'utf8',
       );
 
       const cfg = {
         templateDir,
         partialsDir,
         outDir,
-        view: { dir: "configs", file: "app" },
-        extname: ".hbs",
+        view: { dir: 'configs', file: 'app' },
+        extname: '.hbs',
       };
 
       await renderDirectory(cfg);
 
       const output = await fs.readFile(
-        path.join(outDir, "configs", "app"),
-        "utf8"
+        path.join(outDir, 'configs', 'app'),
+        'utf8',
       );
-      assert.strictEqual(output, "Content");
+      assert.strictEqual(output, 'Content');
     });
   });
 
-  it("uses registered partials in templates", async () => {
+  it('uses registered partials in templates', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
 
       await fs.mkdir(templateDir, { recursive: true });
       await fs.mkdir(partialsDir, { recursive: true });
       await fs.writeFile(
-        path.join(templateDir, "page.hbs"),
-        "{{> header}}Content{{> footer}}",
-        "utf8"
+        path.join(templateDir, 'page.hbs'),
+        '{{> header}}Content{{> footer}}',
+        'utf8',
       );
       await fs.writeFile(
-        path.join(partialsDir, "_header.hbs"),
-        "[Header]",
-        "utf8"
+        path.join(partialsDir, 'header.hbs'),
+        '[Header]',
+        'utf8',
       );
       await fs.writeFile(
-        path.join(partialsDir, "_footer.hbs"),
-        "[Footer]",
-        "utf8"
+        path.join(partialsDir, 'footer.hbs'),
+        '[Footer]',
+        'utf8',
       );
 
       const cfg = {
@@ -211,35 +198,35 @@ describe("renderDirectory", () => {
         partialsDir,
         outDir,
         view: {},
-        extname: ".hbs",
+        extname: '.hbs',
       };
 
       await renderDirectory(cfg);
 
-      const output = await fs.readFile(path.join(outDir, "page"), "utf8");
-      assert.strictEqual(output, "[Header]Content[Footer]");
+      const output = await fs.readFile(path.join(outDir, 'page'), 'utf8');
+      assert.strictEqual(output, '[Header]Content[Footer]');
     });
   });
 
-  it("uses namespaced partials in templates", async () => {
+  it('uses namespaced partials in templates', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
 
       await fs.mkdir(templateDir, { recursive: true });
-      await fs.mkdir(path.join(partialsDir, "@components"), {
+      await fs.mkdir(path.join(partialsDir, 'components'), {
         recursive: true,
       });
       await fs.writeFile(
-        path.join(templateDir, "page.hbs"),
-        "{{> components.button}}",
-        "utf8"
+        path.join(templateDir, 'page.hbs'),
+        '{{> components.button}}',
+        'utf8',
       );
       await fs.writeFile(
-        path.join(partialsDir, "@components", "button.hbs"),
-        "Button",
-        "utf8"
+        path.join(partialsDir, 'components', 'button.hbs'),
+        'Button',
+        'utf8',
       );
 
       const cfg = {
@@ -247,28 +234,28 @@ describe("renderDirectory", () => {
         partialsDir,
         outDir,
         view: {},
-        extname: ".hbs",
+        extname: '.hbs',
       };
 
       await renderDirectory(cfg);
 
-      const output = await fs.readFile(path.join(outDir, "page"), "utf8");
-      assert.strictEqual(output, "Button");
+      const output = await fs.readFile(path.join(outDir, 'page'), 'utf8');
+      assert.strictEqual(output, 'Button');
     });
   });
 
-  it("strips template extension from output", async () => {
+  it('strips template extension from output', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
 
       await fs.mkdir(templateDir, { recursive: true });
       await fs.mkdir(partialsDir, { recursive: true });
       await fs.writeFile(
-        path.join(templateDir, "config.json.hbs"),
+        path.join(templateDir, 'config.json.hbs'),
         '{"key": "value"}',
-        "utf8"
+        'utf8',
       );
 
       const cfg = {
@@ -276,63 +263,59 @@ describe("renderDirectory", () => {
         partialsDir,
         outDir,
         view: {},
-        extname: ".hbs",
+        extname: '.hbs',
       };
 
       await renderDirectory(cfg);
 
       // Should create config.json, not config.json.hbs
       const output = await fs.readFile(
-        path.join(outDir, "config.json"),
-        "utf8"
+        path.join(outDir, 'config.json'),
+        'utf8',
       );
       assert.strictEqual(output, '{"key": "value"}');
     });
   });
 
-  it("uses custom extension", async () => {
+  it('uses custom extension', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
 
       await fs.mkdir(templateDir, { recursive: true });
       await fs.mkdir(partialsDir, { recursive: true });
-      await fs.writeFile(
-        path.join(templateDir, "file.tmpl"),
-        "Custom",
-        "utf8"
-      );
+      await fs.writeFile(path.join(templateDir, 'file.tmpl'), 'Custom', 'utf8');
 
       const cfg = {
         templateDir,
         partialsDir,
         outDir,
         view: {},
-        extname: ".tmpl",
+        extname: '.tmpl',
       };
 
       await renderDirectory(cfg);
 
-      const output = await fs.readFile(path.join(outDir, "file"), "utf8");
-      assert.strictEqual(output, "Custom");
+      const output = await fs.readFile(path.join(outDir, 'file'), 'utf8');
+      assert.strictEqual(output, 'Custom');
     });
   });
 
-  it("creates nested output directories as needed", async () => {
+  it('creates nested output directories as needed', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
 
-      await fs.mkdir(path.join(templateDir, "a", "b", "c"), {
+      await fs.mkdir(path.join(templateDir, 'a', 'b', 'c'), {
         recursive: true,
       });
       await fs.mkdir(partialsDir, { recursive: true });
       await fs.writeFile(
-        path.join(templateDir, "a", "b", "c", "deep.hbs"),
-        "Deep",
-        "utf8"
+        path.join(templateDir, 'a', 'b', 'c', 'deep.hbs'),
+        'Deep',
+        'utf8',
       );
 
       const cfg = {
@@ -340,24 +323,24 @@ describe("renderDirectory", () => {
         partialsDir,
         outDir,
         view: {},
-        extname: ".hbs",
+        extname: '.hbs',
       };
 
       await renderDirectory(cfg);
 
       const output = await fs.readFile(
-        path.join(outDir, "a", "b", "c", "deep"),
-        "utf8"
+        path.join(outDir, 'a', 'b', 'c', 'deep'),
+        'utf8',
       );
-      assert.strictEqual(output, "Deep");
+      assert.strictEqual(output, 'Deep');
     });
   });
 
-  it("handles empty template directory", async () => {
+  it('handles empty template directory', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
 
       await fs.mkdir(templateDir, { recursive: true });
       await fs.mkdir(partialsDir, { recursive: true });
@@ -367,7 +350,7 @@ describe("renderDirectory", () => {
         partialsDir,
         outDir,
         view: {},
-        extname: ".hbs",
+        extname: '.hbs',
       };
 
       await renderDirectory(cfg);
@@ -377,18 +360,18 @@ describe("renderDirectory", () => {
     });
   });
 
-  it("handles empty partials directory", async () => {
+  it('handles empty partials directory', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
 
       await fs.mkdir(templateDir, { recursive: true });
       await fs.mkdir(partialsDir, { recursive: true });
       await fs.writeFile(
-        path.join(templateDir, "file.hbs"),
-        "No partials",
-        "utf8"
+        path.join(templateDir, 'file.hbs'),
+        'No partials',
+        'utf8',
       );
 
       const cfg = {
@@ -396,42 +379,67 @@ describe("renderDirectory", () => {
         partialsDir,
         outDir,
         view: {},
-        extname: ".hbs",
+        extname: '.hbs',
       };
 
       await renderDirectory(cfg);
 
-      const output = await fs.readFile(path.join(outDir, "file"), "utf8");
-      assert.strictEqual(output, "No partials");
+      const output = await fs.readFile(path.join(outDir, 'file'), 'utf8');
+      assert.strictEqual(output, 'No partials');
     });
   });
 
-  it("renders complex nested structure with partials", async () => {
+  it('throws when partialsDir does not exist', async () => {
     await withTempDir(async (tmpDir) => {
-      const templateDir = path.join(tmpDir, "templates");
-      const partialsDir = path.join(tmpDir, "partials");
-      const outDir = path.join(tmpDir, "out");
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'nonexistent');
+      const outDir = path.join(tmpDir, 'out');
 
-      await fs.mkdir(path.join(templateDir, "pages"), { recursive: true });
-      await fs.mkdir(path.join(partialsDir, "@layouts"), { recursive: true });
-      await fs.mkdir(path.join(partialsDir, "@components"), {
+      await fs.mkdir(templateDir, { recursive: true });
+      await fs.writeFile(
+        path.join(templateDir, 'file.hbs'),
+        'Hello {{name}}!',
+        'utf8',
+      );
+
+      const cfg = {
+        templateDir,
+        partialsDir,
+        outDir,
+        view: { name: 'World' },
+        extname: '.hbs',
+      };
+
+      await assert.rejects(async () => renderDirectory(cfg), /ENOENT/);
+    });
+  });
+
+  it('renders complex nested structure with partials', async () => {
+    await withTempDir(async (tmpDir) => {
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
+
+      await fs.mkdir(path.join(templateDir, 'pages'), { recursive: true });
+      await fs.mkdir(path.join(partialsDir, 'layouts'), { recursive: true });
+      await fs.mkdir(path.join(partialsDir, 'components'), {
         recursive: true,
       });
 
       await fs.writeFile(
-        path.join(templateDir, "pages", "home.hbs"),
-        "{{> layouts.main}}",
-        "utf8"
+        path.join(templateDir, 'pages', 'home.hbs'),
+        '{{> layouts.main}}',
+        'utf8',
       );
       await fs.writeFile(
-        path.join(partialsDir, "@layouts", "main.hbs"),
-        "Header: {{> components.nav}}\nContent",
-        "utf8"
+        path.join(partialsDir, 'layouts', 'main.hbs'),
+        'Header: {{> components.nav}}\nContent',
+        'utf8',
       );
       await fs.writeFile(
-        path.join(partialsDir, "@components", "nav.hbs"),
-        "Navigation",
-        "utf8"
+        path.join(partialsDir, 'components', 'nav.hbs'),
+        'Navigation',
+        'utf8',
       );
 
       const cfg = {
@@ -439,16 +447,225 @@ describe("renderDirectory", () => {
         partialsDir,
         outDir,
         view: {},
-        extname: ".hbs",
+        extname: '.hbs',
       };
 
       await renderDirectory(cfg);
 
       const output = await fs.readFile(
-        path.join(outDir, "pages", "home"),
-        "utf8"
+        path.join(outDir, 'pages', 'home'),
+        'utf8',
       );
-      assert.strictEqual(output, "Header: Navigation\nContent");
+      assert.strictEqual(output, 'Header: Navigation\nContent');
+    });
+  });
+
+  it('uses namespaced partials in templates', async () => {
+    await withTempDir(async (tmpDir) => {
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
+
+      await fs.mkdir(templateDir, { recursive: true });
+      await fs.mkdir(path.join(partialsDir, 'helpers'), { recursive: true });
+      await fs.writeFile(
+        path.join(templateDir, 'page.hbs'),
+        '{{> helpers.badge}}',
+        'utf8',
+      );
+      await fs.writeFile(
+        path.join(partialsDir, 'helpers', 'badge.hbs'),
+        'Badge: {{label}}',
+        'utf8',
+      );
+
+      const cfg = {
+        templateDir,
+        partialsDir,
+        outDir,
+        view: { label: 'New' },
+        extname: '.hbs',
+      };
+
+      await renderDirectory(cfg);
+
+      const output = await fs.readFile(path.join(outDir, 'page'), 'utf8');
+      assert.strictEqual(output, 'Badge: New');
+    });
+  });
+
+  it('uses root partials in templates', async () => {
+    await withTempDir(async (tmpDir) => {
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
+
+      await fs.mkdir(templateDir, { recursive: true });
+      await fs.mkdir(partialsDir, { recursive: true });
+      await fs.writeFile(
+        path.join(templateDir, 'page.hbs'),
+        '{{> utils}}',
+        'utf8',
+      );
+      await fs.writeFile(
+        path.join(partialsDir, 'utils.hbs'),
+        'Utility content',
+        'utf8',
+      );
+
+      const cfg = {
+        templateDir,
+        partialsDir,
+        outDir,
+        view: {},
+        extname: '.hbs',
+      };
+
+      await renderDirectory(cfg);
+
+      const output = await fs.readFile(path.join(outDir, 'page'), 'utf8');
+      assert.strictEqual(output, 'Utility content');
+    });
+  });
+
+  it('does not pollute global Handlebars', async () => {
+    const before = { ...Handlebars.partials };
+
+    await withTempDir(async (tmpDir) => {
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
+
+      await fs.mkdir(templateDir, { recursive: true });
+      await fs.mkdir(partialsDir, { recursive: true });
+      await fs.writeFile(
+        path.join(templateDir, 'page.hbs'),
+        '{{> test_partial}}',
+        'utf8',
+      );
+      await fs.writeFile(
+        path.join(partialsDir, 'test_partial.hbs'),
+        'Test',
+        'utf8',
+      );
+
+      await renderDirectory({
+        templateDir,
+        partialsDir,
+        outDir,
+        view: {},
+        extname: '.hbs',
+      });
+
+      assert.deepStrictEqual(Handlebars.partials, before);
+    });
+  });
+
+  it('uses provided Handlebars instance', async () => {
+    await withTempDir(async (tmpDir) => {
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
+
+      await fs.mkdir(templateDir, { recursive: true });
+      await fs.mkdir(partialsDir, { recursive: true });
+      await fs.writeFile(
+        path.join(templateDir, 'page.hbs'),
+        '{{shout name}}',
+        'utf8',
+      );
+
+      const scopedHandlebars = Handlebars.create();
+      scopedHandlebars.registerHelper('shout', (v) => String(v).toUpperCase());
+
+      await renderDirectory(
+        {
+          templateDir,
+          partialsDir,
+          outDir,
+          view: { name: 'hello' },
+          extname: '.hbs',
+        },
+        scopedHandlebars,
+      );
+
+      const output = await fs.readFile(path.join(outDir, 'page'), 'utf8');
+      assert.strictEqual(output, 'HELLO');
+    });
+  });
+
+  it('uses @ flattened partials in templates', async () => {
+    await withTempDir(async (tmpDir) => {
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
+
+      await fs.mkdir(templateDir, { recursive: true });
+      await fs.mkdir(path.join(partialsDir, '@helpers', 'deep'), {
+        recursive: true,
+      });
+      await fs.writeFile(
+        path.join(templateDir, 'page.hbs'),
+        '{{> date}} {{> nested}}',
+        'utf8',
+      );
+      await fs.writeFile(
+        path.join(partialsDir, '@helpers', 'date.hbs'),
+        'Today',
+        'utf8',
+      );
+      await fs.writeFile(
+        path.join(partialsDir, '@helpers', 'deep', 'nested.hbs'),
+        'Deep',
+        'utf8',
+      );
+
+      await renderDirectory({
+        templateDir,
+        partialsDir,
+        outDir,
+        view: {},
+        extname: '.hbs',
+      });
+
+      const output = await fs.readFile(path.join(outDir, 'page'), 'utf8');
+      assert.strictEqual(output, 'Today Deep');
+    });
+  });
+
+  it('uses recursively nested partials in templates', async () => {
+    await withTempDir(async (tmpDir) => {
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
+
+      await fs.mkdir(templateDir, { recursive: true });
+      await fs.mkdir(path.join(partialsDir, 'components', 'forms'), {
+        recursive: true,
+      });
+      await fs.writeFile(
+        path.join(templateDir, 'page.hbs'),
+        '{{> components.forms.login}}',
+        'utf8',
+      );
+      await fs.writeFile(
+        path.join(partialsDir, 'components', 'forms', 'login.hbs'),
+        'Login: {{user}}',
+        'utf8',
+      );
+
+      const cfg = {
+        templateDir,
+        partialsDir,
+        outDir,
+        view: { user: 'admin' },
+        extname: '.hbs',
+      };
+
+      await renderDirectory(cfg);
+
+      const output = await fs.readFile(path.join(outDir, 'page'), 'utf8');
+      assert.strictEqual(output, 'Login: admin');
     });
   });
 });

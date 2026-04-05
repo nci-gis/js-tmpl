@@ -1,5 +1,5 @@
-import fs from "node:fs/promises";
-import path from "node:path";
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 /** Safe mkdir -p
  * @param {string} dir Directory path to create
@@ -13,7 +13,7 @@ export async function ensureDir(dir) {
  * @param {string} content Content to write
  */
 export async function writeFileSafe(file, content) {
-  await fs.writeFile(file, content, "utf8");
+  await fs.writeFile(file, content, 'utf8');
 }
 
 /** Resolve path relative to cwd
@@ -35,7 +35,8 @@ export function resolvePath(p, cwd = process.cwd()) {
  * @returns {string} Absolute path.
  */
 export function safeResolvePath(...segments) {
-  const isAbsolute = segments ? segments[0] && path.isAbsolute(segments[0]) : false;
+  const isAbsolute =
+    segments.length > 0 && segments[0] && path.isAbsolute(segments[0]);
   if (isAbsolute) {
     return path.resolve(...segments);
   }
