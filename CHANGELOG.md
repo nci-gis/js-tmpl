@@ -5,7 +5,42 @@ All notable changes to js-tmpl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.1-beta.2] - 2026-01-31
+## [0.0.1] - 2026-04-05
+
+### Added
+
+- Add environment variable allowlisting with envKeys and envPrefix by @pasxd245
+- Accept optional Handlebars instance in renderDirectory by @pasxd245
+
+### Build
+
+- Add prettier, husky, and lint-staged by @pasxd245
+
+### Changed
+
+- Redesign partial system with optional partialsDir by @pasxd245
+
+### Documentation
+
+- Eliminate duplication via SSOT and add doc automation by @pasxd245
+
+### Fixed
+
+- Add JSDoc type annotations for checkJs compatibility by @pasxd245
+
+### Miscellaneous
+
+- Restructure agent knowledge base and add analysis docs by @pasxd245
+
+### Styling
+
+- Format src and tests with prettier by @pasxd245
+
+## [0.0.1-beta.2] - 2026-02-09
+
+### Added
+
+- V0.0.1-beta - foundation with comprehensive test suite by @pasxd245
 
 ### CI/CD
 
@@ -20,12 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - Refresh documentation hub and roadmap by @pasxd245
-
-## [0.0.1-beta.1] - 2026-01-23
-
-### Added
-
-- V0.0.1-beta - foundation with comprehensive test suite by @pasxd245
 
 ## Roadmap
 
