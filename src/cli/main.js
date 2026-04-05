@@ -4,6 +4,7 @@ import { resolveConfig } from '../config/resolver.js';
 import { renderDirectory } from '../engine/renderDirectory.js';
 import { parseArgs } from './args.js';
 
+/** @returns {Promise<void>} */
 export async function main() {
   const cli = parseArgs(process.argv);
 

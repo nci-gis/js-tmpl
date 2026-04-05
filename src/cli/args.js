@@ -2,9 +2,10 @@
  * Parse CLI arguments.
  *
  * @param {string[]} args
- * @returns {Record<string, any>}
+ * @returns {import('../types.js').CliArgs}
  */
 export function parseArgs(args) {
+  /** @type {import('../types.js').CliArgs} */
   const opts = { command: 'render' };
 
   let i = 0;

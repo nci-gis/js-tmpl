@@ -35,9 +35,8 @@ export function resolvePath(p, cwd = process.cwd()) {
  * @returns {string} Absolute path.
  */
 export function safeResolvePath(...segments) {
-  const isAbsolute = segments
-    ? segments[0] && path.isAbsolute(segments[0])
-    : false;
+  const isAbsolute =
+    segments.length > 0 && segments[0] && path.isAbsolute(segments[0]);
   if (isAbsolute) {
     return path.resolve(...segments);
   }

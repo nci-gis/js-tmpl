@@ -7,7 +7,7 @@ import YAML from 'js-yaml';
  * Load YAML or JSON values.
  *
  * @param {string} filePath Path to YAML or JSON file.
- * @returns {object} Parsed values.
+ * @returns {Record<string, unknown>} Parsed values.
  */
 export function loadYamlOrJson(filePath) {
   // Check if file exists before attempting to read
@@ -21,10 +21,10 @@ export function loadYamlOrJson(filePath) {
   const raw = fs.readFileSync(filePath, 'utf8');
 
   if (/\.ya?ml$/i.test(filePath)) {
-    return YAML.load(raw) || {};
+    return /** @type {Record<string, unknown>} */ (YAML.load(raw) || {});
   }
   if (/\.json$/i.test(filePath)) {
-    return JSON.parse(raw);
+    return /** @type {Record<string, unknown>} */ (JSON.parse(raw));
   }
 
   throw new Error(`Unsupported values file: ${filePath}`);
@@ -35,7 +35,7 @@ export function loadYamlOrJson(filePath) {
  *
  * @param {string} cwd Current working directory.
  * @param {string} [explicitFile] Explicit config file path.
- * @returns {object|null} Parsed config object or null if not found.
+ * @returns {Record<string, unknown> | null} Parsed config object or null if not found.
  */
 export function loadProjectConfig(cwd, explicitFile) {
   const candidates = explicitFile
@@ -57,11 +57,11 @@ export function loadProjectConfig(cwd, explicitFile) {
     const raw = fs.readFileSync(abs, 'utf8');
 
     if (/\.ya?ml$/i.test(abs)) {
-      return YAML.load(raw) || {};
+      return /** @type {Record<string, unknown>} */ (YAML.load(raw) || {});
     }
 
     if (/\.json$/i.test(abs)) {
-      return JSON.parse(raw);
+      return /** @type {Record<string, unknown>} */ (JSON.parse(raw));
     }
   }
 

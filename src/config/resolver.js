@@ -34,9 +34,9 @@ function resolveValuesFilePath(valuesFile, valuesDir, cwd) {
  * Resolve final config using:
  * defaults < projectConfig < cliArgs
  *
- * @param {object} cli - CLI arguments
- * @param {string} cwd - Current working directory
- * @returns {object} - Resolved configuration
+ * @param {import('../types.js').CliArgs} cli - CLI arguments
+ * @param {string} [cwd] - Current working directory
+ * @returns {import('../types.js').TemplateConfig} - Resolved configuration
  */
 export function resolveConfig(cli, cwd = process.cwd()) {
   const projectConfig = loadProjectConfig(cwd, cli.configFile);
@@ -47,6 +47,7 @@ export function resolveConfig(cli, cwd = process.cwd()) {
     ...cli,
   };
 
+  /** @param {string} p */
   const abs = (p) => (path.isAbsolute(p) ? p : path.join(cwd, p));
 
   // Validate valuesFile is provided

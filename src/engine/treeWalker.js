@@ -3,13 +3,17 @@ import path from 'node:path';
 
 /**
  * BFS async folder walker.
+ * @param {string} rootDir
+ * @param {string} [ext]
+ * @param {Array<string | RegExp>} [ignore]
+ * @returns {Promise<import('../types.js').TemplateFile[]>}
  */
 export async function walkTemplateTree(rootDir, ext = '.hbs', ignore = []) {
   const results = [];
   const queue = [''];
 
   while (queue.length) {
-    const rel = queue.shift();
+    const rel = /** @type {string} */ (queue.shift());
     const abs = path.join(rootDir, rel);
     const stat = await fs.stat(abs);
 
@@ -29,6 +33,11 @@ export async function walkTemplateTree(rootDir, ext = '.hbs', ignore = []) {
   return results;
 }
 
+/**
+ * @param {string} name
+ * @param {string | RegExp} rule
+ * @returns {boolean}
+ */
 function matchIgnore(name, rule) {
   return rule instanceof RegExp ? rule.test(name) : rule === name;
 }

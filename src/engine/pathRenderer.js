@@ -4,6 +4,9 @@ import { getNested } from '../utils/object.js';
 
 /**
  * Render `${var}` placeholders in each segment of the relPath.
+ * @param {string} relPath
+ * @param {Record<string, unknown>} view
+ * @returns {string}
  */
 export function renderPath(relPath, view) {
   const segments = relPath.split(path.sep);

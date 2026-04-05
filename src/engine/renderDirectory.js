@@ -10,6 +10,8 @@ import { walkTemplateTree } from './treeWalker.js';
 
 /**
  * Main rendering orchestrator.
+ * @param {import('../types.js').TemplateConfig} cfg
+ * @returns {Promise<void>}
  */
 export async function renderDirectory(cfg) {
   const { templateDir, partialsDir, outDir, view, extname } = cfg;
