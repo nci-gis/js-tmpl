@@ -561,6 +561,39 @@ describe('renderDirectory', () => {
     });
   });
 
+  it('uses provided Handlebars instance', async () => {
+    await withTempDir(async (tmpDir) => {
+      const templateDir = path.join(tmpDir, 'templates');
+      const partialsDir = path.join(tmpDir, 'partials');
+      const outDir = path.join(tmpDir, 'out');
+
+      await fs.mkdir(templateDir, { recursive: true });
+      await fs.mkdir(partialsDir, { recursive: true });
+      await fs.writeFile(
+        path.join(templateDir, 'page.hbs'),
+        '{{shout name}}',
+        'utf8',
+      );
+
+      const scopedHandlebars = Handlebars.create();
+      scopedHandlebars.registerHelper('shout', (v) => String(v).toUpperCase());
+
+      await renderDirectory(
+        {
+          templateDir,
+          partialsDir,
+          outDir,
+          view: { name: 'hello' },
+          extname: '.hbs',
+        },
+        scopedHandlebars,
+      );
+
+      const output = await fs.readFile(path.join(outDir, 'page'), 'utf8');
+      assert.strictEqual(output, 'HELLO');
+    });
+  });
+
   it('uses @ flattened partials in templates', async () => {
     await withTempDir(async (tmpDir) => {
       const templateDir = path.join(tmpDir, 'templates');

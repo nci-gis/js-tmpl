@@ -102,7 +102,7 @@ console.log(config);
 
 ---
 
-### renderDirectory(config)
+### renderDirectory(config[, hbs])
 
 Executes the complete rendering process.
 
@@ -110,7 +110,7 @@ Executes the complete rendering process.
 
 1. Load values file (YAML/JSON)
 2. Build view object (`{...values, env: pickEnv({keys, prefix})}`) — only allowlisted env vars
-3. Create a scoped Handlebars instance (`Handlebars.create()`)
+3. Use the provided Handlebars instance, or create a scoped one (`Handlebars.create()`)
 4. Register partials from `partialsDir` (if configured)
 5. Discover templates via BFS tree walk
 6. For each template:
@@ -121,6 +121,8 @@ Executes the complete rendering process.
 #### Parameters
 
 `config` (Object) - Configuration object from `resolveConfig()`
+
+`hbs` (Object, optional) - A Handlebars instance to use for rendering. If omitted, an isolated instance is created via `Handlebars.create()`.
 
 #### Returns
 
@@ -528,7 +530,10 @@ declare module '@nci-gis/js-tmpl' {
     configFile?: string;
   }): any;
 
-  export function renderDirectory(config: any): Promise<void>;
+  export function renderDirectory(
+    config: any,
+    hbs?: typeof Handlebars,
+  ): Promise<void>;
 }
 ```
 

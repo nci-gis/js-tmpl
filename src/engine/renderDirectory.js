@@ -11,12 +11,13 @@ import { walkTemplateTree } from './treeWalker.js';
 /**
  * Main rendering orchestrator.
  * @param {import('../types.js').TemplateConfig} cfg
+ * @param {typeof import('handlebars')} [hbs] - Optional Handlebars instance (creates an isolated one if omitted)
  * @returns {Promise<void>}
  */
-export async function renderDirectory(cfg) {
+export async function renderDirectory(cfg, hbs) {
   const { templateDir, partialsDir, outDir, view, extname } = cfg;
 
-  const hbs = Handlebars.create();
+  hbs = hbs || Handlebars.create();
   await registerPartials(partialsDir, extname, hbs);
 
   const files = await walkTemplateTree(templateDir, extname);
