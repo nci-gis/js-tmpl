@@ -80,6 +80,10 @@ not push helpers into config.
   - Add `registerHelpers` to programmatic API example (line ~155) showing the full workflow:
     `Handlebars.create()` → `registerHelpers(hbs, {...})` → `renderDirectory(cfg, hbs)`
   - This is the most common entry point — without it the feature remains invisible
+- [ ] Remove unused `config` npm package and empty `config/default.yaml`
+  - The `config` package (env-based server config) is never imported; the project uses its own
+    `src/config/resolver.js` for CLI-driven config resolution
+  - `npm uninstall config && rm config/default.yaml` (remove directory if empty)
 - [ ] CHANGELOG.md — no manual edit needed; git-cliff generates from `feat:` commit at release
 
 ### Out of Scope (future rounds)
