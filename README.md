@@ -337,7 +337,7 @@ For security concerns, see [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT © pasxd245
+See [LICENSE](LICENSE).
 
 ## Learn More
 
@@ -354,3 +354,7 @@ MIT © pasxd245
 - [Examples](examples/) - Working examples and templates
 - [Issue Tracker](https://github.com/nci-gis/js-tmpl/issues) - Report bugs or request features
 - [NPM Package](https://www.npmjs.com/package/@nci-gis/js-tmpl) - Package registry
+
+## Transparency
+
+AI-assisted development (e.g., Claude Code, Copilot) was used for scaffolding and iteration.
