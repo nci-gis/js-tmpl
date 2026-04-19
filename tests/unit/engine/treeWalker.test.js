@@ -91,52 +91,6 @@ describe('walkTemplateTree', () => {
     });
   });
 
-  it('ignores files by exact name match', async () => {
-    await withTempDir(async (tmpDir) => {
-      await fs.writeFile(path.join(tmpDir, 'include.hbs'), 'inc', 'utf8');
-      await fs.writeFile(path.join(tmpDir, 'ignore.hbs'), 'ign', 'utf8');
-
-      const results = await walkTemplateTree(tmpDir, '.hbs', ['ignore.hbs']);
-
-      assert.strictEqual(results.length, 1);
-      assert.strictEqual(results[0].relPath, 'include.hbs');
-    });
-  });
-
-  it('ignores files by regex pattern', async () => {
-    await withTempDir(async (tmpDir) => {
-      await fs.writeFile(path.join(tmpDir, 'file.hbs'), 'file', 'utf8');
-      await fs.writeFile(path.join(tmpDir, '_partial.hbs'), 'partial', 'utf8');
-
-      const results = await walkTemplateTree(tmpDir, '.hbs', [/^_/]);
-
-      assert.strictEqual(results.length, 1);
-      assert.strictEqual(results[0].relPath, 'file.hbs');
-    });
-  });
-
-  it('ignores directories', async () => {
-    await withTempDir(async (tmpDir) => {
-      await fs.mkdir(path.join(tmpDir, 'include'), { recursive: true });
-      await fs.mkdir(path.join(tmpDir, 'node_modules'), { recursive: true });
-      await fs.writeFile(
-        path.join(tmpDir, 'include', 'file.hbs'),
-        'inc',
-        'utf8',
-      );
-      await fs.writeFile(
-        path.join(tmpDir, 'node_modules', 'lib.hbs'),
-        'lib',
-        'utf8',
-      );
-
-      const results = await walkTemplateTree(tmpDir, '.hbs', ['node_modules']);
-
-      assert.strictEqual(results.length, 1);
-      assert.strictEqual(results[0].relPath, 'include/file.hbs');
-    });
-  });
-
   it('handles empty directory', async () => {
     await withTempDir(async (tmpDir) => {
       const results = await walkTemplateTree(tmpDir);
@@ -171,22 +125,6 @@ describe('walkTemplateTree', () => {
       assert.strictEqual(results.length, 3);
       const rootFiles = results.filter((r) => !r.relPath.includes('/'));
       assert.strictEqual(rootFiles.length, 2);
-    });
-  });
-
-  it('ignores multiple patterns', async () => {
-    await withTempDir(async (tmpDir) => {
-      await fs.writeFile(path.join(tmpDir, 'file.hbs'), 'file', 'utf8');
-      await fs.writeFile(path.join(tmpDir, '_partial.hbs'), 'partial', 'utf8');
-      await fs.writeFile(path.join(tmpDir, 'test.hbs'), 'test', 'utf8');
-
-      const results = await walkTemplateTree(tmpDir, '.hbs', [
-        /^_/,
-        'test.hbs',
-      ]);
-
-      assert.strictEqual(results.length, 1);
-      assert.strictEqual(results[0].relPath, 'file.hbs');
     });
   });
 

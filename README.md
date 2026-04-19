@@ -242,7 +242,7 @@ Duplicate partial names throw an error. Names must be alphanumeric + underscore 
 Think of js-tmpl as a function:
 
 ```text
-(input templates, data, config) → output files
+f(config, values/view, input templates) → files (output)
 ```
 
 There is no hidden state, no lifecycle, and no side effects.

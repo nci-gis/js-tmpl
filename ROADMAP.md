@@ -16,6 +16,7 @@ This document outlines the planned features and improvements for js-tmpl.
 ### Core Engine (Block-aligned ✅)
 
 - [ ] Custom Handlebars helpers registration API
+- [ ] Path guards (`$if{var}` / `$ifn{var}`) for conditional file output — view-driven skip, visible in the template tree, composes with multi-values. See [docs/agents/plan/20260418-richer-inputs.plan.md](docs/agents/plan/20260418-richer-inputs.plan.md).
 - [ ] Watch mode for development
 - [ ] Multi-pass rendering orchestration **(engine-level only, no orchestration semantics)**
 - [ ] CLI `--help` flag that works without `--values`
@@ -53,7 +54,7 @@ Reason:
 ### Extensibility (Scale-aligned ✅)
 
 - [ ] Plugin system for extensibility
-- [ ] Advanced filtering and ignore rules
+- [ ] Advanced filtering and ignore rules — **deferred from 0.1.x**; path guards (0.1.0) cover most real-world skip needs via `view` data. Revisit only with concrete user cases that guards can't express; decide then whether ignore earns a second skip mechanism. Rationale: [docs/agents/plan/20260418-richer-inputs.plan.md#why-ignore-was-deferred](docs/agents/plan/20260418-richer-inputs.plan.md#why-ignore-was-deferred).
 - [ ] Custom path placeholder syntax configuration
 
 > These extend capability without changing the engine’s role.
