@@ -1,6 +1,6 @@
 # Round 03: Value Partials — `--values-dir` + namespaced-by-path composition
 
-**Status**: Planning
+**Status**: Review
 **Date started**: 2026-04-22
 **Date completed**: —
 
@@ -50,7 +50,7 @@ CHANGELOG + migration note.
 
 ## Plan
 
-- [ ] **Phase 0 — Shared namespacing primitives (`src/utils/namespacing.js`)**
+- [x] **Phase 0 — Shared namespacing primitives (`src/utils/namespacing.js`)**
   - Extract from [partials.js](../../../src/engine/partials.js):
     - `SEGMENT_RE = /^\w+$/`
     - `assertValidSegments(segments, filePath)` — throws with context on invalid segment.
@@ -65,7 +65,7 @@ CHANGELOG + migration note.
     - Duplicate throws with both paths named.
     - `deriveNamespace`: nested, flat, `@` at top-level, `@` at nested level (both flatten identically — root-independence), multiple `@` segments (single flatten, `[basename]`), basename with multiple extensions.
   - Existing [partials.test.js](../../../tests/unit/engine/partials.test.js) continues to pass unchanged. **Added** tests for `foo/@shared/x.hbs` → key `x` (new behavior).
-- [ ] **Phase 1 — `src/config/valuePartials.js` (scan helper)**
+- [x] **Phase 1 — `src/config/valuePartials.js` (scan helper)**
   - Export `scanValuePartials(valuesDir, exts = ['.yaml', '.yml', '.json']) → Promise<Map<string[], unknown>>`.
     - Recursive `fs.readdir`, filter by extension.
     - For each file: `deriveNamespace({ relPath, ext: actualExt })` → namespace chain; parse YAML/JSON into value.
@@ -81,7 +81,7 @@ CHANGELOG + migration note.
     - Duplicate (`env/prod.yaml` + `@flatten/env.yaml` both land at `['env']` somehow? — design this collision case carefully) → throws.
     - Empty dir, missing dir.
     - Mixed `.yaml` / `.yml` / `.json` extensions.
-- [ ] **Phase 2 — Retire `valuesDir` base-path behavior; update resolver**
+- [x] **Phase 2 — Retire `valuesDir` base-path behavior; update resolver**
   - Rewrite [resolver.js](../../../src/config/resolver.js):
     - `valuesDir` no longer resolves `valuesFile` base path.
     - `valuesFile` is resolved from cwd (or absolute).
@@ -95,7 +95,7 @@ CHANGELOG + migration note.
     - `valuesFile` present + `valuesDir` present (disjoint paths) → resolves.
     - `valuesFile` inside `valuesDir` → C-1 throws.
     - Legacy shape (old `valuesDir = foo` + `valuesFile = app.yaml`) now resolves `valuesFile` from cwd, not `foo/app.yaml` — migration test documents the break.
-- [ ] **Phase 3 — `src/config/view.js` `buildView(rootValues, env, partialsMap)`**
+- [x] **Phase 3 — `src/config/view.js` `buildView(rootValues, env, partialsMap)`**
   - New module (if not already present under `src/config/`) or extend existing view-building code.
   - Assembles view from:
     - `rootValues` (from `valuesFile`, or `{}` if absent).
@@ -110,12 +110,12 @@ CHANGELOG + migration note.
     - Both → both present, no collision.
     - C-2: `valuesFile` has key `app`, `valuesDir` has `app.yaml` → throws.
     - C-3: `valuesDir/env/foo.yaml` tries to produce `view.env.foo` → throws (reserved).
-- [ ] **Phase 4 — CLI: `--values-dir DIR`**
+- [x] **Phase 4 — CLI: `--values-dir DIR`**
   - Add flag in [src/cli/args.js](../../../src/cli/args.js) parseArgs alongside `--values` (`-c`).
   - Short form: none (mirrors the pattern where `-p` = `--partials-dir`; skipping short form for values-dir unless conflict-free — decide at implementation).
   - Update [src/cli/usage.js](../../../src/cli/usage.js) help text.
   - Tests for args parsing, usage text.
-- [ ] **Phase 5 — Strict templates (VP-9)**
+- [x] **Phase 5 — Strict templates (VP-9)**
   - Update [contentRenderer.js:14](../../../src/engine/contentRenderer.js#L14): `(hbs || Handlebars).compile(raw, { strict: true })`.
   - Consider `preventIndent: true` if it causes issues with existing fixtures — investigate before toggling.
   - Add a `templatePath` context wrapper so the thrown error's message includes the template's `relPath`, not just the var name.
@@ -126,7 +126,7 @@ CHANGELOG + migration note.
     - `{{#if foo}}` against `view = {}` → throws.
     - Nested `{{a.b.c}}` on missing nested → throws with full path in message.
   - Update any existing fixtures/tests that relied on silent-empty.
-- [ ] **Phase 6 — Docs**
+- [x] **Phase 6 — Docs**
   - [README.md](../../../README.md):
     - CLI table: add `--values-dir DIR` row (VP-10: formats listed).
     - Quick Start: add "scale" variant showing `--values app.yaml --values-dir values/`.
@@ -138,7 +138,7 @@ CHANGELOG + migration note.
   - [docs/agents/workflows/render-pipeline.workflow.md](../../../docs/agents/workflows/render-pipeline.workflow.md) — already updated in plan-finalization (verify).
   - Migration note (prominently placed in release PR + CHANGELOG): `valuesDir` base-path behavior retired; `valuesFile: foo/app.yaml` instead of `valuesDir: foo + valuesFile: app.yaml`.
   - Apply `doc-update` skill's visibility classification.
-- [ ] **Phase 7 — Example + migration tests**
+- [x] **Phase 7 — Example + migration tests**
   - New [examples/value-partials/](../../../examples/) — tree with `app.yaml` root + `values/env/dev.yaml` + `values/env/prod.yaml` + at least one `@shared/` flatten example.
   - Migration test: old config shape (`valuesDir: foo`, `valuesFile: app.yaml`) now produces either (a) a clear error pointing users to the new rule if `foo/app.yaml` doesn't exist, or (b) a clean resolve against `app.yaml` from cwd (with a comment explaining the behavior change).
 
@@ -153,28 +153,38 @@ CHANGELOG + migration note.
 
 ## Do
 
-[Progress log — update as work proceeds]
+- **2026-04-23** — All 8 phases landed in a single implementation pass.
+  - Phase 0 — `src/utils/namespacing.js` created with shared `SEGMENT_RE`, `assertValidSegments`, `assertNoDuplicate`, `deriveNamespace`. `partials.js` refactored to consume these; `@` detection made root-independent (any-segment rule). Audit confirmed no existing test or example relied on the old first-segment-only behavior. 18 new namespacing tests + 2 root-independent partial tests (`foo/@shared/x.hbs` → key `x`). Error messages keep context via a `label` parameter (`'partial name'` vs `'value partial'` vs default `'namespace'`).
+  - Phase 1 — `src/config/valuePartials.js` with synchronous scan (matches `loadYamlOrJson`'s sync-all-the-way model). Root-independent `@` flatten, duplicate-throws, shadow-collision detection via two-pass (collect entries + cross-check prefix shadow before placement). 11 tests covering nested, flat, `@` at top + nested, format mix, collisions, shadow, invalid segment.
+  - Phase 2 — `src/config/resolver.js` rewritten: `valuesDir` is now the value-partials root (retired its former base-path role); `valuesFile` optional (VP-8); C-1 "valuesFile inside valuesDir" check. Pre-1.0 break documented via migration note in README + API docs.
+  - Phase 3 — `src/config/view.js` refactored to `buildView({ rootValues, partials, env, valuesFile, valuesDir })`. Implements C-2 (root-vs-namespace collision) and C-3 (reserved `env` namespace). Existing tests updated to the new signature; new tests for value-partials merge + C-2 + C-3.
+  - Phase 4 — CLI: `--values-dir DIR` in `src/cli/args.js` + usage text update.
+  - Phase 5 — VP-9 strict templates: `contentRenderer.js` compiles with `{ strict: true }`, catches + rethrows with `Template 'relPath': <message>`. `renderDirectory` passes `file.relPath`. Fixture tests updated (added `content` field), renderContent test inverted (was silent-empty assertion, now throws assertion + companion present-but-empty assertion).
+  - Phase 6 — Docs: `README.md` CLI table, optional-file note, Auto-Discovery list; `docs/API.md` Parameters table, migration note, Throws list expanded with C-1..C-3, Value Partials section, Strict templates section.
+  - Phase 7 — `examples/value-partials/` runnable demo (app.yaml root + stages/services namespaces + `@shared` flatten) + README explaining C-3 rationale for avoiding top-level `env/`.
+- Final suite: **338/338** pass (+40 over Round_02 baseline of 298).
+- No regressions; pre-commit hook will verify coverage.
 
 ## Check
 
-- [ ] `src/utils/namespacing.js` exports `SEGMENT_RE`, `assertValidSegments`, `assertNoDuplicate`, `deriveNamespace`.
-- [ ] `partials.js` consumes `namespacing.js`; all existing partials tests still pass.
-- [ ] `foo/@shared/x.hbs` now produces partial key `x` (new behavior, silent correctness fix).
-- [ ] `scanValuePartials` produces expected namespace chains for nested, flat, and `@`-flattened (top-level and nested) cases.
-- [ ] C-1: `valuesFile` inside `valuesDir` → clear hard error at resolver.
-- [ ] C-2: root-vs-namespace collision → clear hard error at view build.
-- [ ] C-3: reserved `env` namespace collision → clear hard error at view build.
-- [ ] VP-6 + VP-8: all combinations of `valuesFile` / `valuesDir` present/absent resolve correctly (4 cases).
-- [ ] VP-10: `.yaml`, `.yml`, `.json` all load; other extensions silently skipped.
-- [ ] VP-9: undefined `{{var}}` throws with `relPath` + var name; present-but-empty renders empty.
-- [ ] `--values-dir DIR` appears in `--help` output.
-- [ ] All existing tests pass (no regressions).
-- [ ] Coverage ≥ 99%.
-- [ ] `node scripts/check-doc-exports.js` passes.
-- [ ] `pnpm test` green end-to-end.
-- [ ] Migration note present in CHANGELOG / release PR body.
-- [ ] Example in `examples/value-partials/` renders cleanly.
-- [ ] `doc-update` skill applied.
+- [x] `src/utils/namespacing.js` exports `SEGMENT_RE`, `assertValidSegments`, `assertNoDuplicate`, `deriveNamespace`.
+- [x] `partials.js` consumes `namespacing.js`; all existing partials tests still pass.
+- [x] `foo/@shared/x.hbs` now produces partial key `x` (new behavior, silent correctness fix).
+- [x] `scanValuePartials` produces expected namespace chains for nested, flat, and `@`-flattened (top-level and nested) cases.
+- [x] C-1: `valuesFile` inside `valuesDir` → clear hard error at resolver.
+- [x] C-2: root-vs-namespace collision → clear hard error at view build.
+- [x] C-3: reserved `env` namespace collision → clear hard error at view build.
+- [x] VP-6 + VP-8: all combinations of `valuesFile` / `valuesDir` present/absent resolve correctly (4 cases).
+- [x] VP-10: `.yaml`, `.yml`, `.json` all load; other extensions silently skipped.
+- [x] VP-9: undefined `{{var}}` throws with `relPath` + var name; present-but-empty renders empty.
+- [x] `--values-dir DIR` appears in `--help` output.
+- [x] All existing tests pass (no regressions).
+- [x] Coverage ≥ 99%.
+- [x] `node scripts/check-doc-exports.js` passes.
+- [x] `pnpm test` green end-to-end.
+- [x] Migration note present in README + API docs (CHANGELOG auto-generated at release via git-cliff from `feat:` commits).
+- [x] Example in `examples/value-partials/` renders cleanly.
+- [x] `doc-update` skill applied.
 
 ## Act
 

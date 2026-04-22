@@ -415,4 +415,43 @@ describe('registerPartials', () => {
       assert.strictEqual(template({ items: ['a', 'b', 'c'] }), 'Items: a,b,c,');
     });
   });
+
+  // ── Root-independent `@` flatten (Round 03, Phase 0) ───────────────
+
+  describe('@ flatten is root-independent', () => {
+    it('@ at a nested level flattens (not just top-level)', async () => {
+      // Before: `foo/@shared/helpers.hbs` registered as `foo.shared.helpers`.
+      // After: `@<name>` anywhere in the chain flattens to filename-as-key,
+      // so this registers as `helpers`.
+      await withTempDir(async (tmpDir) => {
+        const hbs = Handlebars.create();
+        const nested = path.join(tmpDir, 'foo', '@shared');
+        await fs.mkdir(nested, { recursive: true });
+        await fs.writeFile(path.join(nested, 'helpers.hbs'), 'H', 'utf8');
+
+        await registerPartials(tmpDir, '.hbs', hbs);
+
+        assert.strictEqual(hbs.partials['helpers'], 'H');
+        assert.ok(!hbs.partials['foo.shared.helpers']);
+      });
+    });
+
+    it('produces the same key regardless of which ancestor is the scan root', async () => {
+      // Scanning `tmpDir` vs scanning `tmpDir/env` — the file has `@overrides`
+      // in its chain either way, so both paths produce key `app`.
+      await withTempDir(async (tmpDir) => {
+        const inner = path.join(tmpDir, 'env', '@overrides');
+        await fs.mkdir(inner, { recursive: true });
+        await fs.writeFile(path.join(inner, 'app.hbs'), 'A', 'utf8');
+
+        const hbs1 = Handlebars.create();
+        await registerPartials(tmpDir, '.hbs', hbs1);
+        assert.strictEqual(hbs1.partials['app'], 'A');
+
+        const hbs2 = Handlebars.create();
+        await registerPartials(path.join(tmpDir, 'env'), '.hbs', hbs2);
+        assert.strictEqual(hbs2.partials['app'], 'A');
+      });
+    });
+  });
 });

@@ -44,6 +44,22 @@ describe('parseArgs', () => {
     assert.strictEqual(result.valuesFile, 'vals.yaml');
   });
 
+  it('parses --values-dir', () => {
+    const result = parseArgs(['--values-dir', 'values']);
+    assert.strictEqual(result.valuesDir, 'values');
+  });
+
+  it('parses --values and --values-dir together', () => {
+    const result = parseArgs([
+      '--values',
+      'app.yaml',
+      '--values-dir',
+      'values',
+    ]);
+    assert.strictEqual(result.valuesFile, 'app.yaml');
+    assert.strictEqual(result.valuesDir, 'values');
+  });
+
   it('parses --out', () => {
     const result = parseArgs(['--out', 'build']);
     assert.strictEqual(result.outDir, 'build');

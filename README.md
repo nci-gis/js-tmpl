@@ -78,10 +78,11 @@ js-tmpl will search for a project config file in **exactly these locations**, in
 
 Everything else must be **explicitly specified**:
 
-- ✅ **Values file** - Required via `--values` flag or `valuesFile` config
-- ✅ **Template directory** - Must be in config or defaults to `templates/`
-- ✅ **Output directory** - Must be in config or defaults to `dist/`
-- ✅ **Partials directory** - Must be in config; not loaded if omitted
+- ✅ **Values file** — Optional via `--values` flag or `valuesFile` config (VP-8)
+- ✅ **Values directory** — Optional via `--values-dir` flag or `valuesDir` config (VP-6)
+- ✅ **Template directory** — Must be in config or defaults to `templates/`
+- ✅ **Output directory** — Must be in config or defaults to `dist/`
+- ✅ **Partials directory** — Must be in config; not loaded if omitted
 
 ### Override Auto-Discovery
 
@@ -272,16 +273,22 @@ js-tmpl render [options]
 
 ### Options
 
-| Option                   | Description                             | Default         |
-| ------------------------ | --------------------------------------- | --------------- |
-| `-c, --values FILE`      | Values file (YAML/JSON)                 | **Required**    |
-| `-t, --template-dir DIR` | Template directory                      | `templates`     |
-| `-o, --out DIR`          | Output directory                        | `dist`          |
-| `-p, --partials-dir DIR` | Partials directory                      | None (skipped)  |
-| `-x, --ext EXT`          | Template extension                      | `.hbs`          |
-| `--config-file FILE`     | Explicit config file                    | Auto-discovered |
-| `--env-keys KEYS`        | Comma-separated env var names to expose | None            |
-| `--env-prefix PREFIX`    | Auto-include env vars with this prefix  | None            |
+| Option                   | Description                              | Default         |
+| ------------------------ | ---------------------------------------- | --------------- |
+| `-c, --values FILE`      | Values file (`.yaml` / `.yml` / `.json`) | Optional        |
+| `--values-dir DIR`       | Value-partials root (namespaced by path) | Optional        |
+| `-t, --template-dir DIR` | Template directory                       | `templates`     |
+| `-o, --out DIR`          | Output directory                         | `dist`          |
+| `-p, --partials-dir DIR` | Partials directory                       | None (skipped)  |
+| `-x, --ext EXT`          | Template extension                       | `.hbs`          |
+| `--config-file FILE`     | Explicit config file                     | Auto-discovered |
+| `--env-keys KEYS`        | Comma-separated env var names to expose  | None            |
+| `--env-prefix PREFIX`    | Auto-include env vars with this prefix   | None            |
+
+Both `--values` and `--values-dir` are optional (VP-8, VP-6). If neither is
+supplied, `view` is `{ env: {...} }` only. Missing `{{var}}` in a template
+throws with the template's relative path and variable name (VP-9, strict
+mode).
 
 ### Examples of Usage
 
@@ -310,6 +317,9 @@ See [docs/API.md](docs/API.md) for the complete API reference — parameters, re
   conditionals), root and namespaced partials, multi-format output.
 - [examples/path-guards/](examples/path-guards/) — conditional files via
   `$if{var}` / `$ifn{var}` whole-segment path guards.
+- [examples/value-partials/](examples/value-partials/) — composing `view`
+  from multiple structured files via `--values-dir` (directory-as-namespace,
+  no merge, `@`-flatten escape).
 
 ## Testing
 

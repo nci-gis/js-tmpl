@@ -29,7 +29,7 @@ export async function renderDirectory(cfg, hbs) {
       relRendered.replace(new RegExp(`${extname}$`), ''),
     );
 
-    const content = await renderContent(file.absPath, view, hbs);
+    const content = await renderContent(file.absPath, view, hbs, file.relPath);
 
     await ensureDir(path.dirname(target));
     await writeFileSafe(target, content);

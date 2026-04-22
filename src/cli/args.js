@@ -32,6 +32,10 @@ export function parseArgs(args) {
         opts.valuesFile = args[++i];
         break;
 
+      case '--values-dir':
+        opts.valuesDir = args[++i];
+        break;
+
       case '-o':
       case '--out':
         opts.outDir = args[++i];

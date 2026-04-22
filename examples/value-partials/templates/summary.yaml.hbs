@@ -1,0 +1,14 @@
+project: {{project.name}}
+owner: {{project.owner}}
+api:
+  port: {{services.api.port}}
+  image: {{services.api.image}}
+prod:
+  replicas: {{stages.prod.replicas}}
+  log_level: {{stages.prod.log_level}}
+dev:
+  replicas: {{stages.dev.replicas}}
+  log_level: {{stages.dev.log_level}}
+constants:
+  max_retries: {{constants.max_retries}}
+  timeout_ms: {{constants.timeout_ms}}

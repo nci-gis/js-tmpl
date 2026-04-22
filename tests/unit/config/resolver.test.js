@@ -7,13 +7,17 @@ import { resolveConfig } from '../../../src/config/resolver.js';
 import { withTempDir } from '../../helpers/tempDir.js';
 
 describe('resolveConfig', () => {
-  it('throws error when valuesFile is missing', async () => {
+  it('resolves without valuesFile when both valuesFile and valuesDir are absent (VP-8)', async () => {
     await withTempDir(async (tmpDir) => {
       const cli = {};
+      const config = resolveConfig(cli, tmpDir);
 
-      assert.throws(
-        () => resolveConfig(cli, tmpDir),
-        /Missing required configuration: valuesFile/,
+      assert.ok(config.view);
+      assert.deepStrictEqual(config.view.env, {});
+      // No file-based values; view is { env: {} } only.
+      assert.deepStrictEqual(
+        Object.keys(config.view).filter((k) => k !== 'env'),
+        [],
       );
     });
   });
@@ -369,10 +373,11 @@ describe('resolveConfig', () => {
     });
   });
 
-  it('resolves valuesFile from valuesDir when set', async () => {
+  it('valuesDir scans as value-partials root (not a base path for valuesFile)', async () => {
+    // Post-Round-03: valuesDir is the value-partials root, not a base path.
+    // Files under it are namespaced-by-directory into view.
     await withTempDir(async (tmpDir) => {
-      // Create valuesDir and file
-      const valuesDir = path.join(tmpDir, 'templates.values');
+      const valuesDir = path.join(tmpDir, 'values');
       await fs.mkdir(valuesDir, { recursive: true });
       await fs.writeFile(
         path.join(valuesDir, 'prod.yaml'),
@@ -380,18 +385,16 @@ describe('resolveConfig', () => {
         'utf8',
       );
 
-      // Set valuesDir in config
       const projectConfigFile = path.join(tmpDir, 'js-tmpl.config.yaml');
-      await fs.writeFile(
-        projectConfigFile,
-        'valuesDir: templates.values',
-        'utf8',
+      await fs.writeFile(projectConfigFile, 'valuesDir: values', 'utf8');
+
+      const config = resolveConfig({}, tmpDir);
+
+      // `values/prod.yaml` → `view.prod.*`
+      assert.strictEqual(
+        /** @type {Record<string, unknown>} */ (config.view.prod).environment,
+        'production',
       );
-
-      const cli = { valuesFile: 'prod.yaml' };
-      const config = resolveConfig(cli, tmpDir);
-
-      assert.strictEqual(config.view.environment, 'production');
     });
   });
 
@@ -414,7 +417,7 @@ describe('resolveConfig', () => {
     });
   });
 
-  it('absolute valuesDir is resolved correctly', async () => {
+  it('absolute valuesDir scans as value-partials root', async () => {
     await withTempDir(async (tmpDir) => {
       const absoluteValuesDir = path.join(tmpDir, 'absolute-values');
       await fs.mkdir(absoluteValuesDir, { recursive: true });
@@ -431,10 +434,28 @@ describe('resolveConfig', () => {
         'utf8',
       );
 
-      const cli = { valuesFile: 'data.yaml' };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig({}, tmpDir);
 
-      assert.strictEqual(config.view.location, 'absolute-dir');
+      // `absolute-values/data.yaml` → `view.data.*`
+      assert.strictEqual(
+        /** @type {Record<string, unknown>} */ (config.view.data).location,
+        'absolute-dir',
+      );
+    });
+  });
+
+  it('throws C-1 when valuesFile sits inside valuesDir', async () => {
+    await withTempDir(async (tmpDir) => {
+      const valuesDir = path.join(tmpDir, 'values');
+      await fs.mkdir(valuesDir, { recursive: true });
+      const valuesFileInside = path.join(valuesDir, 'root.yaml');
+      await fs.writeFile(valuesFileInside, 'x: 1', 'utf8');
+
+      assert.throws(
+        () =>
+          resolveConfig({ valuesFile: valuesFileInside, valuesDir }, tmpDir),
+        /is inside valuesDir/,
+      );
     });
   });
 
