@@ -26,21 +26,24 @@ flowchart LR
   end
   subgraph P2[Phase 2 — buildView]
     direction TB
-    VF[valuesFile]
-    VD[valuesDir scan]
+    VF["valuesFile (optional, VP-8)"]
+    VD["valuesDir scan (optional, VP-6)"]
     EV[allowlisted env]
-    VF --> V[view]
-    VD --> V
+    VF --> CC{collision checks C-1..C-3}
+    VD --> CC
+    CC --> V[view]
     EV --> V
   end
   subgraph P3[Phase 3 — renderDirectory]
     direction TB
     T[templateDir]
     P[partialsDir]
-    PR[pathRenderer]
-    CR[contentRenderer]
-    T --> PR
-    T --> CR
+    TW["treeWalker (view-aware: formula eval, early-exit)"]
+    PR["pathRenderer (var expansion only)"]
+    CR["contentRenderer (strict:true, VP-9)"]
+    T --> TW
+    TW --> PR
+    TW --> CR
     P --> REG[registerPartials]
     REG --> CR
     PR --> W[writeFileSafe]
@@ -50,6 +53,7 @@ flowchart LR
   M --> VF
   M --> VD
   M --> EV
+  V --> TW
   V --> PR
   V --> CR
 ```
@@ -65,11 +69,16 @@ flowchart TD
   Main --> Resolver[src/config/resolver.js resolveConfig]
   Resolver --> Loader[src/config/loader.js loadProjectConfig]
   Resolver --> ValLoad[src/config/loader.js loadYamlOrJson]
+  Resolver --> VPScan[src/config/valuePartials.js scanValuePartials]
   ValLoad --> View[src/config/view.js buildView]
+  VPScan --> View
   Main --> Render[src/engine/renderDirectory.js]
   Render --> Partials[src/engine/partials.js registerPartials]
   Render --> Walk[src/engine/treeWalker.js walkTemplateTree]
+  Walk --> Formula[src/engine/pathFormula.js evalFormula]
+  Formula --> Segment[src/engine/pathSegment.js classifySegment]
   Render --> Path[src/engine/pathRenderer.js renderPath]
+  Path --> Segment
   Render --> Content[src/engine/contentRenderer.js renderContent]
   Render --> FS[src/utils/fs.js writeFileSafe]
 ```

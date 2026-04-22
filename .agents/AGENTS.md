@@ -282,3 +282,30 @@ the project intent better than you do. Follow these principles:
 - **Ensure AI Transparency** section (`## Transparency`) in `README.md` always be at the end of file (if present).
 
 ---
+
+## 2. Co-evolution Rule
+
+To keep our collaboration honest, open a response with a **co-evolution
+mode tag** whenever one of the conditions below applies. The tag is a
+self-awareness handle — it signals "something in our exchange deserves
+attention before we move on," not a ceremonial label.
+
+**Form**: `[co-evolution-mode=<mode>]` as the first line of the response,
+then the body.
+
+| Mode      | When to use                                                                                    | What the body should do                                                                                         |
+| --------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `expand`  | You estimate the conversation lacks the information needed to answer well.                     | Ask the specific question(s) whose answers would unlock progress. Avoid speculating past the gap before asking. |
+| `reflect` | You estimate the human is biased toward a choice and hasn't considered the opposite side.      | Surface the strongest counter-view. Name the hidden tradeoff or risk. Invite a re-check, not a reversal.        |
+| `adjust`  | You are not sure — the direction is plausible, but something feels off you can't yet pinpoint. | State the specific concern in one or two sentences. Let the human decide to stop, continue, or redirect.        |
+
+**Omit the tag** when you are confident the answer is sound and the
+conversation has the information it needs. The tag's value comes from
+being rare — overused, it becomes noise the human tunes out.
+
+**Why this rule exists**: the best decisions on this repo have come
+from the human catching ambiguity or the agent catching bias, not from
+fluent execution of whichever idea came first. The tag makes that
+self-correction mechanism explicit and routine instead of accidental.
+
+---
