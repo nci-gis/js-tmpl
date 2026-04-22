@@ -20,7 +20,7 @@ export async function renderDirectory(cfg, hbs) {
   hbs = hbs || Handlebars.create();
   await registerPartials(partialsDir, extname, hbs);
 
-  const files = await walkTemplateTree(templateDir, extname);
+  const files = await walkTemplateTree(templateDir, { ext: extname, view });
 
   for (const file of files) {
     const relRendered = renderPath(file.relPath, view);

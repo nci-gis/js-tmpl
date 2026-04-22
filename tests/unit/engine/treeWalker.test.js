@@ -182,4 +182,171 @@ describe('walkTemplateTree', () => {
       assert.strictEqual(results[0].relPath, 'templates/page.hbs');
     });
   });
+
+  // ── Path formulas ($if / $ifn) ────────────────────────────────────
+
+  describe('view-aware path formulas', () => {
+    it('accepts options-object form (ext only) as parity with string form', async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.writeFile(path.join(tmpDir, 'a.hbs'), 'a', 'utf8');
+
+        const results = await walkTemplateTree(tmpDir, { ext: '.hbs' });
+        assert.strictEqual(results.length, 1);
+        assert.strictEqual(results[0].relPath, 'a.hbs');
+      });
+    });
+
+    it('prunes subtree when $if formula fails', async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.mkdir(path.join(tmpDir, '$if{prod}'), { recursive: true });
+        await fs.writeFile(
+          path.join(tmpDir, '$if{prod}', 'prod.hbs'),
+          'prod',
+          'utf8',
+        );
+        await fs.writeFile(path.join(tmpDir, 'always.hbs'), 'always', 'utf8');
+
+        const results = await walkTemplateTree(tmpDir, {
+          ext: '.hbs',
+          view: { prod: false },
+        });
+
+        assert.deepStrictEqual(
+          results.map((r) => r.relPath).sort((a, b) => a.localeCompare(b)),
+          ['always.hbs'],
+        );
+      });
+    });
+
+    it('includes subtree when $if formula passes', async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.mkdir(path.join(tmpDir, '$if{prod}'), { recursive: true });
+        await fs.writeFile(
+          path.join(tmpDir, '$if{prod}', 'prod.hbs'),
+          'prod',
+          'utf8',
+        );
+
+        const results = await walkTemplateTree(tmpDir, {
+          ext: '.hbs',
+          view: { prod: true },
+        });
+
+        assert.deepStrictEqual(
+          results.map((r) => r.relPath).sort((a, b) => a.localeCompare(b)),
+          ['$if{prod}/prod.hbs'],
+        );
+      });
+    });
+
+    it('inverts via $ifn', async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.mkdir(path.join(tmpDir, '$ifn{debug}'), { recursive: true });
+        await fs.writeFile(
+          path.join(tmpDir, '$ifn{debug}', 'release.hbs'),
+          'r',
+          'utf8',
+        );
+
+        const results = await walkTemplateTree(tmpDir, {
+          ext: '.hbs',
+          view: { debug: false },
+        });
+        assert.strictEqual(results.length, 1);
+      });
+    });
+
+    it('nested guards — both must pass', async () => {
+      await withTempDir(async (tmpDir) => {
+        const nested = path.join(tmpDir, '$if{a}', '$if{b}');
+        await fs.mkdir(nested, { recursive: true });
+        await fs.writeFile(path.join(nested, 'x.hbs'), 'x', 'utf8');
+
+        const bothTrue = await walkTemplateTree(tmpDir, {
+          ext: '.hbs',
+          view: { a: true, b: true },
+        });
+        assert.strictEqual(bothTrue.length, 1);
+
+        const oneFalse = await walkTemplateTree(tmpDir, {
+          ext: '.hbs',
+          view: { a: true, b: false },
+        });
+        assert.strictEqual(oneFalse.length, 0);
+      });
+    });
+
+    it('throws with relPath context on missing guard var', async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.mkdir(path.join(tmpDir, '$if{missing}'), { recursive: true });
+        await fs.writeFile(
+          path.join(tmpDir, '$if{missing}', 'x.hbs'),
+          'x',
+          'utf8',
+        );
+
+        await assert.rejects(
+          walkTemplateTree(tmpDir, { ext: '.hbs', view: {} }),
+          /undefined view variable 'missing'/,
+        );
+      });
+    });
+
+    it('throws on malformed guard segment', async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.mkdir(path.join(tmpDir, '$if{a}folder'), { recursive: true });
+        await fs.writeFile(
+          path.join(tmpDir, '$if{a}folder', 'x.hbs'),
+          'x',
+          'utf8',
+        );
+
+        await assert.rejects(
+          walkTemplateTree(tmpDir, { ext: '.hbs', view: { a: true } }),
+          /whole segments/,
+        );
+      });
+    });
+
+    it('no view supplied — walker treats $if dirs as literal (parity)', async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.mkdir(path.join(tmpDir, '$if{any}'), { recursive: true });
+        await fs.writeFile(path.join(tmpDir, '$if{any}', 'x.hbs'), 'x', 'utf8');
+
+        const results = await walkTemplateTree(tmpDir);
+        assert.strictEqual(results.length, 1);
+        assert.strictEqual(results[0].relPath, '$if{any}/x.hbs');
+      });
+    });
+
+    it('early-exit: failing formula does not readdir skipped subtree', async () => {
+      await withTempDir(async (tmpDir) => {
+        const skipped = path.join(tmpDir, '$if{prod}');
+        await fs.mkdir(skipped, { recursive: true });
+        await fs.writeFile(path.join(skipped, 'p.hbs'), 'p', 'utf8');
+        await fs.writeFile(path.join(tmpDir, 'root.hbs'), 'r', 'utf8');
+
+        // Spy on readdir
+        const origReaddir = fs.readdir;
+        const readdirCalls = [];
+        fs.readdir = (p, ...rest) => {
+          readdirCalls.push(String(p));
+          return origReaddir(p, ...rest);
+        };
+
+        try {
+          await walkTemplateTree(tmpDir, {
+            ext: '.hbs',
+            view: { prod: false },
+          });
+        } finally {
+          fs.readdir = origReaddir;
+        }
+
+        // readdir must be called on root, never on the skipped subtree
+        assert.ok(readdirCalls.includes(tmpDir));
+        assert.ok(!readdirCalls.some((p) => p.includes('$if{prod}')));
+      });
+    });
+  });
 });

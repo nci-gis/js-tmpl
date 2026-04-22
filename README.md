@@ -212,6 +212,22 @@ templates/
 → dist/production/config-my-app.yaml
 ```
 
+Use `$if{var}` / `$ifn{var}` as whole directory segments to conditionally
+include or skip files based on view data:
+
+```text
+templates/
+├── common.yaml.hbs
+├── $if{prod}/
+│   └── alerts.yaml.hbs          → written only when view.prod is truthy
+└── $ifn{prod}/
+    └── debug-panel.yaml.hbs     → written only when view.prod is falsy
+```
+
+Guards are directory-only, whole-segment, and throw loudly on missing
+variables. See [API docs](docs/API.md#path-guards--conditional-files) for
+the full semantics and rejected variants.
+
 ### Partial System
 
 Each render pass uses an isolated Handlebars instance. Directory structure maps to partial names:
@@ -289,12 +305,11 @@ See [docs/API.md](docs/API.md) for the complete API reference — parameters, re
 
 ## Examples
 
-See [examples/yaml-templates/](examples/yaml-templates/) for a complete working example demonstrating:
-
-- Dynamic file paths with `${env.NODE_ENV}`
-- Handlebars features (loops, conditionals)
-- Root and namespaced partials
-- Multi-format output (YAML, Markdown)
+- [examples/yaml-templates/](examples/yaml-templates/) — complete walkthrough:
+  dynamic paths with `${env.NODE_ENV}`, Handlebars features (loops,
+  conditionals), root and namespaced partials, multi-format output.
+- [examples/path-guards/](examples/path-guards/) — conditional files via
+  `$if{var}` / `$ifn{var}` whole-segment path guards.
 
 ## Testing
 

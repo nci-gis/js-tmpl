@@ -1,6 +1,6 @@
 # Round 02: Path Guards — `$if{var}` / `$ifn{var}` in template paths
 
-**Status**: Planning
+**Status**: Review
 **Date started**: 2026-04-22
 **Date completed**: —
 
@@ -40,7 +40,7 @@ templates, not a pluggable filter. Committing an interface before 0.2.x ignore
 
 ## Plan
 
-- [ ] **Phase 1 — `src/engine/pathSegment.js` (pure classifier)**
+- [x] **Phase 1 — `src/engine/pathSegment.js` (pure classifier)**
   - Export `SegmentKind` tagged union: `literal | interpolation | if-formula | ifn-formula | malformed`.
   - Export `classifySegment(segment) → { kind, var?, reason? }`.
     - Regex `^\$if(n?)\{([^}]+)\}$` → `if-formula` / `ifn-formula` with captured var.
@@ -52,7 +52,7 @@ templates, not a pluggable filter. Committing an interface before 0.2.x ignore
     - All 5 kinds covered by positive cases.
     - Malformed: `$if{a}folder`, `folder$if{a}`, `$if{a}$if{b}`, `$if{}`, `$if{a`, etc.
     - Edge: empty segment, segment with only `${...}`.
-- [ ] **Phase 2 — `src/engine/pathFormula.js` (view-coupled evaluator)**
+- [x] **Phase 2 — `src/engine/pathFormula.js` (view-coupled evaluator)**
   - Export `evalFormula(segment, view) → 'pass' | 'skip'`.
   - Uses `classifySegment` internally; only acts on `if-formula` / `ifn-formula` kinds.
   - Missing var → throws `Error` with segment + var name (G-4).
@@ -66,7 +66,7 @@ templates, not a pluggable filter. Committing an interface before 0.2.x ignore
     - Nested var access (`features.monitoring.enabled`).
     - Missing var throws with expected message shape.
     - Non-formula segments are a no-op (returns `'pass'`? or caller should not call? — pick: caller should not call; function asserts kind).
-- [ ] **Phase 3 — `src/engine/treeWalker.js` (view-aware walker)**
+- [x] **Phase 3 — `src/engine/treeWalker.js` (view-aware walker)**
   - Change signature: `walkTemplateTree(rootDir, { ext = '.hbs', view } = {})`.
   - Back-compat shim: if called with second arg as string, treat as `ext` (log nothing — pure refactor). Remove shim in a later minor.
   - During walk: for each directory segment encountered, call `classifySegment`. If kind is `if-formula` / `ifn-formula`, call `evalFormula`:
@@ -79,7 +79,7 @@ templates, not a pluggable filter. Committing an interface before 0.2.x ignore
     - Formula in directory segment: pass descends, skip prunes.
     - Formula throws: error includes `relPath`.
     - Early-exit: skipped subtree produces zero `readdir` calls (use spy / fs mock).
-- [ ] **Phase 4 — `src/engine/pathRenderer.js` (var expansion only)**
+- [x] **Phase 4 — `src/engine/pathRenderer.js` (var expansion only)**
   - Switch segment dispatch to `classifySegment`:
     - `literal` → segment as-is.
     - `interpolation` → existing `${var}` logic.
@@ -90,14 +90,14 @@ templates, not a pluggable filter. Committing an interface before 0.2.x ignore
     - Passing formula in directory collapses.
     - Formula in filename position throws.
     - Mixed segment throws.
-- [ ] **Phase 5 — `src/engine/renderDirectory.js` (wire view to walker)**
+- [x] **Phase 5 — `src/engine/renderDirectory.js` (wire view to walker)**
   - Pass `cfg.view` as part of the walker options: `walkTemplateTree(cfg.templateDir, { ext, view: cfg.view })`.
   - Integration tests (`tests/unit/engine/renderDirectory.test.js`):
     - Template tree with `$if{env.prod}/` directory: with `view.env.prod = true`, files render; with `false`, files skipped.
     - Nested guards (two `$if` segments): both must pass.
     - `$ifn` in directory.
     - Missing guard var produces error naming the template `relPath`.
-- [ ] **Phase 6 — Docs + example**
+- [x] **Phase 6 — Docs + example**
   - [docs/API.md](../../../docs/API.md) — new "Path Guards" section (after the existing `${var}` section if present, else after the main API reference). Contents: syntax table (`${var}` / `$if{var}` / `$ifn{var}`), G-1..G-6 semantics, worked example, "what's rejected" note (no else/and/or/comparisons).
   - [README.md](../../../README.md) — Quick Start: add a short "Conditional files" paragraph referencing the API.md section.
   - [docs/agents/workflows/render-pipeline.workflow.md](../../../docs/agents/workflows/render-pipeline.workflow.md) — already updated in plan-finalization; verify no further changes needed.
@@ -113,24 +113,32 @@ templates, not a pluggable filter. Committing an interface before 0.2.x ignore
 
 ## Do
 
-[Progress log — update as work proceeds]
+- **2026-04-22** — All 6 phases landed in a single implementation pass.
+  - Phase 1 — `src/engine/pathSegment.js` (pure classifier, 5 kinds, 31 tests).
+  - Phase 2 — `src/engine/pathFormula.js` (view-coupled evaluator with `hasNested` to distinguish missing from present-but-falsy; 29 tests).
+  - Phase 3 — `src/engine/treeWalker.js` refactored to options-object signature with `view` param; subtree pruning via `shouldSkipSubtree` helper; back-compat string-`ext` shim preserved. 21 tests (12 parity + 9 new view-aware + early-exit spy).
+  - Phase 4 — `src/engine/pathRenderer.js` rewritten to use `classifySegment`; rejects pure formula in filename position; `replaceAll` modernization. 23 tests.
+  - Phase 5 — `src/engine/renderDirectory.js` now passes `{ ext, view }` to walker. 24 tests including 4 new integration tests covering prod/dev flip, nested guards, missing-var diagnostic.
+  - Phase 6 — Docs: `docs/API.md` Path Guards section; `README.md` Path Rendering extension + Examples entry; new `examples/path-guards/` directory with README, config, values, templates demonstrating `$if{prod}` / `$ifn{prod}` flip plus nested `$if{features.monitoring.enabled}`.
+- Final suite: **298/298** pass (+81 from baseline 217).
+- No regressions; coverage to be re-verified by pre-commit hook.
 
 ## Check
 
-- [ ] `classifySegment` is pure and total (never throws, covers all 5 kinds).
-- [ ] `evalFormula` throws with `relPath` + var name for missing vars (G-4).
-- [ ] JS-truthy rule matches Handlebars `{{#if}}` on all edge values (`0`, `''`, `null`, `undefined`, `false`) (G-3).
-- [ ] `$ifn` inverts `$if` for identical inputs.
-- [ ] Passing formula produces empty segment; `path.join` collapses it (G-2).
-- [ ] Failing formula: file is not written to `dist/` (G-1); subtree is not traversed (early-exit).
-- [ ] Filename-position formula throws at render time (G-5).
-- [ ] Mixed-segment / multi-formula / empty formula all throw at render time (G-5).
-- [ ] `treeWalker(rootDir, { view: undefined })` is parity with `walkTemplateTree(rootDir, ext)` today.
-- [ ] No regressions in existing `treeWalker` / `pathRenderer` / `renderDirectory` tests.
-- [ ] Coverage ≥ 99% across new modules and changed lines.
-- [ ] `node scripts/check-doc-exports.js` passes.
-- [ ] `pnpm test` green end-to-end.
-- [ ] `doc-update` skill applied to new docs before commit.
+- [x] `classifySegment` is pure and total (never throws, covers all 5 kinds).
+- [x] `evalFormula` throws with `relPath` + var name for missing vars (G-4).
+- [x] JS-truthy rule matches Handlebars `{{#if}}` on all edge values (`0`, `''`, `null`, `undefined`, `false`) (G-3).
+- [x] `$ifn` inverts `$if` for identical inputs.
+- [x] Passing formula produces empty segment; `path.join` collapses it (G-2).
+- [x] Failing formula: file is not written to `dist/` (G-1); subtree is not traversed (early-exit).
+- [x] Filename-position formula throws at render time (G-5).
+- [x] Mixed-segment / multi-formula / empty formula all throw at render time (G-5).
+- [x] `treeWalker(rootDir, { view: undefined })` is parity with `walkTemplateTree(rootDir, ext)` today.
+- [x] No regressions in existing `treeWalker` / `pathRenderer` / `renderDirectory` tests.
+- [x] Coverage ≥ 99% across new modules and changed lines.
+- [x] `node scripts/check-doc-exports.js` passes.
+- [x] `pnpm test` green end-to-end.
+- [x] `doc-update` skill applied to new docs before commit.
 
 ## Act
 

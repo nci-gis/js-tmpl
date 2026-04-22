@@ -316,6 +316,73 @@ dist/production/my-app-config.yaml
 - Array access supported: `${items.0.name}`
 - No glob expansion
 
+### Path Guards — conditional files
+
+Paths also support **guard formulas** that conditionally include or skip a
+file based on view data:
+
+| Form        | Role                 |
+| ----------- | -------------------- |
+| `${var}`    | Insert value         |
+| `$if{var}`  | Pass if `var` truthy |
+| `$ifn{var}` | Pass if `var` falsy  |
+
+**Example:**
+
+```text
+templates/$if{monitoring.enabled}/dashboard.yaml.hbs
+templates/$if{prod}/$ifn{debug}/config.yaml.hbs
+```
+
+If any guard in the path fails, the file is not written to the output
+directory. The guarded subtree is never traversed, so unrelated files
+under it cost nothing.
+
+**Semantics (strict):**
+
+- **Whole-segment, directories only.** A path segment containing a guard
+  must be _exactly_ the guard — `$if{a}folder` and `folder/$if{a}file.hbs`
+  throw at render time.
+- **One guard per segment.** `$if{a}$if{b}` throws.
+- **JS-truthy rule.** `false`, `0`, `''`, `null`, `undefined` → falsy;
+  everything else → truthy. Matches Handlebars `{{#if}}`.
+- **Missing variable throws.** A guard on a variable not present in `view`
+  is a hard error with the template's relPath and variable name.
+- **Passing guard collapses to an empty segment** — `$if{prod}/app.yaml`
+  renders to `app.yaml` when `prod` is truthy.
+- **`$ifn` inverts `$if`.** No other operators: no `else`, `elif`, `and`,
+  `or`, `not`, or comparisons — ever. Compound logic lives in values
+  (precomputed boolean) or in two files (`$if` + `$ifn` pair).
+
+**Worked example:**
+
+Tree:
+
+```text
+templates/
+  common.yaml.hbs
+  $if{prod}/
+    alerts.yaml.hbs
+  $ifn{prod}/
+    debug-panel.yaml.hbs
+```
+
+With `view = { prod: true }`:
+
+```text
+dist/
+  common.yaml
+  alerts.yaml
+```
+
+With `view = { prod: false }`:
+
+```text
+dist/
+  common.yaml
+  debug-panel.yaml
+```
+
 ## Content Rendering
 
 Templates use full Handlebars syntax.

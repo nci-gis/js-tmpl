@@ -93,4 +93,64 @@ describe('renderPath', () => {
     const result = renderPath('static/nested/file.txt', view);
     assert.strictEqual(result, 'static/nested/file.txt');
   });
+
+  // ── Path formulas ($if / $ifn) ────────────────────────────────────
+
+  describe('path formulas', () => {
+    it('collapses passing $if in a directory segment (G-2)', () => {
+      const view = { prod: true };
+      const result = renderPath('$if{prod}/config.yaml', view);
+      assert.strictEqual(result, 'config.yaml');
+    });
+
+    it('collapses multiple passing formulas', () => {
+      const view = { a: true, b: true };
+      const result = renderPath('$if{a}/$if{b}/file.yaml', view);
+      assert.strictEqual(result, 'file.yaml');
+    });
+
+    it('passes through literal segments around a formula', () => {
+      const view = { prod: true };
+      const result = renderPath('configs/$if{prod}/app.yaml', view);
+      assert.strictEqual(result, 'configs/app.yaml');
+    });
+
+    it('expansion still works alongside formula', () => {
+      const view = { prod: true, name: 'api' };
+      const result = renderPath('$if{prod}/${name}.yaml', view);
+      assert.strictEqual(result, 'api.yaml');
+    });
+
+    it('throws for pure formula as filename (G-5)', () => {
+      // `$if{a}` as the entire last segment (no suffix) classifies as a
+      // formula — filename position is rejected.
+      assert.throws(
+        () => renderPath('folder/$if{a}', { a: true }),
+        /not allowed in a filename/,
+      );
+    });
+
+    it('throws for formula mixed into filename — malformed (G-5)', () => {
+      // `$if{a}.yaml` has extra content after the formula → malformed,
+      // thrown at render time.
+      assert.throws(
+        () => renderPath('folder/$if{a}.yaml', { a: true }),
+        /whole segments/,
+      );
+    });
+
+    it('throws for a malformed mixed segment', () => {
+      assert.throws(
+        () => renderPath('$if{a}folder/x.yaml', { a: true }),
+        /whole segments/,
+      );
+    });
+
+    it('error message includes relPath', () => {
+      assert.throws(
+        () => renderPath('folder/$if{x}name.yaml', {}),
+        /in 'folder\/\$if\{x\}name\.yaml'/,
+      );
+    });
+  });
 });
