@@ -15,31 +15,33 @@ This document outlines the planned features and improvements for js-tmpl.
 
 ### Core Engine (Block-aligned ✅)
 
-- [ ] Custom Handlebars helpers registration API
-- [ ] Path guards (`$if{var}` / `$ifn{var}`) for conditional file output — view-driven skip, visible in the template tree, composes with multi-values. See [docs/agents/plan/20260418-richer-inputs.plan.md](docs/agents/plan/20260418-richer-inputs.plan.md).
-- [ ] Watch mode for development
-- [ ] Multi-pass rendering orchestration **(engine-level only, no orchestration semantics)**
-- [ ] CLI `--help` flag that works without `--values`
-- [ ] Dry-run mode (`--dry-run`)
+- [x] **Path guards (`$if{var}` / `$ifn{var}`)** — conditional file output via view-driven whole-segment formulas; early-exit on pruned subtrees, visible in the template tree. Shipped in **0.1.0** (Round 02). See [docs/agents/plan/20260418-richer-inputs.plan.md](docs/agents/plan/20260418-richer-inputs.plan.md).
+- [x] **Value partials (`--values-dir`)** — compose `view` from multiple structured files by directory namespace, no merge semantics, root-independent `@` flatten, hard errors on collision. Shipped in **0.1.0** (Round 03). See [docs/agents/plan/20260418-richer-inputs.plan.md](docs/agents/plan/20260418-richer-inputs.plan.md).
+- [x] **Strict templates** — Handlebars compiled with `strict: true`; missing `{{var}}` throws with template relPath + var name. Shipped in **0.1.0** (Round 03, VP-9).
+- [x] **CLI `--help` without `--values`** — closed by VP-8 making `valuesFile` optional. Shipped in **0.1.0**.
+- [ ] Custom Handlebars helpers registration API (planned for 0.1.1, see [Round 04](.agents/plan/cycles/Round_04.md))
+- [ ] Multi-pass rendering orchestration **(engine-level only, no orchestration semantics)** — speculative; open an issue with a concrete case before this earns a version.
+- [ ] Dry-run mode (`--dry-run`) — planned for a later 0.1.x minor.
 
 > ⚠️ Note: multi-pass here must be explicitly configured, never inferred.
 
 ### Error Handling & Clarity (Block-aligned ✅)
 
-- [ ] Enhanced error messages with suggestions
-- [ ] Parallel rendering optimization
+- [x] **Locatable error messages** — Path-guard missing-var, strict-template undefined-var, C-1/C-2/C-3 collision errors all name the source file(s) and variable. Shipped in **0.1.0**.
+- [ ] Further error-message polish (suggestions, proximity hints) — planned for a later 0.1.x minor.
 
 These directly support:
 
-- [ ] Explicit > Implicit
-- [ ] Deterministic > Clever
+- [x] Explicit > Implicit
+- [x] Deterministic > Clever
 
 ### ❌ Deferred (not Block)
 
 The following are intentionally deferred to avoid premature scaling:
 
-- [ ] ⏸ Watch mode
-- [ ] ⏸ Progress indicators
+- [ ] ⏸ Watch mode — DX, not correctness.
+- [ ] ⏸ Progress indicators — DX, not correctness.
+- [ ] ⏸ Parallel rendering optimization — performance belongs in 0.2.x (Scale phase); must preserve deterministic output.
 
 Reason:
 
