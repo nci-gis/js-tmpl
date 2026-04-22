@@ -8,6 +8,30 @@ import Handlebars from 'handlebars';
 import { renderDirectory } from '../../../src/engine/renderDirectory.js';
 import { withTempDir } from '../../helpers/tempDir.js';
 
+async function seedGuardTree(tmpDir) {
+  const templateDir = path.join(tmpDir, 'templates');
+  const partialsDir = path.join(tmpDir, 'partials');
+  const outDir = path.join(tmpDir, 'out');
+
+  await fs.mkdir(path.join(templateDir, '$if{prod}'), { recursive: true });
+  await fs.mkdir(path.join(templateDir, '$ifn{prod}'), { recursive: true });
+  await fs.mkdir(partialsDir, { recursive: true });
+
+  await fs.writeFile(path.join(templateDir, 'always.hbs'), 'always', 'utf8');
+  await fs.writeFile(
+    path.join(templateDir, '$if{prod}', 'prod.hbs'),
+    'prod',
+    'utf8',
+  );
+  await fs.writeFile(
+    path.join(templateDir, '$ifn{prod}', 'dev.hbs'),
+    'dev',
+    'utf8',
+  );
+
+  return { templateDir, partialsDir, outDir };
+}
+
 describe('renderDirectory', () => {
   beforeEach(() => {
     // Clear registered partials before each test
@@ -666,6 +690,119 @@ describe('renderDirectory', () => {
 
       const output = await fs.readFile(path.join(outDir, 'page'), 'utf8');
       assert.strictEqual(output, 'Login: admin');
+    });
+  });
+
+  // ── Path guards ($if / $ifn) ──────────────────────────────────────
+
+  describe('path guards', () => {
+    it('renders only prod-guarded files when prod=true', async () => {
+      await withTempDir(async (tmpDir) => {
+        const dirs = await seedGuardTree(tmpDir);
+
+        await renderDirectory({
+          ...dirs,
+          view: { prod: true },
+          extname: '.hbs',
+        });
+
+        assert.ok(
+          await fs
+            .stat(path.join(dirs.outDir, 'always'))
+            .then(() => true)
+            .catch(() => false),
+        );
+        assert.ok(
+          await fs
+            .stat(path.join(dirs.outDir, 'prod'))
+            .then(() => true)
+            .catch(() => false),
+        );
+        await assert.rejects(fs.stat(path.join(dirs.outDir, 'dev')));
+      });
+    });
+
+    it('renders only dev-guarded files when prod=false', async () => {
+      await withTempDir(async (tmpDir) => {
+        const dirs = await seedGuardTree(tmpDir);
+
+        await renderDirectory({
+          ...dirs,
+          view: { prod: false },
+          extname: '.hbs',
+        });
+
+        assert.ok(
+          await fs
+            .stat(path.join(dirs.outDir, 'always'))
+            .then(() => true)
+            .catch(() => false),
+        );
+        assert.ok(
+          await fs
+            .stat(path.join(dirs.outDir, 'dev'))
+            .then(() => true)
+            .catch(() => false),
+        );
+        await assert.rejects(fs.stat(path.join(dirs.outDir, 'prod')));
+      });
+    });
+
+    it('nested guards — both must pass', async () => {
+      await withTempDir(async (tmpDir) => {
+        const templateDir = path.join(tmpDir, 'templates');
+        const partialsDir = path.join(tmpDir, 'partials');
+        const outDir = path.join(tmpDir, 'out');
+        const nested = path.join(templateDir, '$if{a}', '$if{b}');
+
+        await fs.mkdir(nested, { recursive: true });
+        await fs.mkdir(partialsDir, { recursive: true });
+        await fs.writeFile(path.join(nested, 'deep.hbs'), 'deep', 'utf8');
+
+        await renderDirectory({
+          templateDir,
+          partialsDir,
+          outDir,
+          view: { a: true, b: true },
+          extname: '.hbs',
+        });
+
+        assert.ok(
+          await fs
+            .stat(path.join(outDir, 'deep'))
+            .then(() => true)
+            .catch(() => false),
+        );
+      });
+    });
+
+    it('throws with relPath on missing guard variable', async () => {
+      await withTempDir(async (tmpDir) => {
+        const templateDir = path.join(tmpDir, 'templates');
+        const partialsDir = path.join(tmpDir, 'partials');
+        const outDir = path.join(tmpDir, 'out');
+
+        await fs.mkdir(path.join(templateDir, '$if{missing}'), {
+          recursive: true,
+        });
+        await fs.mkdir(partialsDir, { recursive: true });
+        await fs.writeFile(
+          path.join(templateDir, '$if{missing}', 'x.hbs'),
+          'x',
+          'utf8',
+        );
+
+        await assert.rejects(
+          renderDirectory({
+            templateDir,
+            partialsDir,
+            outDir,
+            view: {},
+            extname: '.hbs',
+          }),
+          /undefined view variable 'missing'/,
+        );
+      });
     });
   });
 });

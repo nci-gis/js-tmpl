@@ -92,14 +92,25 @@ describe('renderContent', () => {
     });
   });
 
-  it('handles missing properties gracefully', async () => {
+  it('throws on missing property (strict mode, VP-9)', async () => {
     await withTempDir(async (tmpDir) => {
       const templateFile = path.join(tmpDir, 'template.hbs');
       await fs.writeFile(templateFile, 'Value: {{missing}}', 'utf8');
 
       const view = {};
-      const result = await renderContent(templateFile, view);
+      await assert.rejects(
+        renderContent(templateFile, view, undefined, 'template.hbs'),
+        /Template 'template\.hbs': "missing" not defined/,
+      );
+    });
+  });
 
+  it('renders present-but-empty string as empty (not missing)', async () => {
+    await withTempDir(async (tmpDir) => {
+      const templateFile = path.join(tmpDir, 'template.hbs');
+      await fs.writeFile(templateFile, 'Value: {{name}}', 'utf8');
+
+      const result = await renderContent(templateFile, { name: '' });
       assert.strictEqual(result, 'Value: ');
     });
   });

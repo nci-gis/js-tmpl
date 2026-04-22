@@ -3,71 +3,62 @@ import process from 'node:process';
 
 import { DEFAULTS } from './defaults.js';
 import { loadProjectConfig, loadYamlOrJson } from './loader.js';
+import { scanValuePartials } from './valuePartials.js';
 import { buildView, pickEnv } from './view.js';
 
 /**
- * Resolve valuesFile path based on valuesDir
- * @param {string} valuesFile - The values file name or path
- * @param {string} valuesDir - Values directory (may be empty string)
- * @param {string} cwd - Current working directory
- * @returns {string} Absolute path to values file
+ * C-1 — throw if the resolved `valuesFile` sits inside the resolved
+ * `valuesDir`. A file loaded both as root and as a value partial would
+ * produce ambiguous collisions.
+ *
+ * @param {string} valuesFileAbs
+ * @param {string} valuesDirAbs
  */
-function resolveValuesFilePath(valuesFile, valuesDir, cwd) {
-  // If absolute, use as-is
-  if (path.isAbsolute(valuesFile)) {
-    return valuesFile;
+function assertValuesFileNotInside(valuesFileAbs, valuesDirAbs) {
+  const rel = path.relative(valuesDirAbs, valuesFileAbs);
+  const inside = rel && !rel.startsWith('..') && !path.isAbsolute(rel);
+  if (inside) {
+    throw new Error(
+      `valuesFile '${valuesFileAbs}' is inside valuesDir '${valuesDirAbs}'.\n` +
+        `Move the file out, or drop valuesDir.`,
+    );
   }
-
-  // If valuesDir is set (truthy), use it as base
-  if (valuesDir) {
-    const absoluteValuesDir = path.isAbsolute(valuesDir)
-      ? valuesDir
-      : path.join(cwd, valuesDir);
-    return path.join(absoluteValuesDir, valuesFile);
-  }
-
-  // Otherwise, resolve from cwd
-  return path.join(cwd, valuesFile);
 }
 
 /**
- * Resolve final config using:
- * defaults < projectConfig < cliArgs
+ * Resolve final config using: defaults < projectConfig < cliArgs.
  *
- * @param {import('../types.js').CliArgs} cli - CLI arguments
- * @param {string} [cwd] - Current working directory
- * @returns {import('../types.js').TemplateConfig} - Resolved configuration
+ * Value sources (all optional per VP-5, VP-6, VP-8):
+ * - `valuesFile` loaded into top-level view keys.
+ * - `valuesDir` scanned via `scanValuePartials` into a namespaced tree.
+ * - Allowlisted env vars under `view.env.*`.
+ *
+ * Collision rules C-1, C-2, C-3 apply and surface as hard errors.
+ *
+ * @param {import('../types.js').CliArgs} cli
+ * @param {string} [cwd]
+ * @returns {import('../types.js').TemplateConfig}
  */
 export function resolveConfig(cli, cwd = process.cwd()) {
   const projectConfig = loadProjectConfig(cwd, cli.configFile);
-
-  const mergedConfig = {
-    ...DEFAULTS,
-    ...projectConfig,
-    ...cli,
-  };
+  const mergedConfig = { ...DEFAULTS, ...projectConfig, ...cli };
 
   /** @param {string} p */
   const abs = (p) => (path.isAbsolute(p) ? p : path.join(cwd, p));
 
-  // Validate valuesFile is provided
-  if (!mergedConfig.valuesFile) {
-    throw new Error(
-      'Missing required configuration: valuesFile\n' +
-        'Provide via:\n' +
-        '  - CLI: --values path/to/values.yaml\n' +
-        '  - Config: valuesFile: "path/to/values.yaml" in js-tmpl.config.yaml',
-    );
+  const valuesFileAbs = mergedConfig.valuesFile
+    ? abs(mergedConfig.valuesFile)
+    : '';
+  const valuesDirAbs = mergedConfig.valuesDir
+    ? abs(mergedConfig.valuesDir)
+    : '';
+
+  if (valuesFileAbs && valuesDirAbs) {
+    assertValuesFileNotInside(valuesFileAbs, valuesDirAbs);
   }
 
-  // Resolve path - simple logic based on valuesDir presence
-  const valuesFilePath = resolveValuesFilePath(
-    mergedConfig.valuesFile,
-    mergedConfig.valuesDir,
-    cwd,
-  );
-
-  const values = loadYamlOrJson(valuesFilePath);
+  const rootValues = valuesFileAbs ? loadYamlOrJson(valuesFileAbs) : {};
+  const partials = valuesDirAbs ? scanValuePartials(valuesDirAbs) : {};
 
   const hasEnvConfig = mergedConfig.envKeys?.length || mergedConfig.envPrefix;
   const env = hasEnvConfig
@@ -82,6 +73,12 @@ export function resolveConfig(cli, cwd = process.cwd()) {
     partialsDir: mergedConfig.partialsDir ? abs(mergedConfig.partialsDir) : '',
     outDir: abs(mergedConfig.outDir),
     extname: mergedConfig.extname,
-    view: buildView(values, env),
+    view: buildView({
+      rootValues,
+      partials,
+      env,
+      valuesFile: valuesFileAbs || '<unset>',
+      valuesDir: valuesDirAbs || '<unset>',
+    }),
   };
 }

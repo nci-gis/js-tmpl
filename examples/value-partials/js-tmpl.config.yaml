@@ -1,0 +1,5 @@
+templateDir: templates
+valuesFile: app.yaml
+valuesDir: values
+outDir: dist
+extname: .hbs

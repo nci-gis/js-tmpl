@@ -26,49 +26,35 @@ Resolves configuration by merging user options with project config and defaults.
 
 `options` (Object):
 
-| Property      | Type     | Required | Default         | Description                       |
-| ------------- | -------- | -------- | --------------- | --------------------------------- |
-| `valuesFile`  | string   | **Yes**  | -               | Path to values file (YAML/JSON)   |
-| `valuesDir`   | string   | No       | `""`            | Base directory for valuesFile     |
-| `templateDir` | string   | No       | `"templates"`   | Path to template directory        |
-| `partialsDir` | string   | No       | `""` (skipped)  | Path to partials directory        |
-| `outDir`      | string   | No       | `"dist"`        | Path to output directory          |
-| `extname`     | string   | No       | `".hbs"`        | Template file extension           |
-| `configFile`  | string   | No       | Auto-discovered | Explicit config file path         |
-| `envKeys`     | string[] | No       | `[]`            | Env var names to expose           |
-| `envPrefix`   | string   | No       | `""`            | Auto-include env vars with prefix |
+| Property      | Type     | Required | Default         | Description                                      |
+| ------------- | -------- | -------- | --------------- | ------------------------------------------------ |
+| `valuesFile`  | string   | No       | —               | Path to values file (`.yaml` / `.yml` / `.json`) |
+| `valuesDir`   | string   | No       | —               | Value-partials root (see "Value Partials" below) |
+| `templateDir` | string   | No       | `"templates"`   | Path to template directory                       |
+| `partialsDir` | string   | No       | `""` (skipped)  | Path to partials directory                       |
+| `outDir`      | string   | No       | `"dist"`        | Path to output directory                         |
+| `extname`     | string   | No       | `".hbs"`        | Template file extension                          |
+| `configFile`  | string   | No       | Auto-discovered | Explicit config file path                        |
+| `envKeys`     | string[] | No       | `[]`            | Env var names to expose                          |
+| `envPrefix`   | string   | No       | `""`            | Auto-include env vars with prefix                |
 
-#### Path Resolution for valuesFile
+Both `valuesFile` and `valuesDir` are optional (VP-5, VP-6, VP-8). If neither
+is supplied, `view` is `{ env: {...} }` only — the CLI invocation itself is
+the declaration. Missing `{{var}}` references in templates throw loudly
+(VP-9, strict mode).
 
-The `valuesFile` path is resolved based on whether `valuesDir` is set:
+#### Value sources and path resolution
 
-- **If `valuesDir` is set**: `valuesFile` resolves as `valuesDir/valuesFile`
-- **If `valuesDir` is empty** (default): `valuesFile` resolves from `process.cwd()`
-- **Absolute paths**: Always used as-is, ignoring `valuesDir`
+- **`valuesFile`** — resolved from cwd (or used as-is if absolute). Loaded
+  into top-level `view` keys. One file, no merging.
+- **`valuesDir`** — resolved from cwd (or used as-is if absolute). Scanned
+  recursively; each file becomes a namespace in view by its directory path
+  (see "Value Partials" below).
 
-**Examples:**
-
-```javascript
-// Without valuesDir (resolves from cwd)
-resolveConfig({
-  valuesFile: 'config/prod.yaml',
-});
-// Resolves to: <cwd>/config/prod.yaml
-
-// With valuesDir (organized values directory)
-resolveConfig({
-  valuesDir: 'templates.values',
-  valuesFile: 'prod.yaml',
-});
-// Resolves to: <cwd>/templates.values/prod.yaml
-
-// Absolute path (ignores valuesDir)
-resolveConfig({
-  valuesDir: 'templates.values',
-  valuesFile: '/absolute/path/values.yaml',
-});
-// Resolves to: /absolute/path/values.yaml
-```
+**Migration note (0.1.0):** Prior to 0.1.0, `valuesDir` was a base path
+that `valuesFile` resolved against (`valuesDir + valuesFile` → file path).
+That behavior is retired. If you relied on it, combine the paths yourself:
+`valuesFile: foo/app.yaml` instead of `valuesDir: foo, valuesFile: app.yaml`.
 
 #### Returns
 
@@ -76,8 +62,16 @@ resolveConfig({
 
 #### Throws
 
-- `Error` - If `valuesFile` is missing
-- `Error` - If config file is specified but not found
+- `Error` — If the config file is specified but not found.
+- `Error` — **C-1**: if `valuesFile` resolves to a path inside `valuesDir`.
+- `Error` — **C-2**: if a top-level key in `valuesFile` collides with a
+  top-level namespace scanned from `valuesDir`.
+- `Error` — **C-3**: if a file under `valuesDir` resolves to the reserved
+  `env` namespace.
+- `Error` — If a file under `valuesDir` contains invalid namespace segments
+  (characters outside `/^\w+$/`).
+- `Error` — If two files under `valuesDir` resolve to the same namespace,
+  or one file's namespace is a strict prefix of another (shadow collision).
 
 #### Example
 
@@ -200,7 +194,8 @@ The view object is passed to all templates and contains:
 
 ```javascript
 {
-  ...valuesData,     // All data from values file
+  ...rootValues,     // Top-level keys from `valuesFile` (if any)
+  ...namespaces,     // Namespaced sub-trees from `valuesDir` (if any)
   env: { ... }       // Allowlisted environment variables (reserved key)
 }
 ```
@@ -210,6 +205,47 @@ The view object is passed to all templates and contains:
 >
 > **Reserved key:** `env` is always reserved for environment data.
 > If your values file contains a top-level `env` key, a warning is logged and it will be overwritten.
+
+### Value Partials (`valuesDir`)
+
+`valuesDir` is a **value-partials root**. Each file under it becomes a
+namespace in `view` determined by its directory path — mirroring the
+template partials system:
+
+| File path (under `valuesDir`) | View placement        |
+| ----------------------------- | --------------------- |
+| `app.yaml`                    | `view.app.*`          |
+| `env/prod.yaml`               | `view.env.prod.*`     |
+| `services/api.yaml`           | `view.services.api.*` |
+| `@shared/consts.yaml`         | `view.consts.*`       |
+| `env/@overrides/app.yaml`     | `view.app.*`          |
+
+**Rules:**
+
+- **Formats**: `.yaml`, `.yml`, `.json`. Other extensions are skipped.
+- **Segment validation**: each directory / filename segment must match
+  `/^\w+$/` (letters, digits, underscore). Other characters throw.
+- **`@<name>/` flatten**: any segment starting with `@` (anywhere in the
+  relative path) collapses the chain to `[basename]`. Root-independent —
+  scanning `values/` and `values/env/` yield the same namespace for
+  `values/env/@overrides/app.yaml`.
+- **No merge, no precedence**: every value has exactly one source.
+  Duplicates throw, naming both files.
+- **Shadow collisions throw**: `env.yaml` and `env/prod.yaml` can't
+  coexist — a leaf can't simultaneously be a sub-tree.
+- **Optional**: absent `valuesDir` contributes nothing.
+- **`env` is reserved**: a file that resolves to the top-level `env`
+  namespace throws (collision rule C-3).
+
+### Strict templates
+
+Templates are compiled with Handlebars `strict: true`. A `{{var}}` on an
+undefined path throws an error that includes the template's relative path
+and the variable name. Present-but-empty values (`''`, `0`, `false`,
+`null`) render as normal — only **missing** properties fail loudly.
+
+This pairs with the Path Guards rule (G-4) and the Value Partials design:
+missing data is always loud, never silent.
 
 ### Exposing Environment Variables
 
@@ -315,6 +351,73 @@ dist/production/my-app-config.yaml
 - Nested access supported: `${a.b.c}`
 - Array access supported: `${items.0.name}`
 - No glob expansion
+
+### Path Guards — conditional files
+
+Paths also support **guard formulas** that conditionally include or skip a
+file based on view data:
+
+| Form        | Role                 |
+| ----------- | -------------------- |
+| `${var}`    | Insert value         |
+| `$if{var}`  | Pass if `var` truthy |
+| `$ifn{var}` | Pass if `var` falsy  |
+
+**Example:**
+
+```text
+templates/$if{monitoring.enabled}/dashboard.yaml.hbs
+templates/$if{prod}/$ifn{debug}/config.yaml.hbs
+```
+
+If any guard in the path fails, the file is not written to the output
+directory. The guarded subtree is never traversed, so unrelated files
+under it cost nothing.
+
+**Semantics (strict):**
+
+- **Whole-segment, directories only.** A path segment containing a guard
+  must be _exactly_ the guard — `$if{a}folder` and `folder/$if{a}file.hbs`
+  throw at render time.
+- **One guard per segment.** `$if{a}$if{b}` throws.
+- **JS-truthy rule.** `false`, `0`, `''`, `null`, `undefined` → falsy;
+  everything else → truthy. Matches Handlebars `{{#if}}`.
+- **Missing variable throws.** A guard on a variable not present in `view`
+  is a hard error with the template's relPath and variable name.
+- **Passing guard collapses to an empty segment** — `$if{prod}/app.yaml`
+  renders to `app.yaml` when `prod` is truthy.
+- **`$ifn` inverts `$if`.** No other operators: no `else`, `elif`, `and`,
+  `or`, `not`, or comparisons — ever. Compound logic lives in values
+  (precomputed boolean) or in two files (`$if` + `$ifn` pair).
+
+**Worked example:**
+
+Tree:
+
+```text
+templates/
+  common.yaml.hbs
+  $if{prod}/
+    alerts.yaml.hbs
+  $ifn{prod}/
+    debug-panel.yaml.hbs
+```
+
+With `view = { prod: true }`:
+
+```text
+dist/
+  common.yaml
+  alerts.yaml
+```
+
+With `view = { prod: false }`:
+
+```text
+dist/
+  common.yaml
+  debug-panel.yaml
+```
 
 ## Content Rendering
 
