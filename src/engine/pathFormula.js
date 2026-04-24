@@ -15,13 +15,15 @@ function hasNested(view, key) {
   const parts = key.split('.');
   let cur = view;
   for (let i = 0; i < parts.length - 1; i++) {
-    if (cur === null || cur === undefined || typeof cur !== 'object')
-      {return false;}
+    if (cur === null || cur === undefined || typeof cur !== 'object') {
+      return false;
+    }
     cur = /** @type {Record<string, unknown>} */ (cur)[parts[i]];
   }
-  if (cur === null || cur === undefined || typeof cur !== 'object')
-    {return false;}
-  return Object.prototype.hasOwnProperty.call(cur, parts[parts.length - 1]);
+  if (cur === null || cur === undefined || typeof cur !== 'object') {
+    return false;
+  }
+  return Object.hasOwn(cur, parts[parts.length - 1]); // NOSONAR
 }
 
 /**
