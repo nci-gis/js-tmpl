@@ -1,0 +1,5 @@
+templateDir: templates
+partialsDir: templates.partials
+valuesFile: values.yaml
+outDir: dist
+extname: .hbs

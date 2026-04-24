@@ -78,10 +78,11 @@ js-tmpl will search for a project config file in **exactly these locations**, in
 
 Everything else must be **explicitly specified**:
 
-- ✅ **Values file** - Required via `--values` flag or `valuesFile` config
-- ✅ **Template directory** - Must be in config or defaults to `templates/`
-- ✅ **Output directory** - Must be in config or defaults to `dist/`
-- ✅ **Partials directory** - Must be in config; not loaded if omitted
+- ✅ **Values file** — Optional via `--values` flag or `valuesFile` config (VP-8)
+- ✅ **Values directory** — Optional via `--values-dir` flag or `valuesDir` config (VP-6)
+- ✅ **Template directory** — Must be in config or defaults to `templates/`
+- ✅ **Output directory** — Must be in config or defaults to `dist/`
+- ✅ **Partials directory** — Must be in config; not loaded if omitted
 
 ### Override Auto-Discovery
 
@@ -212,6 +213,22 @@ templates/
 → dist/production/config-my-app.yaml
 ```
 
+Use `$if{var}` / `$ifn{var}` as whole directory segments to conditionally
+include or skip files based on view data:
+
+```text
+templates/
+├── common.yaml.hbs
+├── $if{prod}/
+│   └── alerts.yaml.hbs          → written only when view.prod is truthy
+└── $ifn{prod}/
+    └── debug-panel.yaml.hbs     → written only when view.prod is falsy
+```
+
+Guards are directory-only, whole-segment, and throw loudly on missing
+variables. See [API docs](docs/API.md#path-guards--conditional-files) for
+the full semantics and rejected variants.
+
 ### Partial System
 
 Each render pass uses an isolated Handlebars instance. Directory structure maps to partial names:
@@ -242,7 +259,7 @@ Duplicate partial names throw an error. Names must be alphanumeric + underscore 
 Think of js-tmpl as a function:
 
 ```text
-(input templates, data, config) → output files
+f(config, values/view, input templates) → files (output)
 ```
 
 There is no hidden state, no lifecycle, and no side effects.
@@ -256,16 +273,22 @@ js-tmpl render [options]
 
 ### Options
 
-| Option                   | Description                             | Default         |
-| ------------------------ | --------------------------------------- | --------------- |
-| `-c, --values FILE`      | Values file (YAML/JSON)                 | **Required**    |
-| `-t, --template-dir DIR` | Template directory                      | `templates`     |
-| `-o, --out DIR`          | Output directory                        | `dist`          |
-| `-p, --partials-dir DIR` | Partials directory                      | None (skipped)  |
-| `-x, --ext EXT`          | Template extension                      | `.hbs`          |
-| `--config-file FILE`     | Explicit config file                    | Auto-discovered |
-| `--env-keys KEYS`        | Comma-separated env var names to expose | None            |
-| `--env-prefix PREFIX`    | Auto-include env vars with this prefix  | None            |
+| Option                   | Description                              | Default         |
+| ------------------------ | ---------------------------------------- | --------------- |
+| `-c, --values FILE`      | Values file (`.yaml` / `.yml` / `.json`) | Optional        |
+| `--values-dir DIR`       | Value-partials root (namespaced by path) | Optional        |
+| `-t, --template-dir DIR` | Template directory                       | `templates`     |
+| `-o, --out DIR`          | Output directory                         | `dist`          |
+| `-p, --partials-dir DIR` | Partials directory                       | None (skipped)  |
+| `-x, --ext EXT`          | Template extension                       | `.hbs`          |
+| `--config-file FILE`     | Explicit config file                     | Auto-discovered |
+| `--env-keys KEYS`        | Comma-separated env var names to expose  | None            |
+| `--env-prefix PREFIX`    | Auto-include env vars with this prefix   | None            |
+
+Both `--values` and `--values-dir` are optional (VP-8, VP-6). If neither is
+supplied, `view` is `{ env: {...} }` only. Missing `{{var}}` in a template
+throws with the template's relative path and variable name (VP-9, strict
+mode).
 
 ### Examples of Usage
 
@@ -289,12 +312,14 @@ See [docs/API.md](docs/API.md) for the complete API reference — parameters, re
 
 ## Examples
 
-See [examples/yaml-templates/](examples/yaml-templates/) for a complete working example demonstrating:
-
-- Dynamic file paths with `${env.NODE_ENV}`
-- Handlebars features (loops, conditionals)
-- Root and namespaced partials
-- Multi-format output (YAML, Markdown)
+- [examples/yaml-templates/](examples/yaml-templates/) — complete walkthrough:
+  dynamic paths with `${env.NODE_ENV}`, Handlebars features (loops,
+  conditionals), root and namespaced partials, multi-format output.
+- [examples/path-guards/](examples/path-guards/) — conditional files via
+  `$if{var}` / `$ifn{var}` whole-segment path guards.
+- [examples/value-partials/](examples/value-partials/) — composing `view`
+  from multiple structured files via `--values-dir` (directory-as-namespace,
+  no merge, `@`-flatten escape).
 
 ## Testing
 
@@ -337,7 +362,7 @@ For security concerns, see [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT © pasxd245
+See [LICENSE](LICENSE).
 
 ## Learn More
 
@@ -354,3 +379,7 @@ MIT © pasxd245
 - [Examples](examples/) - Working examples and templates
 - [Issue Tracker](https://github.com/nci-gis/js-tmpl/issues) - Report bugs or request features
 - [NPM Package](https://www.npmjs.com/package/@nci-gis/js-tmpl) - Package registry
+
+## Transparency
+
+AI-assisted development (e.g., Claude Code, Copilot) was used for scaffolding and iteration.

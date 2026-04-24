@@ -28,3 +28,7 @@ services:
   - name: auth
     url: https://auth.example.com
     enabled: true
+
+content: |
+  This project is generated from templates.
+  Customize by editing the values file and re-rendering.

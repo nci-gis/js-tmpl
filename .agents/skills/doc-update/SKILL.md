@@ -31,6 +31,19 @@ Every topic has exactly ONE canonical file. Content lives there and nowhere else
 | Testing documentation                         | `tests/README.md`    | Test structure, coverage, how to run tests                 |
 | Documentation index                           | `docs/ToC.md`        | Links to all docs (hub only, never repeats content)        |
 
+## Internal vs Public Docs
+
+Not every file under `docs/` is public-facing.
+
+- `docs/analysis/` is **internal by default**. Treat it as project analysis,
+  design exploration, or agent-oriented reasoning unless a human explicitly says
+  it should be surfaced to end users.
+- Files under `docs/analysis/` should **not** be added to `docs/ToC.md` or
+  `README.md` automatically.
+- Only user-facing canonical docs belong in `docs/ToC.md` and README cross-links.
+- If unsure whether a new `docs/` file is public or internal, prefer keeping it
+  unlisted and ask only if that distinction materially matters.
+
 ## Decision Table: "Where does this go?"
 
 | You are documenting...                 | Write it in                                                                               |
@@ -42,7 +55,8 @@ Every topic has exactly ONE canonical file. Content lives there and nowhere else
 | A change to the rendering pipeline     | `docs/WORKFLOW.md`                                                                        |
 | A new test pattern or test utility     | `tests/README.md`                                                                         |
 | A new example                          | `examples/` directory + link from `docs/ToC.md`                                           |
-| An entirely new topic                  | New file in `docs/` + register in `docs/ToC.md` (see step 6)                              |
+| An entirely new public topic           | New file in `docs/` + register in `docs/ToC.md` (see step 6)                              |
+| Internal analysis or agent reasoning   | New file in `docs/analysis/` and leave unlisted unless explicitly requested               |
 
 ## Procedure
 
@@ -122,7 +136,7 @@ Fix any failures before considering the task complete.
 
 ### 6. Handle new topics
 
-If a genuinely new topic does not fit any existing canonical file:
+If a genuinely new public-facing topic does not fit any existing canonical file:
 
 1. Create a new file in `docs/` using naming consistent with existing files (e.g., `docs/SECURITY-MODEL.md`, `docs/Plugins.md`).
 2. Register the new file in `docs/ToC.md`:
@@ -131,6 +145,13 @@ If a genuinely new topic does not fit any existing canonical file:
    - Keep `ToC.md` as links only -- do not add content summaries.
 3. If the README should reference it, add a one-line summary + link in the "Learn More" section at the bottom of `README.md`.
 4. Update the SSOT Topic Map in this skill (or flag for human review).
+
+If the topic is internal analysis rather than public docs:
+
+1. Create the file under `docs/analysis/`.
+2. Do not add it to `docs/ToC.md`.
+3. Do not add it to `README.md` unless a human explicitly requests public surfacing.
+4. Keep any references targeted and minimal.
 
 ### 7. README discipline
 
@@ -149,7 +170,7 @@ Before finishing any documentation task, verify:
 
 - [ ] Content lives in exactly one canonical file (no duplication)
 - [ ] Other files link to the canonical source, not copy from it
-- [ ] `docs/ToC.md` is updated if a new section or file was added
+- [ ] `docs/ToC.md` is updated if a new public-facing section or file was added
 - [ ] `README.md` summary is still accurate (brief + links out)
 - [ ] `pnpm docs:check` passes with no errors
 - [ ] New exported functions or config candidates appear in `docs/API.md`

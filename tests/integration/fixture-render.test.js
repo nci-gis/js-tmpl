@@ -119,6 +119,7 @@ describe('Integration: Fixture-based Rendering', () => {
         services: [
           { name: 'api', url: 'https://api.custom.com', enabled: true },
         ],
+        content: 'Custom content for the generated README.',
       };
 
       const cfg = {

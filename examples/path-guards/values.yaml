@@ -1,0 +1,10 @@
+project:
+  name: my-service
+
+# Flip this between true and false to see path guards in action.
+prod: true
+
+# Example view-data driving a nested guard.
+features:
+  monitoring:
+    enabled: true

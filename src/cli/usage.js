@@ -6,7 +6,8 @@ Commands:
 
 Options:
   -t, --template-dir <dir>   Template directory (default: templates)
-  -c, --values <file>        Values file (YAML or JSON) [required]
+  -c, --values <file>        Values file (.yaml / .yml / .json) — optional
+      --values-dir <dir>     Value-partials root, namespaced into view by path
   -o, --out <dir>            Output directory (default: dist)
   -p, --partials-dir <dir>   Partials directory
   -x, --ext <ext>            Template extension (default: .hbs)

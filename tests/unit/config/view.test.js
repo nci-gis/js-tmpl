@@ -4,11 +4,11 @@ import { describe, it, mock } from 'node:test';
 import { buildView, pickEnv } from '../../../src/config/view.js';
 
 describe('buildView', () => {
-  it('builds view with values and env', () => {
-    const values = { name: 'test', version: '1.0.0' };
-    const env = { NODE_ENV: 'test' };
-
-    const view = buildView(values, env);
+  it('builds view with root values and env', () => {
+    const view = buildView({
+      rootValues: { name: 'test', version: '1.0.0' },
+      env: { NODE_ENV: 'test' },
+    });
 
     assert.deepStrictEqual(view, {
       name: 'test',
@@ -18,35 +18,25 @@ describe('buildView', () => {
   });
 
   it('defaults env to empty object when not provided', () => {
-    const values = { name: 'test' };
-
-    const view = buildView(values);
-
+    const view = buildView({ rootValues: { name: 'test' } });
     assert.strictEqual(view.name, 'test');
     assert.deepStrictEqual(view.env, {});
   });
 
-  it('handles empty values object', () => {
-    const values = {};
-    const env = { NODE_ENV: 'production' };
-
-    const view = buildView(values, env);
-
-    assert.deepStrictEqual(view, {
-      env: { NODE_ENV: 'production' },
-    });
+  it('handles empty root values', () => {
+    const view = buildView({ env: { NODE_ENV: 'production' } });
+    assert.deepStrictEqual(view, { env: { NODE_ENV: 'production' } });
   });
 
-  it('spreads all values properties', () => {
-    const values = {
-      name: 'app',
-      config: { port: 3000 },
-      list: [1, 2, 3],
-    };
-    const env = {};
+  it('handles no arguments at all (VP-8)', () => {
+    const view = buildView();
+    assert.deepStrictEqual(view, { env: {} });
+  });
 
-    const view = buildView(values, env);
-
+  it('spreads all root-value properties', () => {
+    const view = buildView({
+      rootValues: { name: 'app', config: { port: 3000 }, list: [1, 2, 3] },
+    });
     assert.strictEqual(view.name, 'app');
     assert.deepStrictEqual(view.config, { port: 3000 });
     assert.deepStrictEqual(view.list, [1, 2, 3]);
@@ -54,22 +44,21 @@ describe('buildView', () => {
   });
 
   it('env is a reserved key — always contains the environment object', () => {
-    const values = { name: 'test', env: 'should-be-overridden' };
-    const env = { NODE_ENV: 'test' };
-
-    const view = buildView(values, env);
-
+    const view = buildView({
+      rootValues: { name: 'test', env: 'should-be-overridden' },
+      env: { NODE_ENV: 'test' },
+    });
     assert.strictEqual(view.name, 'test');
     assert.deepStrictEqual(view.env, { NODE_ENV: 'test' });
   });
 
-  it('warns when values contain "env" key', () => {
+  it('warns when root values contain "env" key', () => {
     const warnMock = mock.fn();
     const originalWarn = console.warn;
     console.warn = warnMock;
 
     try {
-      buildView({ env: 'user-value' }, {});
+      buildView({ rootValues: { env: 'user-value' } });
       assert.strictEqual(warnMock.mock.calls.length, 1);
       assert.match(warnMock.mock.calls[0].arguments[0], /reserved key/);
     } finally {
@@ -77,35 +66,74 @@ describe('buildView', () => {
     }
   });
 
-  it('does not warn when values have no "env" key', () => {
+  it('does not warn when root values have no "env" key', () => {
     const warnMock = mock.fn();
     const originalWarn = console.warn;
     console.warn = warnMock;
 
     try {
-      buildView({ name: 'test' }, {});
+      buildView({ rootValues: { name: 'test' } });
       assert.strictEqual(warnMock.mock.calls.length, 0);
     } finally {
       console.warn = originalWarn;
     }
   });
 
-  it('handles nested object structures in values', () => {
-    const values = {
-      app: {
-        name: 'myapp',
-        settings: {
-          debug: true,
-        },
+  it('handles nested object structures in root values', () => {
+    const view = buildView({
+      rootValues: {
+        app: { name: 'myapp', settings: { debug: true } },
       },
-    };
-    const env = {};
-
-    const view = buildView(values, env);
-
+    });
     assert.deepStrictEqual(view.app, {
       name: 'myapp',
       settings: { debug: true },
+    });
+  });
+
+  // ── Value partials (Round 03) ─────────────────────────────────────
+
+  describe('value partials', () => {
+    it('merges partials namespaces into view', () => {
+      const view = buildView({
+        rootValues: { name: 'app' },
+        partials: { services: { api: { port: 8080 } } },
+      });
+      assert.strictEqual(view.name, 'app');
+      assert.deepStrictEqual(view.services, { api: { port: 8080 } });
+    });
+
+    it('C-2 — throws on root-vs-namespace collision', () => {
+      assert.throws(
+        () =>
+          buildView({
+            rootValues: { services: { db: {} } },
+            partials: { services: { api: { port: 8080 } } },
+            valuesFile: '/root/app.yaml',
+            valuesDir: '/root/values',
+          }),
+        /Duplicate view key 'services'/,
+      );
+    });
+
+    it('C-3 — throws on reserved env namespace in partials', () => {
+      assert.throws(
+        () =>
+          buildView({
+            partials: { env: { PROD: '1' } },
+            valuesDir: '/root/values',
+          }),
+        /reserved 'env' namespace/,
+      );
+    });
+
+    it('rootValues has no conflict with partials for non-overlapping keys', () => {
+      const view = buildView({
+        rootValues: { project: 'x' },
+        partials: { services: { api: {} } },
+      });
+      assert.strictEqual(view.project, 'x');
+      assert.deepStrictEqual(view.services, { api: {} });
     });
   });
 });

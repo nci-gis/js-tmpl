@@ -160,14 +160,11 @@ docs: update API documentation for resolveConfig
 test: add edge case coverage for partials system
 ```
 
-Commit message format:
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) and are validated by a `commit-msg` husky hook running `commitlint` (config: [`@commitlint/config-conventional`](https://github.com/conventional-changelog/commitlint/tree/master/%40commitlint/config-conventional)). Commits that don't match will be rejected.
 
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation changes
-- `test:` - Test additions/changes
-- `refactor:` - Code refactoring
-- `chore:` - Build/tooling changes
+Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+
+Format: `type(optional-scope): subject` — e.g. `feat(engine): add $if guard`. Append `!` or a `BREAKING CHANGE:` footer for breaking changes.
 
 ### 5. Push and Create PR
 
