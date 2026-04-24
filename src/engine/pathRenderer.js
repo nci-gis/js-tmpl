@@ -32,8 +32,12 @@ function expandInterpolations(seg, view) {
 function renderSegment(seg, isFilename, view, relPath) {
   const c = classifySegment(seg);
 
-  if (c.kind === 'literal') {return seg;}
-  if (c.kind === 'interpolation') {return expandInterpolations(seg, view);}
+  if (c.kind === 'literal') {
+    return seg;
+  }
+  if (c.kind === 'interpolation') {
+    return expandInterpolations(seg, view);
+  }
   if (c.kind === 'malformed') {
     throw new Error(`${c.reason} (in '${relPath}')`);
   }

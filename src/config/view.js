@@ -70,7 +70,9 @@ function assertNoRootNamespaceCollision(
   valuesDir,
 ) {
   for (const key of Object.keys(rootValues)) {
-    if (key === RESERVED_ENV) {continue;}
+    if (key === RESERVED_ENV) {
+      continue;
+    }
     if (key in partials) {
       throw new Error(
         `Duplicate view key '${key}' — registered by both:\n` +

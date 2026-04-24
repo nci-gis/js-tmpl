@@ -24,7 +24,9 @@ function placeInTree(tree, chain, value) {
   let cur = tree;
   for (let i = 0; i < chain.length - 1; i++) {
     const seg = chain[i];
-    if (!(seg in cur)) {cur[seg] = {};}
+    if (!(seg in cur)) {
+      cur[seg] = {};
+    }
     cur = /** @type {Record<string, unknown>} */ (cur[seg]);
   }
   cur[/** @type {string} */ (chain.at(-1))] = value;
@@ -42,7 +44,9 @@ function assertNoPrefixShadow(entries, rootDir) {
   const byKey = new Map(entries.map((e) => [e.key, e.abs]));
   for (const { key, abs } of entries) {
     for (const other of byKey.keys()) {
-      if (other === key) {continue;}
+      if (other === key) {
+        continue;
+      }
       if (key.startsWith(`${other}.`)) {
         throw new Error(
           `Value partial shadow collision between '${other}' and '${key}':\n` +
@@ -73,7 +77,9 @@ function assertNoPrefixShadow(entries, rootDir) {
  * @returns {Record<string, unknown>}
  */
 export function scanValuePartials(valuesDir, exts = DEFAULT_EXTS) {
-  if (!valuesDir || !fs.existsSync(valuesDir)) {return {};}
+  if (!valuesDir || !fs.existsSync(valuesDir)) {
+    return {};
+  }
 
   const all = /** @type {string[]} */ (
     fs.readdirSync(valuesDir, { recursive: true })

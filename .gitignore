@@ -41,6 +41,9 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Python venv (scripts/code-review-graph)
+.venv/
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 
@@ -145,3 +148,5 @@ tmp/
 .tmp/
 temp/
 .temp/
+# Added by code-review-graph
+.code-review-graph/
