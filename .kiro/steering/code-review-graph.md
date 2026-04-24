@@ -1,20 +1,3 @@
-# CLAUDE.md — Project Instructions
-
-## General instructions
-
-> **Shared knowledge base**: [AGENTS.md](../.agents/AGENTS.md) defines pair
-> programming workflows, decision frameworks, and the `.agents/`
-> directory structure. Load it first for full context before starting
-> any task.
-
-<!--
-
-## Your instructions here
-
--->
-
----
-
 <!-- code-review-graph MCP tools -->
 
 ## MCP Tools: code-review-graph
@@ -54,5 +37,3 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 2. Use `detect_changes` for code review.
 3. Use `get_affected_flows` to understand impact.
 4. Use `query_graph` pattern="tests_for" to check coverage.
-
----
