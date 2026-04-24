@@ -55,6 +55,7 @@ Goal: add narrowly scoped authoring conveniences that preserve the pure
 
 - [ ] **Custom Handlebars helpers registration API** — planned via [Round 04](.agents/plan/cycles/Round_04.md); helpers must be explicitly supplied and registered on scoped Handlebars instances.
 - [ ] **Helper documentation and examples** — add one minimal example that demonstrates explicit helper registration without introducing lifecycle hooks.
+- [ ] **Optional values under strict templates** — document recommended authoring patterns for optional output without disabling VP-9 strict-mode; cover explicit `""`, `false`, `null`, and `{{#if ...}}` guards, including the rule that values inside false `{{#if}}` blocks are not evaluated.
 - [ ] **Additional examples** — Kubernetes and Terraform examples, if they can be written as plain richer-inputs examples rather than new engine behavior.
 
 ### 0.1.x Candidates Requiring Evidence
