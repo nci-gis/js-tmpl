@@ -116,7 +116,7 @@ These principles are **versioned with the project**.
 
 ```javascript
 // All paths resolve from process.cwd() unless absolute
-const abs = (p) => path.isAbsolute(p) ? p : path.join(cwd, p);
+const abs = (p) => (path.isAbsolute(p) ? p : path.join(cwd, p));
 ```
 
 ### ❌ Bad: Magic Project Root Detection
