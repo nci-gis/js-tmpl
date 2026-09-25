@@ -343,8 +343,9 @@ targetFs: portable # optional — or case-sensitive; see "Target file system"
 ### Target file system (`targetFs`)
 
 By default output is **portable**: two templates whose paths differ only by
-case (`README.md`, `readme.md`) are a collision, because they are one file
-on default macOS and Windows file systems.
+case (`README.md`, `readme.md`) or by Unicode normalization (`café` in NFC
+and NFD) are a collision, because they are one file on default macOS and
+Windows file systems.
 
 If the output is only ever used on a case-sensitive file system — for
 example files baked into a Linux container image — declare it:
@@ -760,36 +761,36 @@ try {
 }
 ```
 
-| Code                               | Raised when                                                                   | `details`                                        |
-| ---------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
-| `JSTMPL_CONFIG_NOT_FOUND`          | An explicit config file does not exist                                        |                                                  |
-| `JSTMPL_CONFIG_INVALID_VALUE`      | A config value is not one of its allowed values (`targetFs`)                  | `key`, `value`                                   |
-| `JSTMPL_VALUES_NOT_FOUND`          | The values file does not exist                                                |                                                  |
-| `JSTMPL_VALUES_UNSUPPORTED_FORMAT` | The values file is not `.yaml` / `.yml` / `.json`                             |                                                  |
-| `JSTMPL_VALUES_FILE_IN_DIR`        | `valuesFile` is inside `valuesDir` (C-1)                                      |                                                  |
-| `JSTMPL_NS_INVALID_SEGMENT`        | A partial or value-partial name segment is not `\w+`                          |                                                  |
-| `JSTMPL_NS_DUPLICATE`              | Two files resolve to the same partial or namespace                            |                                                  |
-| `JSTMPL_NS_SHADOW`                 | A value partial is both a leaf and a sub-tree (`a.yaml`, `a/b.yaml`)          |                                                  |
-| `JSTMPL_NS_ROOT_COLLISION`         | A root value key and a value-partial namespace collide (C-2)                  |                                                  |
-| `JSTMPL_NS_RESERVED_ENV`           | A value partial resolves to the reserved `env` namespace (C-3)                |                                                  |
-| `JSTMPL_PATH_MISSING_VAR`          | `${var}` in a template path is not in the view                                | `relPath`, `variable`                            |
-| `JSTMPL_PATH_INVALID_VALUE`        | A `${var}` value is an object/array or contains `\`                           | `relPath`, `variable`                            |
-| `JSTMPL_PATH_EMPTY_SEGMENT`        | A rendered path part is `""`, `.` or `..` (also once `extname` is removed)    | `relPath`, `segment` or `target`                 |
-| `JSTMPL_GUARD_MISSING_VAR`         | `$if{var}` / `$ifn{var}` names a variable not in the view (G-4)               | `relPath`, `segment`, `variable`                 |
-| `JSTMPL_GUARD_MALFORMED`           | A guard is not a whole directory segment (G-5)                                | `relPath`, `segment`                             |
-| `JSTMPL_GUARD_IN_FILENAME`         | A guard is used as a file name (G-5)                                          | `relPath`, `segment`                             |
-| `JSTMPL_TEMPLATE_MISSING_VALUE`    | A template reads a path not in the view (strict mode)                         | `relPath`, `variable`, `line`, `column`          |
-| `JSTMPL_TEMPLATE_SYNTAX`           | Handlebars cannot parse a template                                            | `relPath`                                        |
-| `JSTMPL_TEMPLATE_RENDER_FAILED`    | Rendering failed otherwise (missing partial, a helper threw, …)               | `relPath`                                        |
-| `JSTMPL_OUTPUT_OUTSIDE_OUTDIR`     | A write would land outside `outDir` (e.g. through a symlink in it)            | `relPath`, `target`                              |
-| `JSTMPL_OUTPUT_COLLISION`          | Two templates render to one file (case-insensitive)                           | `templates`, `target`                            |
-| `JSTMPL_MULTIPLE_ERRORS`           | Several of the errors above in one run (`planRender`, `renderDirectory`, CLI) | `errors` (the individual `JsTmplError`s, sorted) |
-| `JSTMPL_HELPER_NO_INSTANCE`        | `registerHelpers` got no Handlebars instance                                  |                                                  |
-| `JSTMPL_HELPER_INVALID_MAP`        | `helpersMap` is not an object                                                 |                                                  |
-| `JSTMPL_HELPER_INVALID_NAME`       | A helper name is not a bare identifier                                        |                                                  |
-| `JSTMPL_HELPER_NOT_FUNCTION`       | A helper value is not a function                                              |                                                  |
-| `JSTMPL_HELPER_ALREADY_REGISTERED` | A helper name is already on the instance                                      |                                                  |
-| `JSTMPL_CLI_USAGE`                 | CLI: unknown option, missing value, unexpected argument (exit 2)              |                                                  |
+| Code                               | Raised when                                                                                     | `details`                                        |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `JSTMPL_CONFIG_NOT_FOUND`          | An explicit config file does not exist                                                          |                                                  |
+| `JSTMPL_CONFIG_INVALID_VALUE`      | A config value is not one of its allowed values (`targetFs`)                                    | `key`, `value`                                   |
+| `JSTMPL_VALUES_NOT_FOUND`          | The values file does not exist                                                                  |                                                  |
+| `JSTMPL_VALUES_UNSUPPORTED_FORMAT` | The values file is not `.yaml` / `.yml` / `.json`                                               |                                                  |
+| `JSTMPL_VALUES_FILE_IN_DIR`        | `valuesFile` is inside `valuesDir` (C-1)                                                        |                                                  |
+| `JSTMPL_NS_INVALID_SEGMENT`        | A partial or value-partial name segment is not `\w+`                                            |                                                  |
+| `JSTMPL_NS_DUPLICATE`              | Two files resolve to the same partial or namespace                                              |                                                  |
+| `JSTMPL_NS_SHADOW`                 | A value partial is both a leaf and a sub-tree (`a.yaml`, `a/b.yaml`)                            |                                                  |
+| `JSTMPL_NS_ROOT_COLLISION`         | A root value key and a value-partial namespace collide (C-2)                                    |                                                  |
+| `JSTMPL_NS_RESERVED_ENV`           | A value partial resolves to the reserved `env` namespace (C-3)                                  |                                                  |
+| `JSTMPL_PATH_MISSING_VAR`          | `${var}` in a template path is not in the view                                                  | `relPath`, `variable`                            |
+| `JSTMPL_PATH_INVALID_VALUE`        | A `${var}` value is an object/array or contains `\`                                             | `relPath`, `variable`                            |
+| `JSTMPL_PATH_EMPTY_SEGMENT`        | A rendered path part is `""`, `.` or `..` (also once `extname` is removed)                      | `relPath`, `segment` or `target`                 |
+| `JSTMPL_GUARD_MISSING_VAR`         | `$if{var}` / `$ifn{var}` names a variable not in the view (G-4)                                 | `relPath`, `segment`, `variable`                 |
+| `JSTMPL_GUARD_MALFORMED`           | A guard is not a whole directory segment (G-5)                                                  | `relPath`, `segment`                             |
+| `JSTMPL_GUARD_IN_FILENAME`         | A guard is used as a file name (G-5)                                                            | `relPath`, `segment`                             |
+| `JSTMPL_TEMPLATE_MISSING_VALUE`    | A template reads a path not in the view (strict mode)                                           | `relPath`, `variable`, `line`, `column`          |
+| `JSTMPL_TEMPLATE_SYNTAX`           | Handlebars cannot parse a template                                                              | `relPath`                                        |
+| `JSTMPL_TEMPLATE_RENDER_FAILED`    | Rendering failed otherwise (missing partial, a helper threw, …)                                 | `relPath`                                        |
+| `JSTMPL_OUTPUT_OUTSIDE_OUTDIR`     | A write would land outside `outDir` (e.g. through a symlink in it)                              | `relPath`, `target`                              |
+| `JSTMPL_OUTPUT_COLLISION`          | Two templates render to one file (see `targetFs`), or one needs the other's file as a directory | `templates`, `target`                            |
+| `JSTMPL_MULTIPLE_ERRORS`           | Several of the errors above in one run (`planRender`, `renderDirectory`, CLI)                   | `errors` (the individual `JsTmplError`s, sorted) |
+| `JSTMPL_HELPER_NO_INSTANCE`        | `registerHelpers` got no Handlebars instance                                                    |                                                  |
+| `JSTMPL_HELPER_INVALID_MAP`        | `helpersMap` is not an object                                                                   |                                                  |
+| `JSTMPL_HELPER_INVALID_NAME`       | A helper name is not a bare identifier                                                          |                                                  |
+| `JSTMPL_HELPER_NOT_FUNCTION`       | A helper value is not a function                                                                |                                                  |
+| `JSTMPL_HELPER_ALREADY_REGISTERED` | A helper name is already on the instance                                                        |                                                  |
+| `JSTMPL_CLI_USAGE`                 | CLI: unknown option, missing value, unexpected argument (exit 2)                                |                                                  |
 
 The CLI prints `js-tmpl: <message>`; with `--verbose` it also prints
 `code: <CODE>` and the stack.

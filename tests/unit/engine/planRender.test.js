@@ -205,6 +205,61 @@ describe('planRender', () => {
     });
   });
 
+  for (const [label, files, targetFs] of [
+    ['a file and a file below it', { 'a.hbs': 'A', 'a/b.hbs': 'B' }],
+    ['case-only difference (portable)', { 'A.hbs': 'A', 'a/b.hbs': 'B' }],
+    ['deeper nesting', { 'a/b.hbs': 'B', 'a/b/c/d.hbs': 'D' }],
+  ]) {
+    it(`rejects a target that another target needs as a directory (${label})`, async () => {
+      await withTempDir(async (tmpDir) => {
+        await seed(path.join(tmpDir, 't'), files);
+        await assert.rejects(planRender({ ...cfg(tmpDir, {}), targetFs }), {
+          code: 'JSTMPL_OUTPUT_COLLISION',
+          message: /is a file, but '.+' needs it as a directory/,
+        });
+        await assert.rejects(
+          renderDirectory({ ...cfg(tmpDir, {}), targetFs }),
+          {
+            code: 'JSTMPL_OUTPUT_COLLISION',
+          },
+        );
+        assert.strictEqual(await exists(path.join(tmpDir, 'out')), false);
+      });
+    });
+  }
+
+  it("targetFs 'case-sensitive' allows 'A' next to 'a/b'", async () => {
+    await withTempDir(async (tmpDir) => {
+      await seed(path.join(tmpDir, 't'), { 'A.hbs': 'A', 'a/b.hbs': 'B' });
+      const plan = await planRender({
+        ...cfg(tmpDir, {}),
+        targetFs: 'case-sensitive',
+      });
+      assert.deepStrictEqual(
+        plan.map((e) => e.target),
+        ['A', 'a/b'],
+      );
+    });
+  });
+
+  it('portable: the same name in NFC and NFD is one target', async () => {
+    await withTempDir(async (tmpDir) => {
+      await seed(path.join(tmpDir, 't'), {
+        '${nfc}.hbs': '1',
+        '${nfd}.hbs': '2',
+      });
+      const view = { nfc: 'caf\u00e9', nfd: 'cafe\u0301' };
+      await assert.rejects(planRender(cfg(tmpDir, view)), {
+        code: 'JSTMPL_OUTPUT_COLLISION',
+      });
+      const plan = await planRender({
+        ...cfg(tmpDir, view),
+        targetFs: 'case-sensitive',
+      });
+      assert.strictEqual(plan.length, 2);
+    });
+  });
+
   // Only js-tmpl's own errors are collected; I/O failures stop the run.
   it(
     'rethrows I/O errors instead of collecting them',

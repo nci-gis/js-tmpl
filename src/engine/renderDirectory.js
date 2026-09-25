@@ -135,6 +135,13 @@ async function planTargets(files, cfg, errors) {
   const owners = new Map();
   /** @type {Map<import('../types.js').TemplateFile, string>} */
   const planned = new Map();
+  // Portable (default): README.md and readme.md, or café in NFC and NFD,
+  // are one file on default macOS and Windows file systems, so targets are
+  // keyed case- and normalization-insensitively. targetFs 'case-sensitive'
+  // declares they are two; writePlan then checks the real disk agrees.
+  /** @param {string} target */
+  const keyOf = (target) =>
+    portable ? target.normalize('NFC').toLowerCase() : target;
 
   for (const file of files) {
     const target = await collectSync(errors, () =>
@@ -144,11 +151,7 @@ async function planTargets(files, cfg, errors) {
       continue;
     }
 
-    // Portable (default): keyed case-insensitively, because README.md and
-    // readme.md are one file on default macOS and Windows file systems.
-    // targetFs 'case-sensitive' declares they are two; writePlan then
-    // checks the real disk agrees.
-    const key = portable ? target.toLowerCase() : target;
+    const key = keyOf(target);
     const owner = owners.get(key);
     if (owner) {
       errors.push(collision(owner, file.relPath, target));
@@ -157,7 +160,35 @@ async function planTargets(files, cfg, errors) {
     owners.set(key, { relPath: file.relPath, target });
     planned.set(file, target);
   }
+
+  // A target cannot also be a directory of another target: 'a' and 'a/b'
+  // would fail half-way through the writes (ENOTDIR).
+  for (const [file, target] of planned) {
+    const parts = keyOf(target).split('/');
+    for (let i = 1; i < parts.length; i++) {
+      const owner = owners.get(parts.slice(0, i).join('/'));
+      if (owner) {
+        errors.push(fileAsDirectory(owner, file.relPath, target));
+        planned.delete(file);
+        break;
+      }
+    }
+  }
   return planned;
+}
+
+/**
+ * @param {{ relPath: string, target: string }} owner - Template whose target is a file
+ * @param {string} relPath - Template that needs that file as a directory
+ * @param {string} target
+ */
+function fileAsDirectory(owner, relPath, target) {
+  return new JsTmplError(
+    ErrorCodes.OUTPUT_COLLISION,
+    `Templates '${owner.relPath}' and '${relPath}' conflict: '${owner.target}' is a file, but '${target}' needs it as a directory.\n` +
+      'Each output path must be either a file or a directory; check the path values.',
+    { details: { templates: [owner.relPath, relPath], target } },
+  );
 }
 
 /**
