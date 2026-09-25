@@ -102,7 +102,7 @@ Reason:
 
 ### 0.2.x — Explain
 
-- [ ] **`--explain` / provenance** — per output file: source template, guards passed/pruned, value sources read; caller-supplied values labelled as such ([Round 09](.agents/plan/cycles/Round_09.md)).
+- [ ] **`--explain` / provenance** — per output file: source template, guards passed/pruned, value sources read; caller-supplied values labelled as such ([Round 09](.agents/plan/cycles/Round_09.md)). Starts only with a real user case.
 
 ## 🟪 0.3.x — Community-Ready (M3)
 
