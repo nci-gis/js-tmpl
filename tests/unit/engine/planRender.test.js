@@ -138,6 +138,38 @@ describe('planRender', () => {
     });
   });
 
+  it('checks the body of a template whose path fails', async () => {
+    await withTempDir(async (tmpDir) => {
+      await seed(path.join(tmpDir, 't'), { '${name}.hbs': '{{missing}}' });
+      await assert.rejects(planRender(cfg(tmpDir, {})), (err) => {
+        assert.deepStrictEqual(
+          err.details.errors.map((e) => e.code),
+          ['JSTMPL_PATH_MISSING_VAR', 'JSTMPL_TEMPLATE_MISSING_VALUE'],
+        );
+        return true;
+      });
+    });
+  });
+
+  it('checks the body of a template that loses a collision', async () => {
+    await withTempDir(async (tmpDir) => {
+      await seed(path.join(tmpDir, 't'), {
+        '${a}.hbs': 'A',
+        '${b}.hbs': '{{missing}}',
+      });
+      await assert.rejects(
+        planRender(cfg(tmpDir, { a: 'same', b: 'same' })),
+        (err) => {
+          assert.deepStrictEqual(err.details.errors.map((e) => e.code).sort(), [
+            'JSTMPL_OUTPUT_COLLISION',
+            'JSTMPL_TEMPLATE_MISSING_VALUE',
+          ]);
+          return true;
+        },
+      );
+    });
+  });
+
   // Only js-tmpl's own errors are collected; I/O failures stop the run.
   it(
     'rethrows I/O errors instead of collecting them',

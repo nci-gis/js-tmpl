@@ -51,13 +51,17 @@ export async function planRender(cfg, hbs) {
     errors,
   });
 
+  const targets = await planTargets(files, cfg, errors);
   /** @type {PlanEntry[]} */
   const plan = [];
-  for (const { file, target } of await planTargets(files, cfg, errors)) {
+  // Every body is rendered, even when its path failed, so one run reports
+  // both problems of a template.
+  for (const file of files) {
     const content = await collect(errors, () =>
       renderContent(file.absPath, view, hbs, file.relPath),
     );
-    if (content !== undefined) {
+    const target = targets.get(file);
+    if (content !== undefined && target !== undefined) {
       plan.push({ relPath: file.relPath, target, content });
     }
   }
@@ -122,15 +126,15 @@ export function comparePlan(plan, outDir) {
  * @param {import('../types.js').TemplateFile[]} files
  * @param {import('../types.js').TemplateConfig} cfg
  * @param {JsTmplError[]} errors
- * @returns {Promise<Array<{ file: import('../types.js').TemplateFile, target: string }>>}
+ * @returns {Promise<Map<import('../types.js').TemplateFile, string>>}
  */
 async function planTargets(files, cfg, errors) {
   const { view, extname } = cfg;
   const portable = (cfg.targetFs ?? 'portable') === 'portable';
   /** @type {Map<string, { relPath: string, target: string }>} */
   const owners = new Map();
-  /** @type {Array<{ file: import('../types.js').TemplateFile, target: string }>} */
-  const planned = [];
+  /** @type {Map<import('../types.js').TemplateFile, string>} */
+  const planned = new Map();
 
   for (const file of files) {
     const target = await collectSync(errors, () =>
@@ -151,7 +155,7 @@ async function planTargets(files, cfg, errors) {
       continue;
     }
     owners.set(key, { relPath: file.relPath, target });
-    planned.push({ file, target });
+    planned.set(file, target);
   }
   return planned;
 }
