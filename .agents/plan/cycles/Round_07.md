@@ -1,6 +1,6 @@
 # Round 07: No Silent Outcomes — strict engine contract + error codes
 
-**Status**: In Progress
+**Status**: Review
 **Date started**: 2026-09-25
 **Date completed**: —
 **Release target**: v0.2.0 (breaking — do not ship in 0.1.x; a2scaffold
@@ -233,6 +233,13 @@ embedders.
     is now reachable and tested; the lexical plan-time check was removed as
     dead code. Out of scope: TOCTOU races on a directory someone else
     modifies during the render.
+- **2026-09-26 — CI (PR #14).** Run 1: macOS green (real case-insensitive
+  disk: `targetFs` write-time collision and junctions verified); Windows
+  red on 3 `realPathOfNearest` unit tests — the JS `fs.realpathSync` keeps
+  8.3 short names (`RUNNER~1`) while the OS returns `runneradmin`. Engine
+  comparisons were consistent (same function on both sides), but the
+  canonical form is the OS's: switched to `realpathSync.native`
+  (`1444b07`). Run 2: all 11 checks green.
 
 ## Check
 
@@ -248,7 +255,8 @@ embedders.
 - [x] Spike verdict recorded in Do, with the path taken (AST).
 - [x] ~~A template with three missing values reports all three in one
       run.~~ Moved to Round 08 with collect-all.
-- [ ] CI green on macOS and Windows (junctions, case-insensitive disks).
+- [x] CI green on macOS and Windows (junctions, case-insensitive disks):
+      PR #14 @ `1444b07`, 11 / 11.
 
 ## Act
 
