@@ -61,7 +61,6 @@ export const CASES = [
     options: {
       valuesFile: 'values.yaml',
       templateDir: 'templates',
-      partialsDir: 'templates.partials',
     },
   },
   {
@@ -70,7 +69,6 @@ export const CASES = [
     options: {
       valuesFile: 'values.yaml',
       templateDir: 'templates',
-      partialsDir: 'templates.partials',
     },
     view: { prod: false },
   },
