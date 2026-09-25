@@ -13,18 +13,20 @@ bugs, not features. The first one is a security fix.
 
 ### Evidence (reproduced on `dev` @ `fac1bfd`)
 
-| #   | Input                                                     | Today                                                                            | Class      |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------------------- | ---------- |
-| 1   | `t/${name}/x.txt.hbs`, `view.name = '../escaped'`         | Writes `./escaped/x.txt`, **outside `outDir`**                                   | Security   |
-| 2   | `t/${a}/x.txt.hbs` + `t/${b}/x.txt.hbs`, `a = b = 'same'` | Only `out/same/x.txt` = B; A silently overwritten                                | Silent     |
-| 3   | `js-tmpl --bogus foo`                                     | Flag and positional ignored                                                      | Silent     |
-| 4   | `js-tmpl --env-keys` / `js-tmpl -o`                       | `TypeError` from `args.js` / `resolver.js`                                       | Crash      |
-| 5   | Any runtime error                                         | `Error: Error: …` + full stack                                                   | Legibility |
-| 6   | `npx js-tmpl` from an installed package                   | `Cannot find module …/node_modules/src/cli/main.js` on Linux (found in Round 05) | Broken     |
+| #   | Input                                                     | Today                                                                                | Class      |
+| --- | --------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------- |
+| 1   | `t/${name}/x.txt.hbs`, `view.name = '../escaped'`         | Writes `./escaped/x.txt`, **outside `outDir`**                                       | Security   |
+| 2   | `t/${a}/x.txt.hbs` + `t/${b}/x.txt.hbs`, `a = b = 'same'` | Only `out/same/x.txt` = B; A silently overwritten                                    | Silent     |
+| 3   | `js-tmpl --bogus foo`                                     | Flag and positional ignored                                                          | Silent     |
+| 4   | `js-tmpl --env-keys` / `js-tmpl -o`                       | `TypeError` from `args.js` / `resolver.js`                                           | Crash      |
+| 5   | Any runtime error                                         | `Error: Error: …` + full stack                                                       | Legibility |
+| 6   | `npx js-tmpl` from an installed package                   | `Cannot find module …/node_modules/src/cli/main.js` on Linux and macOS (Round 05 CI) | Broken     |
 
 Root cause of 6: the bash wrapper resolves `$(dirname "$0")/../src/…`, and
-`$0` is the `node_modules/.bin/js-tmpl` symlink, not its target. The CLI has
-never worked from an installed package, on any OS; only from the repo.
+on Linux/macOS `$0` is the `node_modules/.bin/js-tmpl` symlink, not its
+target. The CLI has never worked there from an installed package. Windows
+passes in CI only because npm's cmd-shim points at the real file and the
+runner ships Git Bash; a Windows machine without bash would still fail.
 
 Root cause of 3–4: [main.js](../../../src/cli/main.js) passes the whole
 `process.argv` (node path + script path included) to `parseArgs`; unit tests

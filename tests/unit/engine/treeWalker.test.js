@@ -4,14 +4,29 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 
 import { walkTemplateTree } from '../../../src/engine/treeWalker.js';
+import { toPosix } from '../../helpers/paths.js';
 import { withTempDir } from '../../helpers/tempDir.js';
+
+/**
+ * walkTemplateTree with POSIX-style relPaths (and messages) on every OS.
+ * @param {Parameters<typeof walkTemplateTree>} args
+ */
+async function walk(...args) {
+  try {
+    const results = await walkTemplateTree(...args);
+    return results.map((r) => ({ ...r, relPath: toPosix(r.relPath) }));
+  } catch (e) {
+    e.message = toPosix(e.message);
+    throw e;
+  }
+}
 
 describe('walkTemplateTree', () => {
   it('walks single file in root', async () => {
     await withTempDir(async (tmpDir) => {
       await fs.writeFile(path.join(tmpDir, 'test.hbs'), 'content', 'utf8');
 
-      const results = await walkTemplateTree(tmpDir);
+      const results = await walk(tmpDir);
 
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0].relPath, 'test.hbs');
@@ -24,7 +39,7 @@ describe('walkTemplateTree', () => {
       await fs.writeFile(path.join(tmpDir, 'a.hbs'), 'a', 'utf8');
       await fs.writeFile(path.join(tmpDir, 'b.hbs'), 'b', 'utf8');
 
-      const results = await walkTemplateTree(tmpDir);
+      const results = await walk(tmpDir);
 
       assert.strictEqual(results.length, 2);
       const relPaths = results.map((r) => r.relPath).sort();
@@ -42,7 +57,7 @@ describe('walkTemplateTree', () => {
         'utf8',
       );
 
-      const results = await walkTemplateTree(tmpDir);
+      const results = await walk(tmpDir);
 
       assert.strictEqual(results.length, 2);
       const relPaths = results.map((r) => r.relPath).sort();
@@ -59,7 +74,7 @@ describe('walkTemplateTree', () => {
         'utf8',
       );
 
-      const results = await walkTemplateTree(tmpDir);
+      const results = await walk(tmpDir);
 
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0].relPath, 'a/b/c/deep.hbs');
@@ -72,7 +87,7 @@ describe('walkTemplateTree', () => {
       await fs.writeFile(path.join(tmpDir, 'readme.md'), 'md', 'utf8');
       await fs.writeFile(path.join(tmpDir, 'data.json'), 'json', 'utf8');
 
-      const results = await walkTemplateTree(tmpDir);
+      const results = await walk(tmpDir);
 
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0].relPath, 'template.hbs');
@@ -84,7 +99,7 @@ describe('walkTemplateTree', () => {
       await fs.writeFile(path.join(tmpDir, 'template.tmpl'), 'tmpl', 'utf8');
       await fs.writeFile(path.join(tmpDir, 'other.hbs'), 'hbs', 'utf8');
 
-      const results = await walkTemplateTree(tmpDir, '.tmpl');
+      const results = await walk(tmpDir, '.tmpl');
 
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0].relPath, 'template.tmpl');
@@ -93,7 +108,7 @@ describe('walkTemplateTree', () => {
 
   it('handles empty directory', async () => {
     await withTempDir(async (tmpDir) => {
-      const results = await walkTemplateTree(tmpDir);
+      const results = await walk(tmpDir);
 
       assert.strictEqual(results.length, 0);
       assert.deepStrictEqual(results, []);
@@ -105,7 +120,7 @@ describe('walkTemplateTree', () => {
       await fs.writeFile(path.join(tmpDir, 'file.txt'), 'txt', 'utf8');
       await fs.writeFile(path.join(tmpDir, 'file.md'), 'md', 'utf8');
 
-      const results = await walkTemplateTree(tmpDir);
+      const results = await walk(tmpDir);
 
       assert.strictEqual(results.length, 0);
     });
@@ -119,7 +134,7 @@ describe('walkTemplateTree', () => {
       await fs.writeFile(path.join(tmpDir, 'b.hbs'), 'b', 'utf8');
       await fs.writeFile(path.join(tmpDir, 'subdir', 'c.hbs'), 'c', 'utf8');
 
-      const results = await walkTemplateTree(tmpDir);
+      const results = await walk(tmpDir);
 
       // BFS should find root files before subdir files
       assert.strictEqual(results.length, 3);
@@ -135,7 +150,7 @@ describe('walkTemplateTree', () => {
       await fs.writeFile(path.join(tmpDir, 'a.hbs'), 'a', 'utf8');
       await fs.writeFile(path.join(tmpDir, 'b.hbs'), 'b', 'utf8');
 
-      const results = await walkTemplateTree(tmpDir);
+      const results = await walk(tmpDir);
 
       // Must be sorted — not dependent on filesystem enumeration order
       assert.deepStrictEqual(
@@ -155,7 +170,7 @@ describe('walkTemplateTree', () => {
       await fs.writeFile(path.join(tmpDir, 'a', 'a.hbs'), 'a', 'utf8');
       await fs.writeFile(path.join(tmpDir, 'm', 'm.hbs'), 'm', 'utf8');
 
-      const results = await walkTemplateTree(tmpDir);
+      const results = await walk(tmpDir);
 
       // BFS: root first, then subdirs in sorted order
       assert.deepStrictEqual(
@@ -176,7 +191,7 @@ describe('walkTemplateTree', () => {
       );
       await fs.writeFile(path.join(tmpDir, 'docs', 'readme.md'), 'md', 'utf8');
 
-      const results = await walkTemplateTree(tmpDir);
+      const results = await walk(tmpDir);
 
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0].relPath, 'templates/page.hbs');
@@ -190,7 +205,7 @@ describe('walkTemplateTree', () => {
       await withTempDir(async (tmpDir) => {
         await fs.writeFile(path.join(tmpDir, 'a.hbs'), 'a', 'utf8');
 
-        const results = await walkTemplateTree(tmpDir, { ext: '.hbs' });
+        const results = await walk(tmpDir, { ext: '.hbs' });
         assert.strictEqual(results.length, 1);
         assert.strictEqual(results[0].relPath, 'a.hbs');
       });
@@ -206,7 +221,7 @@ describe('walkTemplateTree', () => {
         );
         await fs.writeFile(path.join(tmpDir, 'always.hbs'), 'always', 'utf8');
 
-        const results = await walkTemplateTree(tmpDir, {
+        const results = await walk(tmpDir, {
           ext: '.hbs',
           view: { prod: false },
         });
@@ -227,7 +242,7 @@ describe('walkTemplateTree', () => {
           'utf8',
         );
 
-        const results = await walkTemplateTree(tmpDir, {
+        const results = await walk(tmpDir, {
           ext: '.hbs',
           view: { prod: true },
         });
@@ -248,7 +263,7 @@ describe('walkTemplateTree', () => {
           'utf8',
         );
 
-        const results = await walkTemplateTree(tmpDir, {
+        const results = await walk(tmpDir, {
           ext: '.hbs',
           view: { debug: false },
         });
@@ -262,13 +277,13 @@ describe('walkTemplateTree', () => {
         await fs.mkdir(nested, { recursive: true });
         await fs.writeFile(path.join(nested, 'x.hbs'), 'x', 'utf8');
 
-        const bothTrue = await walkTemplateTree(tmpDir, {
+        const bothTrue = await walk(tmpDir, {
           ext: '.hbs',
           view: { a: true, b: true },
         });
         assert.strictEqual(bothTrue.length, 1);
 
-        const oneFalse = await walkTemplateTree(tmpDir, {
+        const oneFalse = await walk(tmpDir, {
           ext: '.hbs',
           view: { a: true, b: false },
         });
@@ -286,7 +301,7 @@ describe('walkTemplateTree', () => {
         );
 
         await assert.rejects(
-          walkTemplateTree(tmpDir, { ext: '.hbs', view: {} }),
+          walk(tmpDir, { ext: '.hbs', view: {} }),
           /undefined view variable 'missing'/,
         );
       });
@@ -302,7 +317,7 @@ describe('walkTemplateTree', () => {
         );
 
         await assert.rejects(
-          walkTemplateTree(tmpDir, { ext: '.hbs', view: { a: true } }),
+          walk(tmpDir, { ext: '.hbs', view: { a: true } }),
           /whole segments/,
         );
       });
@@ -313,7 +328,7 @@ describe('walkTemplateTree', () => {
         await fs.mkdir(path.join(tmpDir, '$if{any}'), { recursive: true });
         await fs.writeFile(path.join(tmpDir, '$if{any}', 'x.hbs'), 'x', 'utf8');
 
-        const results = await walkTemplateTree(tmpDir);
+        const results = await walk(tmpDir);
         assert.strictEqual(results.length, 1);
         assert.strictEqual(results[0].relPath, '$if{any}/x.hbs');
       });
@@ -335,7 +350,7 @@ describe('walkTemplateTree', () => {
         };
 
         try {
-          await walkTemplateTree(tmpDir, {
+          await walk(tmpDir, {
             ext: '.hbs',
             view: { prod: false },
           });

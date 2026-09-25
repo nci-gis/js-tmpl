@@ -143,7 +143,7 @@ describe('safeResolvePath', () => {
 
   it('handles single absolute segment', () => {
     const result = safeResolvePath('/home/user/project');
-    assert.strictEqual(result, '/home/user/project');
+    assert.strictEqual(result, path.resolve('/home/user/project'));
   });
 
   it('handles single relative segment', () => {
