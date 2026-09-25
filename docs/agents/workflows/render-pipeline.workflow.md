@@ -64,7 +64,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-  Bin[bin/js-tmpl] --> Main[src/cli/main.js]
+  Bin[bin/js-tmpl.js] --> Main[src/cli/main.js]
   Main --> Args[src/cli/args.js parseArgs]
   Main --> Resolver[src/config/resolver.js resolveConfig]
   Resolver --> Loader[src/config/loader.js loadProjectConfig]
@@ -90,7 +90,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
   participant User
-  participant Bin as bin/js-tmpl
+  participant Bin as bin/js-tmpl.js
   participant Main as cli/main.js
   participant Args as cli/args.js
   participant Resolver as config/resolver.js

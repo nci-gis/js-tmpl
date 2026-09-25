@@ -38,6 +38,10 @@ embedders.
   API.md previously claimed "missing data is always loud"; corrected in
   Round 04. a2scaffold templates use `{{#if …}}` on keys that may be absent,
   so closing this is breaking.
+- Target collisions are checked by exact path (Round 06). Targets that
+  differ only by case (`README.md` / `readme.md`) are distinct on Linux
+  but the same file on default macOS/Windows file systems, so one silently
+  overwrites the other there: output depends on the OS.
 - All errors are plain `Error`; callers (a2scaffold, agents) can only match
   on message text. Handlebars' original error is lost on rethrow.
 
@@ -110,6 +114,10 @@ embedders.
       contain `/` or `\`, or that are `.` / `..` / empty after
       interpolation. Migration note: nested output dirs come from template
       directories, not from values.
+- [ ] **Case-insensitive target collisions** — treat targets equal under
+      case folding as a collision on every OS, so a tree renders the same
+      files everywhere. Breaking for trees relying on case-only
+      differences (rare); migration note.
 - [ ] **Config discovery moves to the CLI layer** — `resolveConfig` only
       loads a config file when given one explicitly (`configFile`); the CLI
       keeps today's auto-discovery by resolving the path before calling it.

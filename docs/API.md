@@ -434,6 +434,8 @@ dist/production/my-app-config.yaml
 - Nested access supported: `${a.b.c}`
 - Array access supported: `${items.0.name}`
 - No glob expansion
+- **Output stays inside `outDir`** — a rendered path that would escape it (a value such as `../x` or `..`) throws before any file is written
+- **One template per output file** — two templates rendering to the same path throw, naming both, before any file is written
 
 ### Path Guards — conditional files
 
@@ -606,10 +608,10 @@ If two partials resolve to the same name (e.g., `_date.hbs` and `@helpers/date.h
 
 ### Common Errors
 
-**Missing values file:**
+**Values file not found:**
 
-```javascript
-Error: Missing valuesFile (use --values)
+```text
+Error: Values file not found: /project/values.yaml
 ```
 
 **Template syntax error:**
@@ -617,6 +619,19 @@ Error: Missing valuesFile (use --values)
 ```javascript
 Error: Parse error on line 5:
 ...{{#if foo}
+```
+
+**Path escapes `outDir`:**
+
+```text
+Error: Template '${name}/x.txt.hbs' renders to '../escaped/x.txt', which is outside outDir '/project/dist'.
+Check the values of: name. Path values must not contain '..' segments.
+```
+
+**Two templates, one output file:**
+
+```text
+Error: Templates '${a}/x.txt.hbs' and '${b}/x.txt.hbs' both render to 'same/x.txt'.
 ```
 
 **File write error:**
