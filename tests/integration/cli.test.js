@@ -83,6 +83,26 @@ describe('CLI (bin/js-tmpl.js)', () => {
     });
   });
 
+  it('uses js-tmpl.config.yaml from the working directory', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'tpl'));
+      await fs.writeFile(path.join(tmpDir, 'tpl', 'a.txt.hbs'), 'A', 'utf8');
+      await fs.writeFile(
+        path.join(tmpDir, 'js-tmpl.config.yaml'),
+        'templateDir: tpl\noutDir: built\n',
+        'utf8',
+      );
+
+      const r = await cli([], tmpDir);
+      assert.strictEqual(r.code, 0, r.stderr);
+      const out = await fs.readFile(
+        path.join(tmpDir, 'built', 'a.txt'),
+        'utf8',
+      );
+      assert.strictEqual(out, 'A');
+    });
+  });
+
   it('renders a project and exits 0', async () => {
     await withTempDir(async (tmpDir) => {
       await fs.mkdir(path.join(tmpDir, 'templates'));

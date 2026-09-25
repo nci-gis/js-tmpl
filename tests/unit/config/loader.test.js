@@ -8,6 +8,7 @@ import {
   loadProjectConfig,
   loadYamlOrJson,
 } from '../../../src/config/loader.js';
+import { findProjectConfig } from '../../../src/config/resolver.js';
 import { getFixturePath } from '../../helpers/fixtures.js';
 import { withTempDir } from '../../helpers/tempDir.js';
 
@@ -106,7 +107,7 @@ describe('loadProjectConfig', () => {
         'utf8',
       );
 
-      const config = loadProjectConfig(tmpDir);
+      const config = loadProjectConfig(tmpDir, findProjectConfig(tmpDir));
       assert.strictEqual(config.templateDir, 'my-templates');
       assert.strictEqual(config.outDir, 'my-output');
     });
@@ -117,7 +118,7 @@ describe('loadProjectConfig', () => {
       const configPath = path.join(tmpDir, 'js-tmpl.config.yml');
       await fs.writeFile(configPath, 'templateDir: yml-templates', 'utf8');
 
-      const config = loadProjectConfig(tmpDir);
+      const config = loadProjectConfig(tmpDir, findProjectConfig(tmpDir));
       assert.strictEqual(config.templateDir, 'yml-templates');
     });
   });
@@ -131,7 +132,7 @@ describe('loadProjectConfig', () => {
         'utf8',
       );
 
-      const config = loadProjectConfig(tmpDir);
+      const config = loadProjectConfig(tmpDir, findProjectConfig(tmpDir));
       assert.strictEqual(config.templateDir, 'json-templates');
     });
   });
@@ -143,7 +144,7 @@ describe('loadProjectConfig', () => {
       const configPath = path.join(configDir, 'js-tmpl.yaml');
       await fs.writeFile(configPath, 'templateDir: config-yaml', 'utf8');
 
-      const config = loadProjectConfig(tmpDir);
+      const config = loadProjectConfig(tmpDir, findProjectConfig(tmpDir));
       assert.strictEqual(config.templateDir, 'config-yaml');
     });
   });
@@ -159,14 +160,25 @@ describe('loadProjectConfig', () => {
         'utf8',
       );
 
-      const config = loadProjectConfig(tmpDir);
+      const config = loadProjectConfig(tmpDir, findProjectConfig(tmpDir));
       assert.strictEqual(config.templateDir, 'config-json');
+    });
+  });
+
+  it('does not search cwd when no file is given', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.writeFile(
+        path.join(tmpDir, 'js-tmpl.config.yaml'),
+        'templateDir: x',
+        'utf8',
+      );
+      assert.strictEqual(loadProjectConfig(tmpDir), null);
     });
   });
 
   it('returns null when no config file found', async () => {
     await withTempDir(async (tmpDir) => {
-      const config = loadProjectConfig(tmpDir);
+      const config = loadProjectConfig(tmpDir, findProjectConfig(tmpDir));
       assert.strictEqual(config, null);
     });
   });
@@ -196,7 +208,7 @@ describe('loadProjectConfig', () => {
       const configPath = path.join(tmpDir, 'js-tmpl.config.yaml');
       await fs.writeFile(configPath, '# empty', 'utf8');
 
-      const config = loadProjectConfig(tmpDir);
+      const config = loadProjectConfig(tmpDir, findProjectConfig(tmpDir));
       assert.deepStrictEqual(config, {});
     });
   });
@@ -231,7 +243,7 @@ describe('loadProjectConfig', () => {
         'utf8',
       );
 
-      const config = loadProjectConfig(tmpDir);
+      const config = loadProjectConfig(tmpDir, findProjectConfig(tmpDir));
       // Should load .yaml first
       assert.strictEqual(config.templateDir, 'yaml-file');
     });

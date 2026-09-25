@@ -12,6 +12,7 @@ npm install @nci-gis/js-tmpl
 
 ```javascript
 import {
+  findProjectConfig,
   resolveConfig,
   renderDirectory,
   registerHelpers,
@@ -30,17 +31,17 @@ Resolves configuration by merging user options with project config and defaults.
 
 `options` (Object):
 
-| Property      | Type     | Required | Default         | Description                                      |
-| ------------- | -------- | -------- | --------------- | ------------------------------------------------ |
-| `valuesFile`  | string   | No       | —               | Path to values file (`.yaml` / `.yml` / `.json`) |
-| `valuesDir`   | string   | No       | —               | Value-partials root (see "Value Partials" below) |
-| `templateDir` | string   | No       | `"templates"`   | Path to template directory                       |
-| `partialsDir` | string   | No       | `""` (skipped)  | Path to partials directory                       |
-| `outDir`      | string   | No       | `"dist"`        | Path to output directory                         |
-| `extname`     | string   | No       | `".hbs"`        | Template file extension                          |
-| `configFile`  | string   | No       | Auto-discovered | Explicit config file path                        |
-| `envKeys`     | string[] | No       | `[]`            | Env var names to expose                          |
-| `envPrefix`   | string   | No       | `""`            | Auto-include env vars with prefix                |
+| Property      | Type     | Required | Default        | Description                                      |
+| ------------- | -------- | -------- | -------------- | ------------------------------------------------ |
+| `valuesFile`  | string   | No       | —              | Path to values file (`.yaml` / `.yml` / `.json`) |
+| `valuesDir`   | string   | No       | —              | Value-partials root (see "Value Partials" below) |
+| `templateDir` | string   | No       | `"templates"`  | Path to template directory                       |
+| `partialsDir` | string   | No       | `""` (skipped) | Path to partials directory                       |
+| `outDir`      | string   | No       | `"dist"`       | Path to output directory                         |
+| `extname`     | string   | No       | `".hbs"`       | Template file extension                          |
+| `configFile`  | string   | No       | None           | Config file to read (the engine never searches)  |
+| `envKeys`     | string[] | No       | `[]`           | Env var names to expose                          |
+| `envPrefix`   | string   | No       | `""`           | Auto-include env vars with prefix                |
 
 Both `valuesFile` and `valuesDir` are optional (VP-5, VP-6, VP-8). If neither
 is supplied, `view` is `{ env: {...} }` only — the CLI invocation itself is
@@ -97,6 +98,27 @@ console.log(config);
 //   extname: '.hbs'
 // }
 ```
+
+---
+
+### findProjectConfig([cwd])
+
+Returns the absolute path of the project config file the CLI would use —
+the first existing entry of the [Auto-Discovery](#auto-discovery) list in
+`cwd` (default `process.cwd()`) — or `null`. `resolveConfig` never searches
+on its own; use this to opt into the same behaviour:
+
+```javascript
+import { findProjectConfig, resolveConfig } from '@nci-gis/js-tmpl';
+
+const configFile = findProjectConfig();
+const config = resolveConfig(configFile ? { configFile } : {});
+```
+
+> **0.2.0 migration:** before 0.2.0, `resolveConfig()` searched `cwd` for a
+> config file by itself. Embedders that relied on it call
+> `findProjectConfig()`; embedders that worked around it (e.g. passing a
+> different `cwd`) can drop the workaround.
 
 ---
 
@@ -211,7 +233,9 @@ name:
 
 ### Auto-Discovery
 
-If `configFile` is not specified, js-tmpl searches for config in this order:
+The **CLI** searches for a config file when `--config-file` is not given.
+`resolveConfig()` does not search; pass `configFile` (for example from
+`findProjectConfig()`). The CLI's search order:
 
 1. `js-tmpl.config.yaml`
 2. `js-tmpl.config.yml`
@@ -751,6 +775,8 @@ declare module '@nci-gis/js-tmpl' {
     config: any,
     hbs?: typeof Handlebars,
   ): Promise<void>;
+
+  export function findProjectConfig(cwd?: string): string | null;
 
   export function registerHelpers(
     hbs: typeof Handlebars,

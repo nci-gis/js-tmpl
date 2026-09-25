@@ -1,8 +1,13 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
 import { DEFAULTS } from './defaults.js';
-import { loadProjectConfig, loadYamlOrJson } from './loader.js';
+import {
+  CONFIG_CANDIDATES,
+  loadProjectConfig,
+  loadYamlOrJson,
+} from './loader.js';
 import { scanValuePartials } from './valuePartials.js';
 import { buildView, pickEnv } from './view.js';
 
@@ -26,7 +31,30 @@ function assertValuesFileNotInside(valuesFileAbs, valuesDirAbs) {
 }
 
 /**
+ * Find the project config file the CLI would use: the first of
+ * `js-tmpl.config.yaml`, `.yml`, `.json`, `config/js-tmpl.yaml`,
+ * `config/js-tmpl.json` that exists in `cwd`. `resolveConfig` never searches
+ * on its own; call this and pass the result as `configFile` to get the same
+ * behaviour as the CLI.
+ *
+ * @param {string} [cwd]
+ * @returns {string | null} Absolute path of the file, or null if none exists.
+ */
+export function findProjectConfig(cwd = process.cwd()) {
+  for (const rel of CONFIG_CANDIDATES) {
+    const abs = path.join(cwd, rel);
+    if (fs.existsSync(abs)) {
+      return abs;
+    }
+  }
+  return null;
+}
+
+/**
  * Resolve final config using: defaults < projectConfig < cliArgs.
+ *
+ * `projectConfig` is read only from an explicit `configFile`; nothing is
+ * discovered from `cwd` (see `findProjectConfig`).
  *
  * Value sources (all optional per VP-5, VP-6, VP-8):
  * - `valuesFile` loaded into top-level view keys.
