@@ -19,7 +19,7 @@ embedders.
 - `${var}` with a missing var renders `""` ([API.md:350](../../../docs/API.md#L350),
   documented). `t/${missing}/y.txt.hbs` → `out/y.txt`, so the file moves up a
   directory without any message. `$if{missing}` throws (G-4) and
-  `{{missing}}` throws (VP-9), so this is the only silent case left.
+  `{{missing}}` throws (VP-9); path interpolation is the odd one out.
 - `${var}` value containing `/` creates nested directories. Not documented
   either way.
 - `resolveConfig(cli, cwd)` (public engine API) auto-discovers
@@ -27,6 +27,14 @@ embedders.
   `cwd` only to prevent picking up the user's project config (see
   `a2scaffold/src/scaffold/index.js` comment). The engine is making a
   decision it does not need to make.
+- Handlebars `strict: true` checks simple mustaches only. A missing var as a
+  **helper argument** is passed as `undefined` — including built-ins:
+  `{{#if missing}}` renders the else branch, `{{#each missing}}` renders
+  nothing, `{{upper missing}}` gets `undefined` (found in Round 04; pinned by
+  "known gap" tests in `helpers.test.js` and `contentRenderer.test.js`).
+  API.md previously claimed "missing data is always loud"; corrected in
+  Round 04. a2scaffold templates use `{{#if …}}` on keys that may be absent,
+  so closing this is breaking.
 - All errors are plain `Error`; callers (a2scaffold, agents) can only match
   on message text. Handlebars' original error is lost on rethrow.
 
@@ -38,12 +46,63 @@ embedders.
   (`code`, `hint?`, `details?`, `cause`). Naming `JSTMPL_<AREA>_<WHAT>`.
   Messages kept verbatim where possible; codes and hints are additive.
 - Hints only where the fix is mechanical. No fuzzy "did you mean".
+- **Strict-only, no flag.** No `strict: false` / `--no-strict` in 0.2.0.
+  An opt-out is an extension point (anti-pattern without a use case) and
+  a one-way door. Revisit only on a real issue, and then: explicit config,
+  content only (paths stay strict), warnings returned as data, never
+  logged by the engine.
+- **Ownership boundaries** — js-tmpl owns what goes into Handlebars and what
+  comes out; Handlebars owns the middle:
+
+  ```text
+  js-tmpl → [data boundary] → Handlebars → [file boundary] → js-tmpl
+            view, missing       syntax, helpers,     plan, check,
+            handler, provenance partials, compile    paths/guards, writes
+  ```
+
+  Missing-value handling lives at the data boundary (a `Proxy` on `view`),
+  relying on JS property-access semantics, not Handlebars internals.
+  `registerHelpers` stays a thin validation layer; replacing Handlebars is
+  a non-goal.
+
+- **Missing handler: internal seam first.** One internal mechanism, called
+  by js-tmpl when a read misses. It is not a helper: helpers are invoked by
+  template authors, the handler by the engine. Two consumers in 0.2.0:
+  default throw (covers helper arguments too) and collect-all. Not
+  exported.
+- **Public `onMissing` only on evidence** — an option on
+  `renderDirectory` / `planRender` (third argument), never in `cfg` (config stays pure
+  data); content only; ships with an `examples/missing-handler/`; Round 09
+  labels its values `handler-supplied`. No CLI: exposing any user function
+  on the CLI means loading a user module, the same decision as
+  `--helpers ./file.js`, and is made once for both.
 
 ## Plan
 
+- [ ] **Spike first — Proxy on `view`** (shared with Round 09). Under
+      Handlebars strict mode, measure: (a) every missing read is caught,
+      including helper / block-helper arguments; (b) no false positives from
+      Handlebars' internal probes (`hasOwnProperty`, `length`, `toJSON`,
+      symbols, `each` over objects/arrays, partials, `@root`, `../`);
+      (c) output byte-identical when nothing is missing; (d) overhead on the
+      examples. Record the verdict in Do; it decides the next two items.
+- [ ] **Internal missing handler** (if spike passes) — default throws with
+      template `relPath` + path + position (`mustache` / `helper-arg` /
+      `block-param`). Flips the Round 04 "known gap" tests.
+      _If the spike fails:_ close the helper-argument gap by marking param
+      `PathExpression`s strict on the `hbs.parse()` AST (private compiler
+      flag — verify on the pinned Handlebars version, add a guard test),
+      and defer collect-all.
+- [ ] **Collect-all diagnostics** — one run reports every missing value
+      (content, `${}` paths, `$if{}` guards) in a single aggregate error,
+      sorted by template then path, instead of stopping at the first.
+      Document the limit: only branches rendered with the current values
+      are checked.
 - [ ] **`${missing}` throws** with template `relPath` + var name (same shape
       as G-4). Present-but-empty (`''`) still renders empty. Update
       API.md:350 + migration note.
+- [ ] **Migration note for strict helper arguments** — declare optional
+      keys (`key: null` / `false` / `''`); `{{#if missing}}` now throws.
 - [ ] **Interpolated value must be one segment** — reject values that
       contain `/` or `\`, or that are `.` / `..` / empty after
       interpolation. Migration note: nested output dirs come from template
@@ -68,6 +127,8 @@ embedders.
 ### Out of Scope
 
 - Warning on unused values (noisy; shared value files are normal).
+- Public `onMissing`, `strict: false`, CLI injection of functions (see
+  Design notes: evidence-gated).
 - Changing existing message wording beyond what the new rules need.
 
 ## Do
@@ -81,7 +142,9 @@ embedders.
 - [ ] `resolveConfig` without `configFile` reads no file from `cwd` (fs
       spy); CLI behaviour unchanged.
 - [ ] Every code documented; `docs:check` enforces it.
-- [ ] Migration notes present for all three breaking items.
+- [ ] Migration notes present for every breaking item.
+- [ ] Spike verdict recorded in Do, with the path taken (Proxy or AST).
+- [ ] A template with three missing values reports all three in one run.
 
 ## Act
 

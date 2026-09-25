@@ -99,6 +99,7 @@ Reason:
 ### 0.2.0 — No Silent Outcomes + Render Plan (breaking)
 
 - [ ] **`${missing}` throws** — path interpolation joins G-4 / VP-9; interpolated values must be a single path segment ([Round 07](.agents/plan/cycles/Round_07.md)).
+- [ ] **Strict helper arguments** — a missing variable passed to a helper (`{{#if missing}}`, `{{upper missing}}`) throws like `{{missing}}` ([Round 07](.agents/plan/cycles/Round_07.md)).
 - [ ] **Engine API does not auto-discover config** — discovery becomes CLI-only ([Round 07](.agents/plan/cycles/Round_07.md)).
 - [ ] **Stable error codes** — `JsTmplError` with `code` / `hint` / `cause`, documented as public API ([Round 07](.agents/plan/cycles/Round_07.md)).
 - [ ] **`planRender()`** — the engine's decisions as data, without writing ([Round 08](.agents/plan/cycles/Round_08.md)).

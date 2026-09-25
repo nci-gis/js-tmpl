@@ -51,7 +51,8 @@ See [Design Principles](docs/PRINCIPLES.md) - Core philosophy guiding all decisi
 ## Features
 
 - 🎯 **Dynamic File Paths** - Use `${var}` placeholders in paths and filenames
-- 🧩 **Handlebars Templates** - Full Handlebars feature set (loops, conditionals, helpers)
+- 🧩 **Handlebars Templates** - Full Handlebars feature set (loops, conditionals, partials)
+- 🛠️ **Custom Helpers** - `registerHelpers` on a scoped instance, validated and atomic
 - 📦 **Partial System** - Reusable components with root and namespaced partials
 - ⚙️ **Flexible Configuration** - CLI args > project config > defaults
 - 🌲 **BFS Tree Walking** - Async, non-blocking template discovery
@@ -166,6 +167,27 @@ const config = resolveConfig({
 
 await renderDirectory(config);
 ```
+
+**With custom helpers:**
+
+```javascript
+import Handlebars from 'handlebars';
+import {
+  registerHelpers,
+  renderDirectory,
+  resolveConfig,
+} from '@nci-gis/js-tmpl';
+
+const hbs = Handlebars.create();
+registerHelpers(hbs, { upper: (s) => s.toUpperCase() });
+
+await renderDirectory(resolveConfig({ valuesFile: './values.yaml' }), hbs);
+```
+
+Helpers must be pure functions. Strict mode still applies to plain
+`{{var}}` lookups around them; see
+[Strict templates](docs/API.md#strict-templates) for what is not checked
+inside helper arguments.
 
 ### 4. Get output
 
@@ -320,6 +342,8 @@ See [docs/API.md](docs/API.md) for the complete API reference — parameters, re
 - [examples/value-partials/](examples/value-partials/) — composing `view`
   from multiple structured files via `--values-dir` (directory-as-namespace,
   no merge, `@`-flatten escape).
+- [examples/helpers/](examples/helpers/) — registering pure custom helpers on
+  a scoped Handlebars instance with `registerHelpers`.
 
 ## Testing
 
