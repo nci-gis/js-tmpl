@@ -1,10 +1,18 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
 import { DEFAULTS } from './defaults.js';
-import { loadProjectConfig, loadYamlOrJson } from './loader.js';
+import {
+  CONFIG_CANDIDATES,
+  loadProjectConfig,
+  loadYamlOrJson,
+} from './loader.js';
 import { scanValuePartials } from './valuePartials.js';
 import { buildView, pickEnv } from './view.js';
+
+const TARGET_FS = ['portable', 'case-sensitive'];
 
 /**
  * C-1 — throw if the resolved `valuesFile` sits inside the resolved
@@ -18,7 +26,8 @@ function assertValuesFileNotInside(valuesFileAbs, valuesDirAbs) {
   const rel = path.relative(valuesDirAbs, valuesFileAbs);
   const inside = rel && !rel.startsWith('..') && !path.isAbsolute(rel);
   if (inside) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.VALUES_FILE_IN_DIR,
       `valuesFile '${valuesFileAbs}' is inside valuesDir '${valuesDirAbs}'.\n` +
         `Move the file out, or drop valuesDir.`,
     );
@@ -26,7 +35,30 @@ function assertValuesFileNotInside(valuesFileAbs, valuesDirAbs) {
 }
 
 /**
+ * Find the project config file the CLI would use: the first of
+ * `js-tmpl.config.yaml`, `.yml`, `.json`, `config/js-tmpl.yaml`,
+ * `config/js-tmpl.json` that exists in `cwd`. `resolveConfig` never searches
+ * on its own; call this and pass the result as `configFile` to get the same
+ * behaviour as the CLI.
+ *
+ * @param {string} [cwd]
+ * @returns {string | null} Absolute path of the file, or null if none exists.
+ */
+export function findProjectConfig(cwd = process.cwd()) {
+  for (const rel of CONFIG_CANDIDATES) {
+    const abs = path.join(cwd, rel);
+    if (fs.existsSync(abs)) {
+      return abs;
+    }
+  }
+  return null;
+}
+
+/**
  * Resolve final config using: defaults < projectConfig < cliArgs.
+ *
+ * `projectConfig` is read only from an explicit `configFile`; nothing is
+ * discovered from `cwd` (see `findProjectConfig`).
  *
  * Value sources (all optional per VP-5, VP-6, VP-8):
  * - `valuesFile` loaded into top-level view keys.
@@ -68,11 +100,20 @@ export function resolveConfig(cli, cwd = process.cwd()) {
       })
     : {};
 
+  if (!TARGET_FS.includes(mergedConfig.targetFs)) {
+    throw new JsTmplError(
+      ErrorCodes.CONFIG_INVALID_VALUE,
+      `targetFs must be one of ${TARGET_FS.map((v) => `'${v}'`).join(', ')}, got '${mergedConfig.targetFs}'.`,
+      { details: { key: 'targetFs', value: mergedConfig.targetFs } },
+    );
+  }
+
   return {
     templateDir: abs(mergedConfig.templateDir),
     partialsDir: mergedConfig.partialsDir ? abs(mergedConfig.partialsDir) : '',
     outDir: abs(mergedConfig.outDir),
     extname: mergedConfig.extname,
+    targetFs: mergedConfig.targetFs,
     view: buildView({
       rootValues,
       partials,

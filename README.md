@@ -61,11 +61,11 @@ See [Design Principles](docs/PRINCIPLES.md) - Core philosophy guiding all decisi
 
 ## Fixed Rules for Minimal Auto-Discovery
 
-js-tmpl follows the principle **"Explicit Over Implicit"** - most configuration must be provided explicitly. However, for developer convenience, exactly **ONE** type of auto-discovery is allowed:
+js-tmpl follows the principle **"Explicit Over Implicit"** - most configuration must be provided explicitly. However, for developer convenience, exactly **ONE** type of auto-discovery is allowed, and only in the **CLI**:
 
 ### Project Configuration File (Optional)
 
-js-tmpl will search for a project config file in **exactly these locations**, in this order, relative to the current working directory:
+The `js-tmpl` CLI searches for a project config file in **exactly these locations**, in this order, relative to the current working directory:
 
 1. `js-tmpl.config.yaml` (highest priority)
 2. `js-tmpl.config.yml`
@@ -74,6 +74,10 @@ js-tmpl will search for a project config file in **exactly these locations**, in
 5. `config/js-tmpl.json` (lowest priority)
 
 **First match wins.** If no config file is found, internal defaults are used.
+
+The programmatic API never searches: `resolveConfig()` reads a config file
+only when given `configFile`. Call `findProjectConfig(cwd)` to get the CLI's
+behaviour.
 
 ### What is NOT Auto-Discovered
 
@@ -87,20 +91,20 @@ Everything else must be **explicitly specified**:
 
 ### Override Auto-Discovery
 
-You can bypass auto-discovery entirely:
+Name the file explicitly and no search happens:
 
 ```bash
-# Explicit config file (no auto-discovery)
 js-tmpl render --values data.yaml --config-file /path/to/custom-config.yaml
-
-# No config file (use defaults only)
-js-tmpl render --values data.yaml --template-dir ./templates --out ./dist
 ```
+
+CLI options always win over the config file, so
+`--template-dir ./templates --out ./dist` overrides those two keys even when
+a discovered config file sets them.
 
 ### Why These Rules?
 
 1. **Predictable** - Fixed search order, no magic
-2. **Minimal** - Only config file location is auto-discovered
+2. **Minimal** - Only the config file location is auto-discovered, and only by the CLI
 3. **Overridable** - Always use `--config-file` for explicit control
 4. **Documented** - You're reading the complete list right now
 
@@ -184,10 +188,9 @@ registerHelpers(hbs, { upper: (s) => s.toUpperCase() });
 await renderDirectory(resolveConfig({ valuesFile: './values.yaml' }), hbs);
 ```
 
-Helpers must be pure functions. Strict mode still applies to plain
-`{{var}}` lookups around them; see
-[Strict templates](docs/API.md#strict-templates) for what is not checked
-inside helper arguments.
+Helpers must be pure functions. Strict mode applies to their arguments too:
+`{{upper missing}}` throws; see
+[Strict templates](docs/API.md#strict-templates).
 
 ### 4. Get output
 

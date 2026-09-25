@@ -7,16 +7,17 @@ import Handlebars from 'handlebars';
 
 import { registerHelpers } from '../../../src/engine/helpers.js';
 import { renderDirectory } from '../../../src/engine/renderDirectory.js';
+import { compileStrict } from '../../../src/engine/strictCompile.js';
 import { withTempDir } from '../../helpers/tempDir.js';
 
 /**
- * Compile the way contentRenderer does (strict mode, VP-9).
+ * Compile the way contentRenderer does (strict mode incl. arguments).
  * @param {typeof Handlebars} hbs
  * @param {string} src
  * @param {Record<string, unknown>} [view]
  */
 function render(hbs, src, view = {}) {
-  return hbs.compile(src, { strict: true })(view);
+  return compileStrict(hbs, src)(view);
 }
 
 describe('registerHelpers', () => {
@@ -232,15 +233,19 @@ describe('registerHelpers', () => {
     );
   });
 
-  // Known gap: Handlebars strict mode checks simple mustaches only, not
-  // helper arguments (built-ins included). Tracked in Round 07; this test
-  // pins today's behaviour so the change is deliberate when it lands.
-  it('does NOT throw for a missing var in a helper argument (known gap)', () => {
+  // Round 07 (0.2.0): arguments are strict — built-ins and custom helpers.
+  it('throws for a missing var in a helper argument', () => {
     const hbs = Handlebars.create();
     registerHelpers(hbs, { upper: (s) => String(s).toUpperCase() });
 
-    assert.strictEqual(render(hbs, '{{upper missing}}'), 'UNDEFINED');
-    assert.strictEqual(render(hbs, '{{#if missing}}x{{/if}}'), '');
+    assert.throws(
+      () => render(hbs, '{{upper missing}}'),
+      /"missing" not defined/,
+    );
+    assert.throws(
+      () => render(hbs, '{{#if missing}}x{{/if}}'),
+      /"missing" not defined/,
+    );
   });
 
   // ── Integration ────────────────────────────────────────────────────

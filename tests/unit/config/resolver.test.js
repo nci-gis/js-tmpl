@@ -3,14 +3,28 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { resolveConfig } from '../../../src/config/resolver.js';
+import {
+  findProjectConfig,
+  resolveConfig,
+} from '../../../src/config/resolver.js';
 import { withTempDir } from '../../helpers/tempDir.js';
+
+/**
+ * Pass the discovered project config explicitly, as the CLI does. The engine
+ * itself never searches `cwd` (Round 07).
+ * @param {Record<string, unknown>} cli
+ * @param {string} cwd
+ */
+function withDiscovery(cli, cwd) {
+  const configFile = cli.configFile ?? findProjectConfig(cwd);
+  return configFile ? { ...cli, configFile } : cli;
+}
 
 describe('resolveConfig', () => {
   it('resolves without valuesFile when both valuesFile and valuesDir are absent (VP-8)', async () => {
     await withTempDir(async (tmpDir) => {
       const cli = {};
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.ok(config.view);
       assert.deepStrictEqual(config.view.env, {});
@@ -28,7 +42,7 @@ describe('resolveConfig', () => {
       await fs.writeFile(valuesFile, 'name: test', 'utf8');
 
       const cli = { valuesFile: 'values.yaml' };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(config.templateDir, path.join(tmpDir, 'templates'));
       assert.strictEqual(config.partialsDir, '');
@@ -52,7 +66,7 @@ describe('resolveConfig', () => {
       );
 
       const cli = { valuesFile: 'values.yaml' };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(config.templateDir, path.join(tmpDir, 'custom'));
       assert.strictEqual(config.outDir, path.join(tmpDir, 'custom-out'));
@@ -78,7 +92,7 @@ describe('resolveConfig', () => {
         templateDir: 'cli-templates',
         outDir: 'cli-out',
       };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(
         config.templateDir,
@@ -98,7 +112,7 @@ describe('resolveConfig', () => {
         valuesFile: 'values.yaml',
         templateDir: absoluteTemplate,
       };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(config.templateDir, absoluteTemplate);
     });
@@ -113,7 +127,7 @@ describe('resolveConfig', () => {
         valuesFile: 'values.yaml',
         templateDir: '../templates',
       };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(
         config.templateDir,
@@ -132,7 +146,7 @@ describe('resolveConfig', () => {
       );
 
       const cli = { valuesFile: 'values.yaml' };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.deepStrictEqual(config.view.app, {
         name: 'myapp',
@@ -147,7 +161,7 @@ describe('resolveConfig', () => {
       await fs.writeFile(valuesFile, 'data: test', 'utf8');
 
       const cli = { valuesFile: 'values.yaml' };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.deepStrictEqual(config.view.env, {});
     });
@@ -166,7 +180,7 @@ describe('resolveConfig', () => {
         await fs.writeFile(configFile, 'envKeys:\n  - NODE_ENV', 'utf8');
 
         const cli = { valuesFile: 'values.yaml' };
-        const config = resolveConfig(cli, tmpDir);
+        const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
         assert.strictEqual(config.view.env.NODE_ENV, 'test-envkeys');
         assert.strictEqual(Object.keys(config.view.env).length, 1);
@@ -188,7 +202,7 @@ describe('resolveConfig', () => {
         await fs.writeFile(configFile, 'envPrefix: JS_TMPL_', 'utf8');
 
         const cli = { valuesFile: 'values.yaml' };
-        const config = resolveConfig(cli, tmpDir);
+        const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
         assert.strictEqual(config.view.env.JS_TMPL_TEST_VAR, 'hello');
       });
@@ -215,7 +229,7 @@ describe('resolveConfig', () => {
         );
 
         const cli = { valuesFile: 'values.yaml' };
-        const config = resolveConfig(cli, tmpDir);
+        const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
         assert.strictEqual(config.view.env.NODE_ENV, 'combined-test');
         assert.strictEqual(config.view.env.JS_TMPL_COMBO, 'combo');
@@ -239,7 +253,7 @@ describe('resolveConfig', () => {
           valuesFile: 'values.yaml',
           envPrefix: 'JS_TMPL_ONLY_',
         };
-        const config = resolveConfig(cli, tmpDir);
+        const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
         assert.strictEqual(config.view.env.JS_TMPL_ONLY_PREFIX, 'yes');
       });
@@ -257,7 +271,7 @@ describe('resolveConfig', () => {
         valuesFile: 'values.yaml',
         envKeys: ['NONEXISTENT_KEY_12345'],
       };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.deepStrictEqual(config.view.env, {});
     });
@@ -273,7 +287,7 @@ describe('resolveConfig', () => {
       );
 
       const cli = { valuesFile: 'values.json' };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(config.view.name, 'json-test');
       assert.strictEqual(config.view.count, 42);
@@ -296,7 +310,7 @@ describe('resolveConfig', () => {
         valuesFile: 'values.yaml',
         configFile: customConfig,
       };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(
         config.templateDir,
@@ -314,7 +328,7 @@ describe('resolveConfig', () => {
         valuesFile: 'values.yaml',
         extname: '.tmpl',
       };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(config.extname, '.tmpl');
     });
@@ -324,7 +338,10 @@ describe('resolveConfig', () => {
     await withTempDir(async (tmpDir) => {
       const cli = { valuesFile: 'nonexistent.yaml' };
 
-      assert.throws(() => resolveConfig(cli, tmpDir), /Values file not found/);
+      assert.throws(
+        () => resolveConfig(withDiscovery(cli, tmpDir), tmpDir),
+        /Values file not found/,
+      );
     });
   });
 
@@ -347,7 +364,7 @@ describe('resolveConfig', () => {
         // outDir not provided - should use defaults
         // extname not provided - should use project
       };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(config.templateDir, path.join(tmpDir, 'cli-override'));
       assert.strictEqual(
@@ -367,7 +384,7 @@ describe('resolveConfig', () => {
       await fs.writeFile(valuesFile, 'name: from-cwd', 'utf8');
 
       const cli = { valuesFile: 'config/values.yaml' };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(config.view.name, 'from-cwd');
     });
@@ -388,7 +405,7 @@ describe('resolveConfig', () => {
       const projectConfigFile = path.join(tmpDir, 'js-tmpl.config.yaml');
       await fs.writeFile(projectConfigFile, 'valuesDir: values', 'utf8');
 
-      const config = resolveConfig({}, tmpDir);
+      const config = resolveConfig(withDiscovery({}, tmpDir), tmpDir);
 
       // `values/prod.yaml` → `view.prod.*`
       assert.strictEqual(
@@ -411,7 +428,7 @@ describe('resolveConfig', () => {
       );
 
       const cli = { valuesFile: absoluteValuesFile };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(config.view.type, 'absolute');
     });
@@ -434,7 +451,7 @@ describe('resolveConfig', () => {
         'utf8',
       );
 
-      const config = resolveConfig({}, tmpDir);
+      const config = resolveConfig(withDiscovery({}, tmpDir), tmpDir);
 
       // `absolute-values/data.yaml` → `view.data.*`
       assert.strictEqual(
@@ -453,7 +470,10 @@ describe('resolveConfig', () => {
 
       assert.throws(
         () =>
-          resolveConfig({ valuesFile: valuesFileInside, valuesDir }, tmpDir),
+          resolveConfig(
+            withDiscovery({ valuesFile: valuesFileInside, valuesDir }, tmpDir),
+            tmpDir,
+          ),
         /is inside valuesDir/,
       );
     });
@@ -473,9 +493,55 @@ describe('resolveConfig', () => {
       await fs.writeFile(projectConfigFile, 'valuesFile: config.yaml', 'utf8');
 
       const cli = { valuesFile: 'cli.yaml' };
-      const config = resolveConfig(cli, tmpDir);
+      const config = resolveConfig(withDiscovery(cli, tmpDir), tmpDir);
 
       assert.strictEqual(config.view.source, 'cli');
+    });
+  });
+});
+
+describe('config discovery (Round 07)', () => {
+  it('resolveConfig does not read a config file it was not given', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.writeFile(
+        path.join(tmpDir, 'js-tmpl.config.yaml'),
+        'templateDir: from-file',
+        'utf8',
+      );
+
+      const config = resolveConfig({}, tmpDir);
+      assert.strictEqual(config.templateDir, path.join(tmpDir, 'templates'));
+    });
+  });
+
+  it('findProjectConfig returns the first existing candidate, absolute', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'config'));
+      await fs.writeFile(
+        path.join(tmpDir, 'config', 'js-tmpl.yaml'),
+        '',
+        'utf8',
+      );
+      assert.strictEqual(
+        findProjectConfig(tmpDir),
+        path.join(tmpDir, 'config', 'js-tmpl.yaml'),
+      );
+
+      await fs.writeFile(
+        path.join(tmpDir, 'js-tmpl.config.json'),
+        '{}',
+        'utf8',
+      );
+      assert.strictEqual(
+        findProjectConfig(tmpDir),
+        path.join(tmpDir, 'js-tmpl.config.json'),
+      );
+    });
+  });
+
+  it('findProjectConfig returns null when nothing exists', async () => {
+    await withTempDir(async (tmpDir) => {
+      assert.strictEqual(findProjectConfig(tmpDir), null);
     });
   });
 });

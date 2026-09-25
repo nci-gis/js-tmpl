@@ -51,6 +51,7 @@ describe('DEFAULTS', () => {
       'extname',
       'envKeys',
       'envPrefix',
+      'targetFs',
     ];
     const actualKeys = Object.keys(DEFAULTS);
     assert.deepStrictEqual(actualKeys.sort(), expectedKeys.sort());

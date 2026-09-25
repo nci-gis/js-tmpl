@@ -1,14 +1,16 @@
 import { parseArgs as parseNodeArgs } from 'node:util';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
+
 /**
  * The command line was malformed: unknown option, missing value, stray
  * argument. The CLI exits with code 2 for these, distinct from render or
  * config failures (code 1).
  */
-export class UsageError extends Error {
+export class UsageError extends JsTmplError {
   /** @param {string} message */
   constructor(message) {
-    super(message);
+    super(ErrorCodes.CLI_USAGE, message);
     this.name = 'UsageError';
   }
 }

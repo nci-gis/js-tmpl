@@ -80,4 +80,21 @@ for (const candidate of candidates) {
   }
 }
 
+// --- 3. Check every error code is documented in docs/API.md ---
+
+const errorsSrc = fs.readFileSync(path.join(root, 'src/errors.js'), 'utf8');
+const codes = [...errorsSrc.matchAll(/'(JSTMPL_[A-Z_]+)'/g)].map((m) => m[1]);
+const classes = [...errorsSrc.matchAll(/export (?:class|const) (\w+)/g)].map(
+  (m) => m[1],
+);
+
+console.log('\nChecking error codes in docs/API.md:');
+for (const name of [...classes, ...codes]) {
+  if (apiDoc.includes(name)) {
+    pass(name);
+  } else {
+    fail(`"${name}" is defined in src/errors.js but not in docs/API.md`);
+  }
+}
+
 process.exit(exitCode);

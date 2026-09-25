@@ -12,6 +12,7 @@ npm install @nci-gis/js-tmpl
 
 ```javascript
 import {
+  findProjectConfig,
   resolveConfig,
   renderDirectory,
   registerHelpers,
@@ -30,17 +31,18 @@ Resolves configuration by merging user options with project config and defaults.
 
 `options` (Object):
 
-| Property      | Type     | Required | Default         | Description                                      |
-| ------------- | -------- | -------- | --------------- | ------------------------------------------------ |
-| `valuesFile`  | string   | No       | —               | Path to values file (`.yaml` / `.yml` / `.json`) |
-| `valuesDir`   | string   | No       | —               | Value-partials root (see "Value Partials" below) |
-| `templateDir` | string   | No       | `"templates"`   | Path to template directory                       |
-| `partialsDir` | string   | No       | `""` (skipped)  | Path to partials directory                       |
-| `outDir`      | string   | No       | `"dist"`        | Path to output directory                         |
-| `extname`     | string   | No       | `".hbs"`        | Template file extension                          |
-| `configFile`  | string   | No       | Auto-discovered | Explicit config file path                        |
-| `envKeys`     | string[] | No       | `[]`            | Env var names to expose                          |
-| `envPrefix`   | string   | No       | `""`            | Auto-include env vars with prefix                |
+| Property      | Type     | Required | Default        | Description                                                                            |
+| ------------- | -------- | -------- | -------------- | -------------------------------------------------------------------------------------- |
+| `valuesFile`  | string   | No       | —              | Path to values file (`.yaml` / `.yml` / `.json`)                                       |
+| `valuesDir`   | string   | No       | —              | Value-partials root (see "Value Partials" below)                                       |
+| `templateDir` | string   | No       | `"templates"`  | Path to template directory                                                             |
+| `partialsDir` | string   | No       | `""` (skipped) | Path to partials directory                                                             |
+| `outDir`      | string   | No       | `"dist"`       | Path to output directory                                                               |
+| `extname`     | string   | No       | `".hbs"`       | Template file extension                                                                |
+| `configFile`  | string   | No       | None           | Config file to read (the engine never searches)                                        |
+| `envKeys`     | string[] | No       | `[]`           | Env var names to expose                                                                |
+| `envPrefix`   | string   | No       | `""`           | Auto-include env vars with prefix                                                      |
+| `targetFs`    | string   | No       | `"portable"`   | File system the output is for — see [Target file system](#target-file-system-targetfs) |
 
 Both `valuesFile` and `valuesDir` are optional (VP-5, VP-6, VP-8). If neither
 is supplied, `view` is `{ env: {...} }` only — the CLI invocation itself is
@@ -97,6 +99,27 @@ console.log(config);
 //   extname: '.hbs'
 // }
 ```
+
+---
+
+### findProjectConfig([cwd])
+
+Returns the absolute path of the project config file the CLI would use —
+the first existing entry of the [Auto-Discovery](#auto-discovery) list in
+`cwd` (default `process.cwd()`) — or `null`. `resolveConfig` never searches
+on its own; use this to opt into the same behaviour:
+
+```javascript
+import { findProjectConfig, resolveConfig } from '@nci-gis/js-tmpl';
+
+const configFile = findProjectConfig();
+const config = resolveConfig(configFile ? { configFile } : {});
+```
+
+> **0.2.0 migration:** before 0.2.0, `resolveConfig()` searched `cwd` for a
+> config file by itself. Embedders that relied on it call
+> `findProjectConfig()`; embedders that worked around it (e.g. passing a
+> different `cwd`) can drop the workaround.
 
 ---
 
@@ -211,7 +234,9 @@ name:
 
 ### Auto-Discovery
 
-If `configFile` is not specified, js-tmpl searches for config in this order:
+The **CLI** searches for a config file when `--config-file` is not given.
+`resolveConfig()` does not search; pass `configFile` (for example from
+`findProjectConfig()`). The CLI's search order:
 
 1. `js-tmpl.config.yaml`
 2. `js-tmpl.config.yml`
@@ -232,6 +257,7 @@ extname: .hbs
 envKeys: # optional — env var names to expose
   - NODE_ENV
 envPrefix: JS_TMPL_ # optional — auto-include vars with this prefix
+targetFs: portable # optional — or case-sensitive; see "Target file system"
 ```
 
 **JSON:**
@@ -244,9 +270,37 @@ envPrefix: JS_TMPL_ # optional — auto-include vars with this prefix
   "outDir": "dist",
   "extname": ".hbs",
   "envKeys": ["NODE_ENV"],
-  "envPrefix": "JS_TMPL_"
+  "envPrefix": "JS_TMPL_",
+  "targetFs": "portable"
 }
 ```
+
+### Target file system (`targetFs`)
+
+By default output is **portable**: two templates whose paths differ only by
+case (`README.md`, `readme.md`) are a collision, because they are one file
+on default macOS and Windows file systems.
+
+If the output is only ever used on a case-sensitive file system — for
+example files baked into a Linux container image — declare it:
+
+```yaml
+# js-tmpl.config.yaml
+targetFs: case-sensitive
+```
+
+js-tmpl does not detect the OS: you declare where the output goes, since you
+may render on macOS for a Linux target. If you declare `case-sensitive` and
+render onto a case-insensitive disk, the write that would overwrite a file
+fails instead of silently losing it (files written before it stay on disk):
+
+```text
+Error: Templates '${a}.md.hbs' and '${b}.md.hbs' render to 'README.md' and
+'readme.md', which this file system treats as one file.
+Render on a case-sensitive file system, or use targetFs: 'portable'.
+```
+
+Any other value throws `JSTMPL_CONFIG_INVALID_VALUE`.
 
 ## View Object
 
@@ -299,24 +353,32 @@ template partials system:
 
 ### Strict templates
 
-Templates are compiled with Handlebars `strict: true`. A simple mustache
-`{{var}}` on an undefined path throws an error that includes the template's
-relative path and the variable name. Present-but-empty values (`''`, `0`,
-`false`, `null`) render as normal — only **missing** properties fail.
+Every path a template reads must exist in the view. A missing path throws an
+error with the template's relative path, the variable name, and its
+line:column — in a simple mustache and in any argument position:
 
-**Limitation:** Handlebars checks simple mustaches only. A missing variable
-used as a **helper argument** is passed to the helper as `undefined` without
-an error — this includes built-in block helpers:
+| Template                    | View | Result |
+| --------------------------- | ---- | ------ |
+| `{{name}}`                  | `{}` | throws |
+| `{{upper name}}`            | `{}` | throws |
+| `{{#if name}}…{{/if}}`      | `{}` | throws |
+| `{{#each items}}…{{/each}}` | `{}` | throws |
+| `{{> card item}}`           | `{}` | throws |
 
-| Template                    | View | Result                            |
-| --------------------------- | ---- | --------------------------------- |
-| `{{name}}`                  | `{}` | throws                            |
-| `{{upper name}}`            | `{}` | helper receives `undefined`       |
-| `{{#if name}}…{{/if}}`      | `{}` | renders the `else` branch (empty) |
-| `{{#each items}}…{{/each}}` | `{}` | renders nothing                   |
+Present-but-empty values (`''`, `0`, `false`, `null`) render as normal —
+only **missing** properties fail. Partials follow the same rules.
 
-Closing this gap is planned for 0.2.0 (breaking). Until then, do not rely on
-a missing key being treated as falsy — declare it.
+Only paths the template itself reads are checked; what a helper does with
+its arguments in JavaScript is up to the helper.
+
+**Known limit (Handlebars):** fields on block parameters are not checked —
+`{{#each items as |item|}}{{item.missing}}{{/each}}` renders empty. Use
+`{{#each items}}{{missing}}{{/each}}` (context form) where you want the check.
+
+> **0.2.0 migration:** before 0.2.0, a missing key used in `{{#if}}`,
+> `{{#each}}`, `{{#with}}`, `{{#unless}}` or as a helper argument was treated
+> as `undefined`. Declare such keys in values (`key: null`, `false`, `''`,
+> `[]`) — see [Optional values](#optional-values).
 
 #### Optional values
 
@@ -430,12 +492,19 @@ dist/production/my-app-config.yaml
 
 ### Rules
 
-- Missing values resolve to empty string `""`
+- **Missing variables throw** — like `$if{var}` and `{{var}}`; the error names the variable and the template path
+- **Values are primitives** — a string, number, boolean or `null` (renders `""`); objects and arrays throw
+- **Nest with `/` only** — a value may contain `/` (e.g. `skills/group/name`, for depths the template tree cannot express); `\` throws on every OS so a tree renders the same everywhere
+- **Every part must name something** — after rendering, each `/`-separated part must not be `""`, `.` or `..` (so `/abs`, `a//b`, `../x`, `a/..` throw); such parts would silently drop or climb and move the file
 - Nested access supported: `${a.b.c}`
 - Array access supported: `${items.0.name}`
 - No glob expansion
-- **Output stays inside `outDir`** — a rendered path that would escape it (a value such as `../x` or `..`) throws before any file is written
-- **One template per output file** — two templates rendering to the same path throw, naming both, before any file is written
+- **Output stays inside `outDir`** — `outDir` is the only place js-tmpl writes. Every target is checked before rendering starts, and again against the real disk right before it is written: a symbolic link already inside `outDir` (including a dangling one) cannot redirect a write outside it
+- **One template per output file** — two templates rendering to the same path throw, naming both, before any file is written. Paths that differ only by case (`README.md` / `readme.md`) count as the same file, so a tree renders identically on Linux, macOS and Windows
+
+> **0.2.0 migration:** before 0.2.0 a missing `${var}` rendered `""`, and values
+> such as `../x`, `/abs` or `a//b` were joined without checks. Declare every
+> path variable; nest with `/` inside values (`a/b` still works).
 
 ### Path Guards — conditional files
 
@@ -606,6 +675,59 @@ If two partials resolve to the same name (e.g., `_date.hbs` and `@helpers/date.h
 
 ## Error Handling
 
+### Error codes
+
+Every error js-tmpl raises itself is a `JsTmplError` with a stable `code`
+(public API from 0.2.0 — match on `code`, not on message text), optional
+`details`, and `cause` when it wraps another error. Errors from Node itself
+(e.g. `ENOENT` for a missing template directory) keep Node's `code`.
+
+```javascript
+import { ErrorCodes, JsTmplError } from '@nci-gis/js-tmpl';
+
+try {
+  await renderDirectory(config);
+} catch (err) {
+  if (err instanceof JsTmplError && err.code === ErrorCodes.PATH_MISSING_VAR) {
+    console.error(`Declare '${err.details.variable}' in values`);
+  }
+  throw err;
+}
+```
+
+| Code                               | Raised when                                                          | `details`                               |
+| ---------------------------------- | -------------------------------------------------------------------- | --------------------------------------- |
+| `JSTMPL_CONFIG_NOT_FOUND`          | An explicit config file does not exist                               |                                         |
+| `JSTMPL_CONFIG_INVALID_VALUE`      | A config value is not one of its allowed values (`targetFs`)         | `key`, `value`                          |
+| `JSTMPL_VALUES_NOT_FOUND`          | The values file does not exist                                       |                                         |
+| `JSTMPL_VALUES_UNSUPPORTED_FORMAT` | The values file is not `.yaml` / `.yml` / `.json`                    |                                         |
+| `JSTMPL_VALUES_FILE_IN_DIR`        | `valuesFile` is inside `valuesDir` (C-1)                             |                                         |
+| `JSTMPL_NS_INVALID_SEGMENT`        | A partial or value-partial name segment is not `\w+`                 |                                         |
+| `JSTMPL_NS_DUPLICATE`              | Two files resolve to the same partial or namespace                   |                                         |
+| `JSTMPL_NS_SHADOW`                 | A value partial is both a leaf and a sub-tree (`a.yaml`, `a/b.yaml`) |                                         |
+| `JSTMPL_NS_ROOT_COLLISION`         | A root value key and a value-partial namespace collide (C-2)         |                                         |
+| `JSTMPL_NS_RESERVED_ENV`           | A value partial resolves to the reserved `env` namespace (C-3)       |                                         |
+| `JSTMPL_PATH_MISSING_VAR`          | `${var}` in a template path is not in the view                       | `relPath`, `variable`                   |
+| `JSTMPL_PATH_INVALID_VALUE`        | A `${var}` value is an object/array or contains `\`                  | `relPath`, `variable`                   |
+| `JSTMPL_PATH_EMPTY_SEGMENT`        | A rendered path part is `""`, `.` or `..`                            | `relPath`, `segment`                    |
+| `JSTMPL_GUARD_MISSING_VAR`         | `$if{var}` / `$ifn{var}` names a variable not in the view (G-4)      | `relPath`, `segment`, `variable`        |
+| `JSTMPL_GUARD_MALFORMED`           | A guard is not a whole directory segment (G-5)                       | `relPath`, `segment`                    |
+| `JSTMPL_GUARD_IN_FILENAME`         | A guard is used as a file name (G-5)                                 | `relPath`, `segment`                    |
+| `JSTMPL_TEMPLATE_MISSING_VALUE`    | A template reads a path not in the view (strict mode)                | `relPath`, `variable`, `line`, `column` |
+| `JSTMPL_TEMPLATE_SYNTAX`           | Handlebars cannot parse a template                                   | `relPath`                               |
+| `JSTMPL_TEMPLATE_RENDER_FAILED`    | Rendering failed otherwise (missing partial, a helper threw, …)      | `relPath`                               |
+| `JSTMPL_OUTPUT_OUTSIDE_OUTDIR`     | A write would land outside `outDir` (e.g. through a symlink in it)   | `relPath`, `target`                     |
+| `JSTMPL_OUTPUT_COLLISION`          | Two templates render to one file (case-insensitive)                  | `templates`, `target`                   |
+| `JSTMPL_HELPER_NO_INSTANCE`        | `registerHelpers` got no Handlebars instance                         |                                         |
+| `JSTMPL_HELPER_INVALID_MAP`        | `helpersMap` is not an object                                        |                                         |
+| `JSTMPL_HELPER_INVALID_NAME`       | A helper name is not a bare identifier                               |                                         |
+| `JSTMPL_HELPER_NOT_FUNCTION`       | A helper value is not a function                                     |                                         |
+| `JSTMPL_HELPER_ALREADY_REGISTERED` | A helper name is already on the instance                             |                                         |
+| `JSTMPL_CLI_USAGE`                 | CLI: unknown option, missing value, unexpected argument (exit 2)     |                                         |
+
+The CLI prints `js-tmpl: <message>`; with `--verbose` it also prints
+`code: <CODE>` and the stack.
+
 ### Common Errors
 
 **Values file not found:**
@@ -621,11 +743,12 @@ Error: Parse error on line 5:
 ...{{#if foo}
 ```
 
-**Path escapes `outDir`:**
+**Missing or unusable path variable:**
 
 ```text
-Error: Template '${name}/x.txt.hbs' renders to '../escaped/x.txt', which is outside outDir '/project/dist'.
-Check the values of: name. Path values must not contain '..' segments.
+Error: Path variable 'name' is not defined in the view (in '${name}/x.txt.hbs').
+Error: Path variable 'name' is 'a\b', which contains '\' (in '${name}/x.txt.hbs').
+Error: Path segment '${name}' renders to '../x'; every part must name a file or directory (no empty, '.' or '..' parts) (in '${name}/x.txt.hbs').
 ```
 
 **Two templates, one output file:**
@@ -736,6 +859,8 @@ declare module '@nci-gis/js-tmpl' {
     config: any,
     hbs?: typeof Handlebars,
   ): Promise<void>;
+
+  export function findProjectConfig(cwd?: string): string | null;
 
   export function registerHelpers(
     hbs: typeof Handlebars,

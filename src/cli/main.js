@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { resolveConfig } from '../config/resolver.js';
+import { findProjectConfig, resolveConfig } from '../config/resolver.js';
 import { renderDirectory } from '../engine/renderDirectory.js';
 import { parseArgs, UsageError } from './args.js';
 import { USAGE } from './usage.js';
@@ -20,7 +20,10 @@ export async function main(argv) {
     return;
   }
 
-  const cfg = resolveConfig(cli);
+  // Config-file discovery is CLI behaviour; the engine only reads a file it
+  // is given.
+  const configFile = cli.configFile ?? findProjectConfig();
+  const cfg = resolveConfig(configFile ? { ...cli, configFile } : cli);
   await renderDirectory(cfg);
   console.log('✔ js-tmpl completed.');
 }
@@ -45,6 +48,10 @@ export async function run(argv) {
       return 2;
     }
     if (argv.includes('--verbose')) {
+      const code = /** @type {{ code?: string }} */ (err).code;
+      if (code) {
+        console.error(`code: ${code}`);
+      }
       console.error(err.stack);
     }
     return 1;

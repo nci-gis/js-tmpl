@@ -1,30 +1,6 @@
-import { getNested } from '../utils/object.js';
+import { ErrorCodes, JsTmplError } from '../errors.js';
+import { getNested, hasNested } from '../utils/object.js';
 import { classifySegment } from './pathSegment.js';
-
-/**
- * Check whether a dotted key path is *present* in `view` as an own property.
- *
- * Distinct from `getNested`, which can't tell "missing" from "present but null/undefined".
- * Required by G-4 (missing var throws) vs G-3 (present-but-falsy fails).
- *
- * @param {unknown} view
- * @param {string} key
- * @returns {boolean}
- */
-function hasNested(view, key) {
-  const parts = key.split('.');
-  let cur = view;
-  for (let i = 0; i < parts.length - 1; i++) {
-    if (cur === null || cur === undefined || typeof cur !== 'object') {
-      return false;
-    }
-    cur = /** @type {Record<string, unknown>} */ (cur)[parts[i]];
-  }
-  if (cur === null || cur === undefined || typeof cur !== 'object') {
-    return false;
-  }
-  return Object.hasOwn(cur, parts[parts.length - 1]); // NOSONAR
-}
 
 /**
  * Evaluate a single path segment against `view`.
@@ -51,10 +27,12 @@ export function evalFormula(segment, view, relPath) {
   }
 
   if (c.kind === 'malformed') {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.GUARD_MALFORMED,
       relPath
         ? `${c.reason} (in '${relPath}')`
         : /** @type {string} */ (c.reason),
+      { details: { relPath, segment } },
     );
   }
 
@@ -62,8 +40,10 @@ export function evalFormula(segment, view, relPath) {
 
   if (!hasNested(view, varPath)) {
     const where = relPath ? ` in '${relPath}'` : '';
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.GUARD_MISSING_VAR,
       `Path formula '${segment}'${where} references undefined view variable '${varPath}'`,
+      { details: { relPath, segment, variable: varPath } },
     );
   }
 

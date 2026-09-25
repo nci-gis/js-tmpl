@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import YAML from 'js-yaml';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
+
 /**
  * Load YAML or JSON values.
  *
@@ -12,7 +14,8 @@ import YAML from 'js-yaml';
 export function loadYamlOrJson(filePath) {
   // Check if file exists before attempting to read
   if (!fs.existsSync(filePath)) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.VALUES_NOT_FOUND,
       `Values file not found: ${filePath}\n` +
         'Check that the file exists and the path is correct.',
     );
@@ -27,55 +30,50 @@ export function loadYamlOrJson(filePath) {
     return /** @type {Record<string, unknown>} */ (JSON.parse(raw));
   }
 
-  throw new Error(`Unsupported values file: ${filePath}`);
+  throw new JsTmplError(
+    ErrorCodes.VALUES_UNSUPPORTED_FORMAT,
+    `Unsupported values file: ${filePath}`,
+  );
 }
 
 /**
- * Load js-tmpl project config from known locations.
- *
- * @param {string} cwd Current working directory.
- * @param {string} [explicitFile] Explicit config file path.
- * @returns {Record<string, unknown> | null} Parsed config object or null if not found.
+ * Project config file names the CLI looks for, in priority order, relative
+ * to the working directory. The engine never searches on its own; see
+ * `findProjectConfig` in resolver.js.
  */
-export function loadProjectConfig(cwd, explicitFile) {
-  if (explicitFile) {
-    const abs = path.isAbsolute(explicitFile)
-      ? explicitFile
-      : path.join(cwd, explicitFile);
-    if (!fs.existsSync(abs)) {
-      throw new Error(
-        `Config file not found: ${abs}\n` +
-          'The --config-file path was explicitly provided but does not exist.',
-      );
-    }
+export const CONFIG_CANDIDATES = Object.freeze([
+  'js-tmpl.config.yaml',
+  'js-tmpl.config.yml',
+  'js-tmpl.config.json',
+  path.join('config', 'js-tmpl.yaml'),
+  path.join('config', 'js-tmpl.json'),
+]);
+
+/**
+ * Load an explicitly named project config file (YAML or JSON).
+ *
+ * @param {string} cwd Base for a relative `configFile`.
+ * @param {string} [configFile] Config file path. Absent → `null` (no search).
+ * @returns {Record<string, unknown> | null} Parsed config, or null when no file is given.
+ */
+export function loadProjectConfig(cwd, configFile) {
+  if (!configFile) {
+    return null;
+  }
+  const abs = path.isAbsolute(configFile)
+    ? configFile
+    : path.join(cwd, configFile);
+  if (!fs.existsSync(abs)) {
+    throw new JsTmplError(
+      ErrorCodes.CONFIG_NOT_FOUND,
+      `Config file not found: ${abs}\n` +
+        'The config file path was explicitly provided but does not exist.',
+    );
   }
 
-  const candidates = explicitFile
-    ? [explicitFile]
-    : [
-        'js-tmpl.config.yaml',
-        'js-tmpl.config.yml',
-        'js-tmpl.config.json',
-        path.join('config', 'js-tmpl.yaml'),
-        path.join('config', 'js-tmpl.json'),
-      ];
-
-  for (const rel of candidates) {
-    const abs = path.isAbsolute(rel) ? rel : path.join(cwd, rel);
-    if (!fs.existsSync(abs)) {
-      continue;
-    }
-
-    const raw = fs.readFileSync(abs, 'utf8');
-
-    if (/\.ya?ml$/i.test(abs)) {
-      return /** @type {Record<string, unknown>} */ (YAML.load(raw) || {});
-    }
-
-    if (/\.json$/i.test(abs)) {
-      return /** @type {Record<string, unknown>} */ (JSON.parse(raw));
-    }
+  const raw = fs.readFileSync(abs, 'utf8');
+  if (/\.json$/i.test(abs)) {
+    return /** @type {Record<string, unknown>} */ (JSON.parse(raw));
   }
-
-  return null;
+  return /** @type {Record<string, unknown>} */ (YAML.load(raw) || {});
 }

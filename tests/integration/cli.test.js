@@ -69,6 +69,16 @@ describe('CLI (bin/js-tmpl.js)', () => {
       const verbose = await cli(['--verbose'], tmpDir);
       assert.strictEqual(verbose.code, 1);
       assert.match(verbose.stderr, /\n\s+at /);
+
+      await fs.mkdir(path.join(tmpDir, 'templates'));
+      await fs.writeFile(
+        path.join(tmpDir, 'templates', '${nope}.hbs'),
+        'x',
+        'utf8',
+      );
+      const coded = await cli(['--verbose'], tmpDir);
+      assert.strictEqual(coded.code, 1);
+      assert.match(coded.stderr, /\ncode: JSTMPL_PATH_MISSING_VAR\n/);
     });
   });
 
@@ -80,6 +90,26 @@ describe('CLI (bin/js-tmpl.js)', () => {
 
       const bad = await cli(['--bogus'], tmpDir, MAIN);
       assert.strictEqual(bad.code, 2);
+    });
+  });
+
+  it('uses js-tmpl.config.yaml from the working directory', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'tpl'));
+      await fs.writeFile(path.join(tmpDir, 'tpl', 'a.txt.hbs'), 'A', 'utf8');
+      await fs.writeFile(
+        path.join(tmpDir, 'js-tmpl.config.yaml'),
+        'templateDir: tpl\noutDir: built\n',
+        'utf8',
+      );
+
+      const r = await cli([], tmpDir);
+      assert.strictEqual(r.code, 0, r.stderr);
+      const out = await fs.readFile(
+        path.join(tmpDir, 'built', 'a.txt'),
+        'utf8',
+      );
+      assert.strictEqual(out, 'A');
     });
   });
 
