@@ -11,7 +11,11 @@ npm install @nci-gis/js-tmpl
 ## Imports
 
 ```javascript
-import { resolveConfig, renderDirectory } from '@nci-gis/js-tmpl';
+import {
+  resolveConfig,
+  renderDirectory,
+  registerHelpers,
+} from '@nci-gis/js-tmpl';
 ```
 
 ## API Functions
@@ -147,6 +151,62 @@ async function generate() {
 generate().catch(console.error);
 ```
 
+### registerHelpers(hbs, helpersMap)
+
+Registers custom Handlebars helpers on a scoped Handlebars instance. Pass the
+same instance to `renderDirectory`.
+
+#### Parameters
+
+`hbs` (Object, required) - A Handlebars instance, typically from `Handlebars.create()`.
+
+`helpersMap` (Object, optional) - Helper name → function. `null`, `undefined`, or `{}` is a no-op.
+
+#### Rules
+
+- **Atomic** - every entry is validated before any is registered; one invalid entry registers nothing.
+- **Names** - bare identifiers usable as `{{name}}`: `/^[a-zA-Z_$][\w$-]*$/` (`upper`, `date-format`, `$format`, `_private`).
+- **No overrides** - a name already on the instance (built-ins such as `if`, `each`, or an earlier registration) throws. To override deliberately, call `hbs.registerHelper()` directly.
+- **Pure helpers only** - a helper must return the same result for the same arguments. js-tmpl cannot enforce this; a helper that reads the clock, randomness, environment, or disk makes output non-deterministic.
+- **Strict mode** - see [Strict templates](#strict-templates) for what is and is not checked inside helper calls.
+
+#### Returns
+
+`void`
+
+#### Throws
+
+- `Error` - If `hbs` is not a Handlebars instance
+- `Error` - If `helpersMap` is not an object
+- `Error` - If a name is invalid, a value is not a function, or a name is already registered
+
+#### Example
+
+```javascript
+import Handlebars from 'handlebars';
+import {
+  registerHelpers,
+  renderDirectory,
+  resolveConfig,
+} from '@nci-gis/js-tmpl';
+
+const hbs = Handlebars.create();
+registerHelpers(hbs, {
+  upper: (s) => s.toUpperCase(),
+  eq: function (a, b, options) {
+    return a === b ? options.fn(this) : options.inverse(this);
+  },
+});
+
+await renderDirectory(resolveConfig({ valuesFile: './values.yaml' }), hbs);
+```
+
+```handlebars
+name:
+{{upper app.name}}
+{{#eq env 'prod'}}replicas: 3{{else}}replicas: 1{{/eq}}
+```
+
 ## Configuration Files
 
 ### Auto-Discovery
@@ -239,13 +299,36 @@ template partials system:
 
 ### Strict templates
 
-Templates are compiled with Handlebars `strict: true`. A `{{var}}` on an
-undefined path throws an error that includes the template's relative path
-and the variable name. Present-but-empty values (`''`, `0`, `false`,
-`null`) render as normal — only **missing** properties fail loudly.
+Templates are compiled with Handlebars `strict: true`. A simple mustache
+`{{var}}` on an undefined path throws an error that includes the template's
+relative path and the variable name. Present-but-empty values (`''`, `0`,
+`false`, `null`) render as normal — only **missing** properties fail.
 
-This pairs with the Path Guards rule (G-4) and the Value Partials design:
-missing data is always loud, never silent.
+**Limitation:** Handlebars checks simple mustaches only. A missing variable
+used as a **helper argument** is passed to the helper as `undefined` without
+an error — this includes built-in block helpers:
+
+| Template                    | View | Result                            |
+| --------------------------- | ---- | --------------------------------- |
+| `{{name}}`                  | `{}` | throws                            |
+| `{{upper name}}`            | `{}` | helper receives `undefined`       |
+| `{{#if name}}…{{/if}}`      | `{}` | renders the `else` branch (empty) |
+| `{{#each items}}…{{/each}}` | `{}` | renders nothing                   |
+
+Closing this gap is planned for 0.2.0 (breaking). Until then, do not rely on
+a missing key being treated as falsy — declare it.
+
+#### Optional values
+
+Keep strict mode on and make "optional" explicit in values:
+
+- **Declare the key** with an empty value: `description: ''`, `replicas: null`, `features: []`. The key exists, so `{{description}}` renders empty and does not throw.
+- **Use a boolean switch** for optional blocks: `monitoring: false` with `{{#if monitoring}}…{{/if}}`.
+- **Guard nested reads**: `{{#if db}}{{db.host}}{{/if}}` — the body of a false `{{#if}}` is not evaluated, so `db.host` is not looked up when `db` is `null` or `false`.
+- **Whole files** that are optional belong in [Path Guards](#path-guards--conditional-files) (`$if{monitoring}/`), not in an empty template.
+
+Avoid disabling strict mode to make templates "forgiving": a typo in a
+variable name would then render as an empty string.
 
 ### Exposing Environment Variables
 
@@ -351,6 +434,8 @@ dist/production/my-app-config.yaml
 - Nested access supported: `${a.b.c}`
 - Array access supported: `${items.0.name}`
 - No glob expansion
+- **Output stays inside `outDir`** — a rendered path that would escape it (a value such as `../x` or `..`) throws before any file is written
+- **One template per output file** — two templates rendering to the same path throw, naming both, before any file is written
 
 ### Path Guards — conditional files
 
@@ -523,10 +608,10 @@ If two partials resolve to the same name (e.g., `_date.hbs` and `@helpers/date.h
 
 ### Common Errors
 
-**Missing values file:**
+**Values file not found:**
 
-```javascript
-Error: Missing valuesFile (use --values)
+```text
+Error: Values file not found: /project/values.yaml
 ```
 
 **Template syntax error:**
@@ -534,6 +619,19 @@ Error: Missing valuesFile (use --values)
 ```javascript
 Error: Parse error on line 5:
 ...{{#if foo}
+```
+
+**Path escapes `outDir`:**
+
+```text
+Error: Template '${name}/x.txt.hbs' renders to '../escaped/x.txt', which is outside outDir '/project/dist'.
+Check the values of: name. Path values must not contain '..' segments.
+```
+
+**Two templates, one output file:**
+
+```text
+Error: Templates '${a}/x.txt.hbs' and '${b}/x.txt.hbs' both render to 'same/x.txt'.
 ```
 
 **File write error:**
@@ -625,7 +723,8 @@ Currently, js-tmpl does not include TypeScript definitions. They may be added in
 // types/js-tmpl.d.ts
 declare module '@nci-gis/js-tmpl' {
   export function resolveConfig(options: {
-    valuesFile: string;
+    valuesFile?: string;
+    valuesDir?: string;
     templateDir?: string;
     partialsDir?: string;
     outDir?: string;
@@ -637,6 +736,11 @@ declare module '@nci-gis/js-tmpl' {
     config: any,
     hbs?: typeof Handlebars,
   ): Promise<void>;
+
+  export function registerHelpers(
+    hbs: typeof Handlebars,
+    helpersMap?: Record<string, (...args: any[]) => any>,
+  ): void;
 }
 ```
 

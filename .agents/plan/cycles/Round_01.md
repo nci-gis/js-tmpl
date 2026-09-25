@@ -1,8 +1,8 @@
 # Round 01: `registerHelpers` — First-Class Helper Registration API
 
-**Status**: Planning
+**Status**: Superseded — execution moved to [Round 04](Round_04.md)
 **Date started**: 2026-04-05
-**Date completed**: —
+**Date completed**: — (not executed in this round)
 
 ## Goal
 
@@ -94,7 +94,9 @@ not push helpers into config.
 
 ## Do
 
-[Progress log — update as work proceeds]
+- **2026-04-23** — Not executed. Rounds 02 and 03 (richer inputs) shipped first;
+  the plan above was formally resumed by [Round 04](Round_04.md), which
+  inherits this checklist. Track progress there.
 
 ## Check
 

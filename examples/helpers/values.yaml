@@ -1,0 +1,7 @@
+service:
+  name: checkout-api
+  owner: platform team
+stage: prod
+ports:
+  - 8080
+  - 9090

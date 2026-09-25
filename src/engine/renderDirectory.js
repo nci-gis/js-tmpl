@@ -9,26 +9,77 @@ import { renderPath } from './pathRenderer.js';
 import { walkTemplateTree } from './treeWalker.js';
 
 /**
+ * Throw if `target` is not strictly inside `outDir` — a `${var}` value such
+ * as `../x` must never write outside the output directory.
+ *
+ * @param {string} target
+ * @param {string} outDir
+ * @param {string} relPath - Template path, for the error message
+ * @param {string} rendered - Rendered path, for the error message
+ */
+function assertInsideOutDir(target, outDir, relPath, rendered) {
+  const rel = path.relative(path.resolve(outDir), path.resolve(target));
+  const escapes =
+    rel === '' || rel.split(path.sep)[0] === '..' || path.isAbsolute(rel);
+  if (escapes) {
+    const vars = [...relPath.matchAll(/\$\{([^}]+)\}/g)].map((m) => m[1]);
+    throw new Error(
+      `Template '${relPath}' renders to '${rendered}', which is outside outDir '${outDir}'.\n` +
+        (vars.length ? `Check the values of: ${vars.join(', ')}. ` : '') +
+        "Path values must not contain '..' segments.",
+    );
+  }
+}
+
+/**
+ * Map every template to its output path before anything is rendered or
+ * written, so an escaping path or two templates sharing a target fail
+ * before the first file is touched.
+ *
+ * @param {Array<{ relPath: string, absPath: string }>} files
+ * @param {import('../types.js').TemplateConfig} cfg
+ * @returns {Array<{ file: { relPath: string, absPath: string }, target: string }>}
+ */
+function planTargets(files, cfg) {
+  const { outDir, view, extname } = cfg;
+  /** @type {Map<string, string>} */
+  const owners = new Map();
+
+  return files.map((file) => {
+    const rendered = renderPath(file.relPath, view).replace(
+      new RegExp(`${extname}$`),
+      '',
+    );
+    const target = path.join(outDir, rendered);
+    assertInsideOutDir(target, outDir, file.relPath, rendered);
+
+    const owner = owners.get(target);
+    if (owner) {
+      throw new Error(
+        `Templates '${owner}' and '${file.relPath}' both render to '${rendered}'.\n` +
+          'Each output file must come from exactly one template; check the path values.',
+      );
+    }
+    owners.set(target, file.relPath);
+    return { file, target };
+  });
+}
+
+/**
  * Main rendering orchestrator.
  * @param {import('../types.js').TemplateConfig} cfg
  * @param {typeof import('handlebars')} [hbs] - Optional Handlebars instance (creates an isolated one if omitted)
  * @returns {Promise<void>}
  */
 export async function renderDirectory(cfg, hbs) {
-  const { templateDir, partialsDir, outDir, view, extname } = cfg;
+  const { templateDir, partialsDir, view, extname } = cfg;
 
   hbs = hbs || Handlebars.create();
   await registerPartials(partialsDir, extname, hbs);
 
   const files = await walkTemplateTree(templateDir, { ext: extname, view });
 
-  for (const file of files) {
-    const relRendered = renderPath(file.relPath, view);
-    const target = path.join(
-      outDir,
-      relRendered.replace(new RegExp(`${extname}$`), ''),
-    );
-
+  for (const { file, target } of planTargets(files, cfg)) {
     const content = await renderContent(file.absPath, view, hbs, file.relPath);
 
     await ensureDir(path.dirname(target));

@@ -88,8 +88,8 @@ jobs:
           echo "dist_tag=$DIST_TAG" >> $GITHUB_OUTPUT
           echo "📦 Publishing with dist-tag: $DIST_TAG"
 
-      - name: Run tests
-        run: pnpm test
+      - name: Run all gates (same as CI verify)
+        run: pnpm verify
 
       # use `npm publish` instead of using `pnpm publish`
       # which has better OIDC support.

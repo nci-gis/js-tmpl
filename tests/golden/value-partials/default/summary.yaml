@@ -1,0 +1,14 @@
+project: checkout-service
+owner: platform-team
+api:
+  port: 8080
+  image: ghcr.io/example/api:latest
+prod:
+  replicas: 3
+  log_level: warn
+dev:
+  replicas: 1
+  log_level: debug
+constants:
+  max_retries: 5
+  timeout_ms: 30000

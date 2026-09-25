@@ -806,3 +806,153 @@ describe('renderDirectory', () => {
     });
   });
 });
+
+// Round 06 — output confinement (security) and target collisions.
+describe('renderDirectory — output safety', () => {
+  /**
+   * @param {string} tmpDir
+   * @param {Record<string, string>} files - relPath (POSIX) → content
+   */
+  async function seed(tmpDir, files) {
+    const templateDir = path.join(tmpDir, 'templates');
+    for (const [rel, content] of Object.entries(files)) {
+      const abs = path.join(templateDir, ...rel.split('/'));
+      await fs.mkdir(path.dirname(abs), { recursive: true });
+      await fs.writeFile(abs, content, 'utf8');
+    }
+    return { templateDir, outDir: path.join(tmpDir, 'out') };
+  }
+
+  /** @param {string} dir */
+  async function exists(dir) {
+    return fs
+      .stat(dir)
+      .then(() => true)
+      .catch(() => false);
+  }
+
+  for (const [label, name] of [
+    ['../ segment', `..${path.sep}escaped`],
+    ['bare ..', '..'],
+    ['deep ../..', `..${path.sep}..${path.sep}escaped`],
+  ]) {
+    it(`refuses a path value that escapes outDir (${label})`, async () => {
+      await withTempDir(async (tmpDir) => {
+        const { templateDir, outDir } = await seed(tmpDir, {
+          '${name}/x.txt.hbs': 'x',
+        });
+
+        await assert.rejects(
+          renderDirectory({
+            templateDir,
+            outDir,
+            extname: '.hbs',
+            view: { name },
+          }),
+          /outside outDir[\s\S]*Check the values of: name/,
+        );
+        assert.strictEqual(await exists(path.join(tmpDir, 'escaped')), false);
+        assert.strictEqual(await exists(path.join(tmpDir, 'x.txt')), false);
+      });
+    });
+  }
+
+  it('keeps a leading-slash value inside outDir', async () => {
+    await withTempDir(async (tmpDir) => {
+      const { templateDir, outDir } = await seed(tmpDir, {
+        '${name}/x.txt.hbs': 'x',
+      });
+
+      await renderDirectory({
+        templateDir,
+        outDir,
+        extname: '.hbs',
+        view: { name: '/abs' },
+      });
+
+      assert.strictEqual(await exists(path.join(outDir, 'abs', 'x.txt')), true);
+    });
+  });
+
+  it('allows names that merely start with dots', async () => {
+    await withTempDir(async (tmpDir) => {
+      const { templateDir, outDir } = await seed(tmpDir, {
+        '${name}.txt.hbs': 'x',
+      });
+
+      await renderDirectory({
+        templateDir,
+        outDir,
+        extname: '.hbs',
+        view: { name: '..hidden' },
+      });
+
+      assert.strictEqual(await exists(path.join(outDir, '..hidden.txt')), true);
+    });
+  });
+
+  it('writes nothing when any template escapes', async () => {
+    await withTempDir(async (tmpDir) => {
+      const { templateDir, outDir } = await seed(tmpDir, {
+        'a-good.txt.hbs': 'ok',
+        '${name}/x.txt.hbs': 'x',
+      });
+
+      await assert.rejects(
+        renderDirectory({
+          templateDir,
+          outDir,
+          extname: '.hbs',
+          view: { name: '..' },
+        }),
+        /outside outDir/,
+      );
+      assert.strictEqual(await exists(outDir), false);
+    });
+  });
+
+  it('throws when two templates render to the same file, naming both', async () => {
+    await withTempDir(async (tmpDir) => {
+      const { templateDir, outDir } = await seed(tmpDir, {
+        '${a}/x.txt.hbs': 'A',
+        '${b}/x.txt.hbs': 'B',
+      });
+
+      await assert.rejects(
+        renderDirectory({
+          templateDir,
+          outDir,
+          extname: '.hbs',
+          view: { a: 'same', b: 'same' },
+        }),
+        (err) => {
+          assert.match(err.message, /both render to/);
+          assert.ok(err.message.includes(path.join('${a}', 'x.txt.hbs')));
+          assert.ok(err.message.includes(path.join('${b}', 'x.txt.hbs')));
+          return true;
+        },
+      );
+      assert.strictEqual(await exists(outDir), false);
+    });
+  });
+
+  it('renders both when path values differ', async () => {
+    await withTempDir(async (tmpDir) => {
+      const { templateDir, outDir } = await seed(tmpDir, {
+        '${a}/x.txt.hbs': 'A',
+        '${b}/x.txt.hbs': 'B',
+      });
+
+      await renderDirectory({
+        templateDir,
+        outDir,
+        extname: '.hbs',
+        view: { a: 'one', b: 'two' },
+      });
+
+      const one = await fs.readFile(path.join(outDir, 'one', 'x.txt'), 'utf8');
+      const two = await fs.readFile(path.join(outDir, 'two', 'x.txt'), 'utf8');
+      assert.deepStrictEqual([one, two], ['A', 'B']);
+    });
+  });
+});

@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      config:
-        specifier: ^4.1.1
-        version: 4.1.1
       handlebars:
         specifier: ^4.7.8
         version: 4.7.8
@@ -425,10 +422,6 @@ packages:
   concat-stream@2.0.0:
     resolution: {integrity: sha512-MWufYdFw53ccGjCA+Ol7XJYpAlW6/prSMzuPOTRnJGcGzuhLn4Scrz7qf6o8bROZ514ltazcIFJZevcfbo0x7A==}
     engines: {'0': node >= 6.0}
-
-  config@4.1.1:
-    resolution: {integrity: sha512-jljfwqNZ7QHwAW9Z9NDZdJARFiu5pjLqQO0K4ooY22iY/bIY78n0afI4ANEawfgQOxri0K/3oTayX8XIauWcLA==}
-    engines: {node: '>= 20.0.0'}
 
   conventional-changelog-angular@8.3.1:
     resolution: {integrity: sha512-6gfI3otXK5Ph5DfCOI1dblr+kN3FAm5a97hYoQkqNZxOaYa5WKfXH+AnpsmS+iUH2mgVC2Cg2Qw9m5OKcmNrIg==}
@@ -1813,10 +1806,6 @@ snapshots:
       inherits: 2.0.4
       readable-stream: 3.6.2
       typedarray: 0.0.6
-
-  config@4.1.1:
-    dependencies:
-      json5: 2.2.3
 
   conventional-changelog-angular@8.3.1:
     dependencies:

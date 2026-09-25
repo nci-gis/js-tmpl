@@ -1,0 +1,4 @@
+project: my-service
+mode: production-alerts
+notify:
+  - oncall@example.com

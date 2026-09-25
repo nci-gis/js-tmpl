@@ -1,8 +1,8 @@
 # Round 02: Path Guards — `$if{var}` / `$ifn{var}` in template paths
 
-**Status**: Review
+**Status**: Complete
 **Date started**: 2026-04-22
-**Date completed**: —
+**Date completed**: 2026-04-24
 
 ## Goal
 
@@ -144,7 +144,14 @@ templates, not a pluggable filter. Committing an interface before 0.2.x ignore
 
 **Learnings**:
 
-- ...
+- Split path language into two operations: var expansion (renderer) and
+  formulas (walker). Only the walker can prune subtrees, so the renderer
+  stays `${var}`-only.
+- A pure, total classifier (`classifySegment`) made both consumers simple
+  and made malformed input a data case, not an exception path.
+- "Missing" and "present but falsy" must be distinguished explicitly
+  (`hasNested`); `getNested` alone conflates them.
+- Shipped in v0.1.0 (2026-04-24).
 
 **Promotions**:
 

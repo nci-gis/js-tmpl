@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { parseArgs } from '../../../src/cli/args.js';
+import { parseArgs, UsageError } from '../../../src/cli/args.js';
 
 describe('parseArgs', () => {
   it('defaults command to render', () => {
@@ -147,5 +147,65 @@ describe('parseArgs', () => {
   it('help flag takes effect even with other flags', () => {
     const result = parseArgs(['render', '--help', '-c', 'vals.yaml']);
     assert.strictEqual(result.command, 'help');
+  });
+});
+
+// Round 06 — strict parsing: every malformed command line is a UsageError.
+describe('parseArgs — strict', () => {
+  /**
+   * @param {string[]} args
+   * @param {RegExp} message
+   */
+  function rejects(args, message) {
+    assert.throws(
+      () => parseArgs(args),
+      (err) => {
+        assert.ok(err instanceof UsageError, `${err.name}: ${err.message}`);
+        assert.match(err.message, message);
+        return true;
+      },
+    );
+  }
+
+  it('rejects unknown options', () => {
+    rejects(['--bogus'], /Unknown option '--bogus'/);
+    rejects(['-z'], /Unknown option '-z'/);
+  });
+
+  it('rejects an option at the end without its value', () => {
+    rejects(['--env-keys'], /--env-keys <value>' argument missing/);
+    rejects(['-o'], /--out <value>' argument missing/);
+  });
+
+  it('rejects an option followed by another option instead of a value', () => {
+    rejects(['-o', '--values', 'x.yaml'], /Option '-o' is missing its value/);
+  });
+
+  it('accepts a dash-leading value with = syntax', () => {
+    assert.strictEqual(parseArgs(['--out=-dir']).outDir, '-dir');
+  });
+
+  it('rejects unknown commands and extra positionals', () => {
+    rejects(['foo'], /Unknown command 'foo'/);
+    rejects(['render', 'extra'], /Unexpected argument 'extra'/);
+  });
+
+  it('rejects a repeated option, including via its alias', () => {
+    rejects(['-o', 'a', '--out', 'b'], /'--out' given more than once/);
+  });
+
+  it('rejects --env-keys with no names', () => {
+    rejects(['--env-keys', ' , '], /needs at least one variable name/);
+  });
+
+  it('omits unset options so they never override config or defaults', () => {
+    assert.deepStrictEqual(parseArgs(['-c', 'v.yaml']), {
+      command: 'render',
+      valuesFile: 'v.yaml',
+    });
+  });
+
+  it('parses --verbose', () => {
+    assert.strictEqual(parseArgs(['--verbose']).verbose, true);
   });
 });

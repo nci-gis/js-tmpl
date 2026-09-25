@@ -15,7 +15,6 @@ import { resolveConfig, renderDirectory } from '../../src/index.js';
 const options = {
   valuesFile: './values.yaml',
   templateDir: './templates',
-  partialsDir: './templates.partials',
   outDir: './dist',
 };
 
