@@ -49,10 +49,11 @@ describe('renderPath', () => {
     assert.strictEqual(result, 'static/file.txt');
   });
 
-  it('returns empty string for undefined placeholder', () => {
-    const view = {};
-    const result = render('${missing}.txt', view);
-    assert.strictEqual(result, '.txt');
+  it('throws for a missing placeholder variable (0.2.0)', () => {
+    assert.throws(
+      () => render('${missing}.txt', {}),
+      /Path variable 'missing' is not defined in the view \(in '\$\{missing\}\.txt'\)/,
+    );
   });
 
   it('returns empty string for null placeholder', () => {
@@ -165,6 +166,61 @@ describe('renderPath', () => {
       assert.throws(
         () => render('folder/$if{x}name.yaml', {}),
         /in 'folder\/\$if\{x\}name\.yaml'/,
+      );
+    });
+  });
+
+  // Round 07 (0.2.0): a placeholder must produce exactly one segment.
+  describe('single-segment values', () => {
+    it('throws for a missing nested variable', () => {
+      assert.throws(
+        () => render('${a.b}/x', { a: {} }),
+        /'a\.b' is not defined/,
+      );
+    });
+
+    for (const [label, value] of [
+      ['a slash', 'a/b'],
+      ['a backslash', 'a\\b'],
+      ['a leading slash', '/abs'],
+    ]) {
+      it(`throws for a value with ${label}`, () => {
+        assert.throws(
+          () => render('${v}/x', { v: value }),
+          /contains a path separator/,
+        );
+      });
+    }
+
+    for (const [label, value] of [
+      ['empty', ''],
+      ['null', null],
+      ['.', '.'],
+      ['..', '..'],
+    ]) {
+      it(`throws when a whole segment renders ${label}`, () => {
+        assert.throws(
+          () => render('${v}/x', { v: value }),
+          /does not name a file or directory/,
+        );
+      });
+    }
+
+    it('throws for object and array values', () => {
+      assert.throws(() => render('${v}.txt', { v: {} }), /is an object/);
+      assert.throws(() => render('${v}.txt', { v: [1] }), /is an array/);
+    });
+
+    it('allows dots inside a value and empty values within a segment', () => {
+      assert.strictEqual(render('${v}.txt', { v: '..hidden' }), '..hidden.txt');
+      assert.strictEqual(render('app-${v}.txt', { v: '' }), 'app-.txt');
+      assert.strictEqual(render('${v}.txt', { v: null }), '.txt');
+    });
+
+    it('supports array index paths', () => {
+      assert.strictEqual(
+        render('${items.0.name}.txt', { items: [{ name: 'a' }] }),
+        'a.txt',
       );
     });
   });

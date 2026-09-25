@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 import {
   ensureDir,
+  isInsideDir,
   resolvePath,
   safeResolvePath,
   writeFileSafe,
@@ -170,5 +171,33 @@ describe('safeResolvePath', () => {
   it('handles dot notation in segments', () => {
     const result = safeResolvePath('./src', './utils');
     assert.strictEqual(result, path.resolve(process.cwd(), './src', './utils'));
+  });
+});
+
+describe('isInsideDir', () => {
+  const root = path.resolve('/project/dist');
+
+  it('is true for paths strictly inside', () => {
+    assert.strictEqual(isInsideDir(root, path.join(root, 'a.txt')), true);
+    assert.strictEqual(isInsideDir(root, path.join(root, 'a', 'b')), true);
+    assert.strictEqual(isInsideDir(root, path.join(root, '..hidden')), true);
+  });
+
+  it('is false for the directory itself, parents, and siblings', () => {
+    assert.strictEqual(isInsideDir(root, root), false);
+    assert.strictEqual(isInsideDir(root, path.join(root, '..')), false);
+    assert.strictEqual(isInsideDir(root, path.join(root, '..', 'x')), false);
+    assert.strictEqual(
+      isInsideDir(root, path.resolve('/project/dist-other/x')),
+      false,
+    );
+  });
+
+  it('resolves relative inputs before comparing', () => {
+    assert.strictEqual(isInsideDir('dist', path.join('dist', 'a')), true);
+    assert.strictEqual(
+      isInsideDir('dist', path.join('dist', '..', 'a')),
+      false,
+    );
   });
 });

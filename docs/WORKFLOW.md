@@ -141,7 +141,7 @@ graph LR
 
 - `${var}` placeholders replaced with view values
 - Nested access supported: `${a.b.c}`
-- Missing values → empty string `""`
+- Missing values → error (0.2.0); values must be a single segment
 
 ---
 

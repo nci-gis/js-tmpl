@@ -438,12 +438,18 @@ dist/production/my-app-config.yaml
 
 ### Rules
 
-- Missing values resolve to empty string `""`
+- **Missing variables throw** — like `$if{var}` and `{{var}}`; the error names the variable and the template path
+- **One value, one segment** — a value must be a string, number, boolean or `null` (renders `""`), and must not contain `/` or `\`. Nested output directories come from template directories, not values
+- **Segments must name something** — a segment that renders to `""`, `.` or `..` throws (it would silently move the file)
 - Nested access supported: `${a.b.c}`
 - Array access supported: `${items.0.name}`
 - No glob expansion
-- **Output stays inside `outDir`** — a rendered path that would escape it (a value such as `../x` or `..`) throws before any file is written
+- **Output stays inside `outDir`** — checked again for every target before any file is written
 - **One template per output file** — two templates rendering to the same path throw, naming both, before any file is written
+
+> **0.2.0 migration:** before 0.2.0 a missing `${var}` rendered `""` and a value
+> such as `a/b` created nested directories. Declare every path variable, and
+> move nesting into the template tree (`${group}/${name}.yaml.hbs`).
 
 ### Path Guards — conditional files
 
@@ -629,11 +635,12 @@ Error: Parse error on line 5:
 ...{{#if foo}
 ```
 
-**Path escapes `outDir`:**
+**Missing or unusable path variable:**
 
 ```text
-Error: Template '${name}/x.txt.hbs' renders to '../escaped/x.txt', which is outside outDir '/project/dist'.
-Check the values of: name. Path values must not contain '..' segments.
+Error: Path variable 'name' is not defined in the view (in '${name}/x.txt.hbs').
+Error: Path variable 'name' is '../x', which contains a path separator (in '${name}/x.txt.hbs').
+Error: Path segment '${name}' renders to '..', which does not name a file or directory (in '${name}/x.txt.hbs').
 ```
 
 **Two templates, one output file:**

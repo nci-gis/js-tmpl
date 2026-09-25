@@ -849,7 +849,9 @@ describe('renderDirectory — output safety', () => {
             extname: '.hbs',
             view: { name },
           }),
-          /outside outDir[\s\S]*Check the values of: name/,
+          // 0.2.0: rejected at the path level first (separator / '..');
+          // the outDir guard stays as a second line of defence.
+          /path separator|does not name a file or directory/,
         );
         assert.strictEqual(await exists(path.join(tmpDir, 'escaped')), false);
         assert.strictEqual(await exists(path.join(tmpDir, 'x.txt')), false);
@@ -857,20 +859,22 @@ describe('renderDirectory — output safety', () => {
     });
   }
 
-  it('keeps a leading-slash value inside outDir', async () => {
+  it('rejects a leading-slash value (path separator, 0.2.0)', async () => {
     await withTempDir(async (tmpDir) => {
       const { templateDir, outDir } = await seed(tmpDir, {
         '${name}/x.txt.hbs': 'x',
       });
 
-      await renderDirectory({
-        templateDir,
-        outDir,
-        extname: '.hbs',
-        view: { name: '/abs' },
-      });
-
-      assert.strictEqual(await exists(path.join(outDir, 'abs', 'x.txt')), true);
+      await assert.rejects(
+        renderDirectory({
+          templateDir,
+          outDir,
+          extname: '.hbs',
+          view: { name: '/abs' },
+        }),
+        /contains a path separator/,
+      );
+      assert.strictEqual(await exists(outDir), false);
     });
   });
 
@@ -905,7 +909,7 @@ describe('renderDirectory — output safety', () => {
           extname: '.hbs',
           view: { name: '..' },
         }),
-        /outside outDir/,
+        /does not name a file or directory/,
       );
       assert.strictEqual(await exists(outDir), false);
     });

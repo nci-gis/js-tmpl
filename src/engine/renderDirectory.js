@@ -2,15 +2,16 @@ import path from 'node:path';
 
 import Handlebars from 'handlebars';
 
-import { ensureDir, writeFileSafe } from '../utils/fs.js';
+import { ensureDir, isInsideDir, writeFileSafe } from '../utils/fs.js';
 import { renderContent } from './contentRenderer.js';
 import { registerPartials } from './partials.js';
 import { renderPath } from './pathRenderer.js';
 import { walkTemplateTree } from './treeWalker.js';
 
 /**
- * Throw if `target` is not strictly inside `outDir` — a `${var}` value such
- * as `../x` must never write outside the output directory.
+ * Throw if `target` is not strictly inside `outDir`. Path rendering already
+ * rejects `..` and separators in values (Round 07); this stays as a second
+ * line of defence for anything that reaches the filesystem.
  *
  * @param {string} target
  * @param {string} outDir
@@ -18,15 +19,9 @@ import { walkTemplateTree } from './treeWalker.js';
  * @param {string} rendered - Rendered path, for the error message
  */
 function assertInsideOutDir(target, outDir, relPath, rendered) {
-  const rel = path.relative(path.resolve(outDir), path.resolve(target));
-  const escapes =
-    rel === '' || rel.split(path.sep)[0] === '..' || path.isAbsolute(rel);
-  if (escapes) {
-    const vars = [...relPath.matchAll(/\$\{([^}]+)\}/g)].map((m) => m[1]);
+  if (!isInsideDir(outDir, target)) {
     throw new Error(
-      `Template '${relPath}' renders to '${rendered}', which is outside outDir '${outDir}'.\n` +
-        (vars.length ? `Check the values of: ${vars.join(', ')}. ` : '') +
-        "Path values must not contain '..' segments.",
+      `Template '${relPath}' renders to '${rendered}', which is outside outDir '${outDir}'.`,
     );
   }
 }

@@ -42,3 +42,17 @@ export function safeResolvePath(...segments) {
   }
   return path.resolve(process.cwd(), ...segments);
 }
+
+/**
+ * Whether `child` is strictly inside `parent` (not equal to it, not above
+ * it, not on another drive). Both are resolved first; symlinks are not
+ * followed.
+ *
+ * @param {string} parent
+ * @param {string} child
+ * @returns {boolean}
+ */
+export function isInsideDir(parent, child) {
+  const rel = path.relative(path.resolve(parent), path.resolve(child));
+  return rel !== '' && rel.split(path.sep)[0] !== '..' && !path.isAbsolute(rel);
+}
