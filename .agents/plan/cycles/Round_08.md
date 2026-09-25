@@ -26,6 +26,11 @@ generated output.
 - **Expose the decision, not the mechanism.** Export `planRender`, not
   `pathSegment` / `pathFormula`. Internals stay free to change before 1.0,
   and it is one export instead of three or more.
+- **Canonical `/` relPaths.** Today `relPath` uses `path.sep` (Round 05
+  found 20 tests assuming `/`). Once `planRender` / `--check` (and Round 09
+  explain) expose it, output would differ between Windows and POSIX. Plan
+  entries and messages use `/`; convert to native only at filesystem
+  calls.
 - No separate `listOutputs`: a preview that fails exactly where the real
   render fails is correct behaviour, not a cost.
 - `planRender(cfg, hbs) → Promise<Array<{ relPath, target, content }>>`,
@@ -72,6 +77,8 @@ generated output.
 ## Check
 
 - [ ] `renderDirectory` output byte-identical before/after the refactor.
+- [ ] `planRender` output (relPath, target, order) identical on the
+      Windows and POSIX CI jobs.
 - [ ] `--check` exit codes match the design.
 - [ ] a2scaffold prototype drops its path mirror.
 

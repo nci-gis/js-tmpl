@@ -1,8 +1,8 @@
 # Round 05: Hard Gates — CI, release, cross-platform, golden examples
 
-**Status**: Review
+**Status**: Complete
 **Date started**: 2026-09-25
-**Date completed**: —
+**Date completed**: 2026-09-25
 **Release target**: v0.1.1 (no library behaviour change)
 
 ## Goal
@@ -103,6 +103,28 @@ cannot silently break. Runs first so Rounds 06–09 land behind real gates.
       Round 06 Check item.
     - README "No config file (use defaults only)" is false when a config
       file exists in `cwd`; added to Round 07 evidence.
+- **2026-09-25** — CI trial on GitHub: draft PR #8 (`chore/hard-gates` →
+  `dev`) plus throwaway PRs #9–#11 (closed, branches deleted).
+  - Run 1, everything red: `examples/path-guards` pointed `partialsDir` at an
+    empty `templates.partials/`, which git does not track, so a fresh clone
+    hit `ENOENT`. The example was broken for anyone cloning the repo. The
+    example uses no partials; setting removed (`fdba547`). Lesson: run the
+    gates on a fresh `git clone` before pushing; the working tree hides
+    untracked state.
+  - Run 2, Windows `test` red: 20 unit tests hard-coded `/` in relPaths
+    and messages while the engine uses `path.sep`. Real rendering was fine
+    on Windows (golden and `renderDirectory` tests passed). Fixed with
+    `tests/helpers/paths.js` at the call boundary (`ec0f1e8`); engine
+    unchanged. Follow-up recorded in Round 08: canonical `/` relPaths once
+    they become public output.
+  - Run 3 (`ec0f1e8`): `test` green on all 7 OS/Node combinations,
+    `verify` green, `cli` green on Windows and red on Linux/macOS (known
+    bin bug, Round 06). Workflow conclusion `success`, but the two `cli`
+    check runs still show as failed, so don't make `cli (…)` a required
+    check until Round 06 lands.
+  - Correction: the bin works on Windows (npm's cmd-shim targets the real
+    file; the runner has Git Bash). The earlier "Windows breakage
+    suspected" was wrong; Linux/macOS are the broken ones.
   - CONTRIBUTING: prerequisites, `pnpm verify` / golden workflow,
     Preflight, release inputs with examples per channel, required status
     checks. ROADMAP: 0.1.0 release gate stated as not machine-checked
@@ -110,23 +132,35 @@ cannot silently break. Runs first so Rounds 06–09 land behind real gates.
 
 ## Check
 
-- [ ] Throwaway PRs with a lint error, a broken md link, and a coverage
-      drop each fail CI. _Pending: needs the branch pushed to GitHub.
-      Locally each gate exits non-zero on its failure (lint caught an import
-      order error during this round; coverage fails at threshold 100)._
+- [x] Throwaway PRs with a lint error, a broken md link, and a coverage
+      drop each fail CI, for the intended reason:
+  - #9: ESLint `no-var` / `no-unused-vars`.
+  - #10: remark "Cannot find file `docs/DOES-NOT-EXIST.md`".
+  - #11: "98.04% function coverage does not meet threshold of 99%".
 - [x] Release workflow runs every CI gate before its version-bump commit
       (`pnpm verify` step precedes "Update package.json version").
 - [x] Deliberately breaking an example template fails `pnpm test`
       (appended a line to path-guards `common.yaml.hbs` → 2 golden cases
       fail with `content differs: common.yaml`; reverted).
-- [x] `bin/js-tmpl` result recorded in Do: broken on every OS, not only
-      Windows. First real Windows/macOS run happens when CI runs.
+- [x] `bin/js-tmpl` result recorded in Do: broken on Linux and macOS,
+      works on Windows (CI run 3).
 
 ## Act
 
 **Learnings**:
 
-- ...
+- **A gate that has never failed is unproven.** The throwaway-PR trial
+  confirmed each gate fails for its own reason, not an unrelated one.
+- **Golden tests paid for themselves on the first run**: two broken
+  examples (`{{env.DATE}}` under strict mode, untracked empty partials dir)
+  that no unit test could see.
+- **The local working tree lies.** Untracked and ignored state (empty dirs,
+  `dist/`) made local green while a clean checkout was red. Verify on a
+  fresh clone.
+- **Cross-OS CI finds test assumptions first.** Windows exposed POSIX paths
+  baked into 20 tests before it exposed any engine bug.
+- Node's `--test-coverage-*` thresholds are integers (decimals are
+  truncated).
 
 **Promotions**:
 
