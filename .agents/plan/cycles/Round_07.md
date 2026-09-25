@@ -210,17 +210,45 @@ embedders.
   no `\`), and a2scaffold's variable-depth `${skill.path}` keeps working.
   a2scaffold re-run: **236 / 237**, the remaining failure being its mirror
   test of the old `${missing}` → `""` rule (expected; Round 08).
+- **2026-09-26 — `targetFs` + symlink-aware containment (human-approved,
+  `25d5897`).**
+  - `targetFs: 'portable' | 'case-sensitive'` (config file + API; no CLI
+    flag). Named for the _target_, not a behaviour switch: the user declares
+    where the output goes; js-tmpl never reads `process.platform` (render
+    host ≠ target, e.g. macOS CI for a Linux image). `portable`: case-only
+    differences collide at plan time. `case-sensitive`: exact keys at plan
+    time, and at write time a target that the disk resolves to a file
+    already written in this run (same `dev` + `ino`) throws
+    `JSTMPL_OUTPUT_COLLISION` instead of overwriting. Inode, not "exists":
+    a stale `readme.md` from an earlier run on Linux must not be a false
+    positive. Trade-off accepted: that write-time failure can leave earlier
+    files on disk. Tested on Linux with a hard link (two names, one inode —
+    what a case-insensitive disk does). Invalid values →
+    `JSTMPL_CONFIG_INVALID_VALUE` (new code).
+  - outDir is the container for every write: right before each write,
+    `realPathOfNearest(target)` must be `realpath(outDir)` or inside it.
+    Covers directory symlinks and **dangling** symlinks (which `existsSync`
+    reports as absent, while `writeFile` would follow them and create the
+    target outside). Loops stop after 40 links. `JSTMPL_OUTPUT_OUTSIDE_OUTDIR`
+    is now reachable and tested; the lexical plan-time check was removed as
+    dead code. Out of scope: TOCTOU races on a directory someone else
+    modifies during the render.
 
 ## Check
 
-- [ ] No silent case left: each row in Evidence has a throwing test.
-- [ ] No `throw new Error(` left in `src/`.
-- [ ] `resolveConfig` without `configFile` reads no file from `cwd` (fs
-      spy); CLI behaviour unchanged.
-- [ ] Every code documented; `docs:check` enforces it.
-- [ ] Migration notes present for every breaking item.
-- [ ] Spike verdict recorded in Do, with the path taken (Proxy or AST).
-- [ ] A template with three missing values reports all three in one run.
+- [x] No silent case left: each row in Evidence has a throwing test
+      (known limit pinned: block-param fields, a Handlebars gap).
+- [x] No `throw new Error(` left in `src/` (except `realPathOfNearest`'s
+      symlink-loop guard, an OS-level condition like ELOOP).
+- [x] `resolveConfig` without `configFile` reads no file from `cwd`
+      (test with a config present); CLI behaviour unchanged (spawn test).
+- [x] Every code documented; `docs:check` enforces it.
+- [x] Migration notes present for every breaking item (Strict templates,
+      Path Rendering rules, `findProjectConfig`, `targetFs`).
+- [x] Spike verdict recorded in Do, with the path taken (AST).
+- [x] ~~A template with three missing values reports all three in one
+      run.~~ Moved to Round 08 with collect-all.
+- [ ] CI green on macOS and Windows (junctions, case-insensitive disks).
 
 ## Act
 
