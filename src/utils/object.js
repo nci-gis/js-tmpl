@@ -13,3 +13,10 @@ export function getNested(obj, key) {
       obj,
     );
 }
+
+export function trialUncovered(a) {
+  if (a) {
+    return 1;
+  }
+  return 2;
+}
