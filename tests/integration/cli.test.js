@@ -165,6 +165,18 @@ describe('CLI (bin/js-tmpl.js)', () => {
     });
   });
 
+  it('--check: fails like a render would when the disk blocks a target', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'templates'));
+      await fs.writeFile(path.join(tmpDir, 'templates', 'a.hbs'), 'A');
+      await fs.mkdir(path.join(tmpDir, 'dist', 'a'), { recursive: true });
+      const r = await cli(['--check', '--verbose'], tmpDir);
+      assert.strictEqual(r.code, 1);
+      assert.match(r.stderr, /exists in outDir as a directory/);
+      assert.match(r.stderr, /code: JSTMPL_OUTPUT_BLOCKED/);
+    });
+  });
+
   it('--check: render errors still exit 1', async () => {
     await withTempDir(async (tmpDir) => {
       await fs.mkdir(path.join(tmpDir, 'templates'));

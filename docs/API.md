@@ -232,6 +232,11 @@ Files in `outDir` that the plan does not produce are **ignored**: js-tmpl
 does not own `outDir` and keeps no manifest. This is what the CLI's
 `--check` uses.
 
+It first runs the same disk checks as `renderDirectory` does before writing
+(containment, `JSTMPL_OUTPUT_BLOCKED`, one file per target,
+`JSTMPL_OUTPUT_LINKED`) and throws what the render would throw. So an empty
+result means a render would succeed and change nothing.
+
 ```javascript
 import { comparePlan, planRender, resolveConfig } from '@nci-gis/js-tmpl';
 
@@ -784,6 +789,8 @@ try {
 | `JSTMPL_TEMPLATE_RENDER_FAILED`    | Rendering failed otherwise (missing partial, a helper threw, …)                                 | `relPath`                                        |
 | `JSTMPL_OUTPUT_OUTSIDE_OUTDIR`     | A write would land outside `outDir` (e.g. through a symlink in it)                              | `relPath`, `target`                              |
 | `JSTMPL_OUTPUT_COLLISION`          | Two templates render to one file (see `targetFs`), or one needs the other's file as a directory | `templates`, `target`                            |
+| `JSTMPL_OUTPUT_BLOCKED`            | A target exists in `outDir` as a directory (or non-file), or its parent exists as a file        | `relPath`, `target`, `path`                      |
+| `JSTMPL_OUTPUT_LINKED`             | A target in `outDir` has another hard link; writing it would change that file too               | `relPath`, `target`                              |
 | `JSTMPL_MULTIPLE_ERRORS`           | Several of the errors above in one run (`planRender`, `renderDirectory`, CLI)                   | `errors` (the individual `JsTmplError`s, sorted) |
 | `JSTMPL_HELPER_NO_INSTANCE`        | `registerHelpers` got no Handlebars instance                                                    |                                                  |
 | `JSTMPL_HELPER_INVALID_MAP`        | `helpersMap` is not an object                                                                   |                                                  |

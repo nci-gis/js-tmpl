@@ -88,16 +88,16 @@ export async function renderDirectory(cfg, hbs) {
  * Compare a plan with what is on disk in `outDir`, without writing. A target
  * that does not exist is `added`; one whose bytes differ is `changed`. Files
  * in `outDir` that the plan does not produce are ignored: js-tmpl does not
- * own `outDir`. Reads are held to the same container rule as writes.
+ * own `outDir`. Throws what `renderDirectory` would throw before writing
+ * (containment, blocked paths, collisions on disk, hard links), so a clean
+ * result means a render would succeed and change nothing.
  *
  * @param {PlanEntry[]} plan
  * @param {string} outDir
  * @returns {{ added: string[], changed: string[] }} Sorted targets
  */
 export function comparePlan(plan, outDir) {
-  const realOut = fs.existsSync(outDir)
-    ? fs.realpathSync.native(outDir)
-    : realPathOfNearest(outDir);
+  preflight(plan, outDir);
   /** @type {string[]} */
   const added = [];
   /** @type {string[]} */
@@ -105,7 +105,6 @@ export function comparePlan(plan, outDir) {
 
   for (const entry of plan) {
     const abs = path.join(outDir, entry.target);
-    assertInside(realOut, abs, outDir, entry.relPath);
     if (!fs.existsSync(abs)) {
       added.push(entry.target);
     } else if (!fs.readFileSync(abs).equals(Buffer.from(entry.content))) {
@@ -120,8 +119,8 @@ export function comparePlan(plan, outDir) {
 /**
  * Map every template to its output path, collecting path errors and
  * collisions into `errors` (those templates are left out of the result).
- * Path rendering already rejects `..` and empty parts; containment against
- * the real disk is checked when writing.
+ * Path rendering already rejects `..` and empty parts; the real disk is
+ * checked by `preflight`.
  *
  * @param {import('../types.js').TemplateFile[]} files
  * @param {import('../types.js').TemplateConfig} cfg
@@ -310,65 +309,192 @@ function throwCollected(errors) {
 }
 
 /**
- * Write a plan into `outDir`, checking each target against the real disk
- * right before it is written:
- * - the write must land inside the real `outDir`, even through symlinks
- *   already present there (a symlink to `/etc` must not become a way out);
- * - with `targetFs: 'case-sensitive'`, a target that the disk resolves to a
- *   file already written in this run (case-only difference on a
- *   case-insensitive disk) throws instead of overwriting it.
+ * Check a plan against the real disk before anything is written or
+ * compared, so `renderDirectory` and `comparePlan` fail on the same
+ * problems, all collected (see SECURITY.md, "Filesystem Threat Model"):
+ * - every target lands inside the real `outDir`, even through symlinks
+ *   already there (a symlink to `/etc` must not become a way out);
+ * - a target that exists is a regular file, and a parent that exists is a
+ *   directory;
+ * - two targets that are one file on disk (a hard link, or a case-only
+ *   difference on a case-insensitive disk) collide;
+ * - a target with another hard link is refused: writing it would change a
+ *   file elsewhere.
+ *
+ * @param {PlanEntry[]} plan
+ * @param {string} outDir
+ */
+function preflight(plan, outDir) {
+  const realOut = fs.existsSync(outDir)
+    ? fs.realpathSync.native(outDir)
+    : realPathOfNearest(outDir);
+  /** @type {JsTmplError[]} */
+  const errors = [];
+  /** @type {Map<string, import('node:fs').BigIntStats | undefined>} */
+  const stats = new Map();
+  /** @param {string} abs */
+  const statOf = (abs) => {
+    if (!stats.has(abs)) {
+      stats.set(abs, fs.statSync(abs, { bigint: true, throwIfNoEntry: false }));
+    }
+    return stats.get(abs);
+  };
+  /** @type {Array<{ entry: PlanEntry, st: import('node:fs').BigIntStats }>} */
+  const existing = [];
+
+  for (const entry of plan) {
+    const abs = path.join(outDir, entry.target);
+    // Blocked first: below a file, resolving the real path fails (ENOTDIR).
+    const problem =
+      blockedError(entry, outDir, statOf) ??
+      outsideError(realOut, abs, outDir, entry.relPath);
+    if (problem) {
+      errors.push(problem);
+      continue;
+    }
+    const st = statOf(abs);
+    if (st) {
+      existing.push({ entry, st });
+    }
+  }
+
+  /** @type {Map<string, PlanEntry>} */
+  const byInode = new Map();
+  /** @type {Set<string>} */
+  const shared = new Set();
+  for (const { entry, st } of existing) {
+    const id = `${st.dev}:${st.ino}`;
+    const earlier = byInode.get(id);
+    if (earlier) {
+      errors.push(oneFileOnDisk(earlier, entry));
+      shared.add(id);
+    } else {
+      byInode.set(id, entry);
+    }
+  }
+  for (const { entry, st } of existing) {
+    if (st.nlink > 1n && !shared.has(`${st.dev}:${st.ino}`)) {
+      errors.push(
+        new JsTmplError(
+          ErrorCodes.OUTPUT_LINKED,
+          `Template '${entry.relPath}' renders to '${entry.target}', which has another hard link: writing it would also change the other file.\n` +
+            'Replace it with a plain copy (or delete it) and render again.',
+          { details: { relPath: entry.relPath, target: entry.target } },
+        ),
+      );
+    }
+  }
+
+  throwCollected(errors);
+}
+
+/**
+ * The error for a target that does not really land inside `realOut`
+ * (symlinks resolved), if any.
+ *
+ * @param {string} realOut
+ * @param {string} abs
+ * @param {string} outDir
+ * @param {string} relPath
+ * @returns {JsTmplError | undefined}
+ */
+function outsideError(realOut, abs, outDir, relPath) {
+  const real = realPathOfNearest(abs);
+  if (real === realOut || isInsideDir(realOut, real)) {
+    return undefined;
+  }
+  return new JsTmplError(
+    ErrorCodes.OUTPUT_OUTSIDE_OUTDIR,
+    `Template '${relPath}' would write to '${real}' through a symbolic link, outside outDir '${outDir}'.`,
+    { details: { relPath, target: real } },
+  );
+}
+
+/**
+ * The error for a target whose path is taken on disk, if any: a parent
+ * that exists but is not a directory, or the target itself existing as
+ * something other than a regular file (a directory, a FIFO).
+ *
+ * @param {PlanEntry} entry
+ * @param {string} outDir
+ * @param {(abs: string) => import('node:fs').BigIntStats | undefined} statOf
+ * @returns {JsTmplError | undefined}
+ */
+function blockedError({ relPath, target }, outDir, statOf) {
+  const parts = target.split('/');
+  // Parents first: below a file, stat fails with ENOTDIR instead of ENOENT.
+  for (let i = 1; i < parts.length; i++) {
+    const parent = parts.slice(0, i).join('/');
+    const st = statOf(path.join(outDir, parent));
+    if (!st) {
+      return undefined;
+    }
+    if (!st.isDirectory()) {
+      return new JsTmplError(
+        ErrorCodes.OUTPUT_BLOCKED,
+        `Template '${relPath}' renders to '${target}', but '${parent}' exists in outDir as a file, not a directory.`,
+        { details: { relPath, target, path: parent } },
+      );
+    }
+  }
+  const st = statOf(path.join(outDir, target));
+  if (!st || st.isFile()) {
+    return undefined;
+  }
+  const kind = st.isDirectory() ? 'a directory' : 'something other than a file';
+  return new JsTmplError(
+    ErrorCodes.OUTPUT_BLOCKED,
+    `Template '${relPath}' renders to '${target}', which exists in outDir as ${kind}.`,
+    { details: { relPath, target, path: target } },
+  );
+}
+
+/**
+ * @param {PlanEntry} earlier
+ * @param {PlanEntry} entry
+ */
+function oneFileOnDisk(earlier, entry) {
+  return new JsTmplError(
+    ErrorCodes.OUTPUT_COLLISION,
+    `Templates '${earlier.relPath}' and '${entry.relPath}' render to '${earlier.target}' and '${entry.target}', which this file system treats as one file.\n` +
+      "Render on a case-sensitive file system, or use targetFs: 'portable'.",
+    {
+      details: {
+        templates: [earlier.relPath, entry.relPath],
+        target: entry.target,
+      },
+    },
+  );
+}
+
+/**
+ * Write a plan into `outDir` once `preflight` passes. With
+ * `targetFs: 'case-sensitive'` on a fresh case-insensitive disk, two
+ * case-only different targets only become one file once the first is
+ * written, so each write still checks for that and throws instead of
+ * overwriting.
  *
  * @param {PlanEntry[]} plan
  * @param {import('../types.js').TemplateConfig} cfg
  */
 async function writePlan(plan, cfg) {
   const { outDir } = cfg;
+  preflight(plan, outDir);
   await ensureDir(outDir);
-  const realOut = fs.realpathSync.native(outDir);
   /** @type {Map<string, { abs: string, entry: PlanEntry }>} */
   const written = new Map();
 
   for (const entry of plan) {
     const abs = path.join(outDir, entry.target);
-    assertInside(realOut, abs, outDir, entry.relPath);
-
     const lower = abs.toLowerCase();
     const earlier = written.get(lower);
     if (earlier && earlier.abs !== abs && sameFile(earlier.abs, abs)) {
-      throw new JsTmplError(
-        ErrorCodes.OUTPUT_COLLISION,
-        `Templates '${earlier.entry.relPath}' and '${entry.relPath}' render to '${earlier.entry.target}' and '${entry.target}', which this file system treats as one file.\n` +
-          "Render on a case-sensitive file system, or use targetFs: 'portable'.",
-        {
-          details: {
-            templates: [earlier.entry.relPath, entry.relPath],
-            target: entry.target,
-          },
-        },
-      );
+      throw oneFileOnDisk(earlier.entry, entry);
     }
 
     await ensureDir(path.dirname(abs));
     await writeFileSafe(abs, entry.content);
     written.set(lower, { abs, entry });
-  }
-}
-
-/**
- * Throw unless `abs` really lands inside `realOut` (symlinks resolved).
- * @param {string} realOut
- * @param {string} abs
- * @param {string} outDir
- * @param {string} relPath
- */
-function assertInside(realOut, abs, outDir, relPath) {
-  const real = realPathOfNearest(abs);
-  if (real !== realOut && !isInsideDir(realOut, real)) {
-    throw new JsTmplError(
-      ErrorCodes.OUTPUT_OUTSIDE_OUTDIR,
-      `Template '${relPath}' would write to '${real}' through a symbolic link, outside outDir '${outDir}'.`,
-      { details: { relPath, target: real } },
-    );
   }
 }
 

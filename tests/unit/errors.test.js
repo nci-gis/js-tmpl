@@ -228,6 +228,41 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
       );
     }));
 
+  it('OUTPUT_BLOCKED (a directory where the plan puts a file)', () =>
+    withTempDir(async (d) => {
+      await seed(d, { 't/a.hbs': 'A' });
+      await fs.mkdir(path.join(d, 'out', 'a'), { recursive: true });
+      await expectCode(
+        ErrorCodes.OUTPUT_BLOCKED,
+        () =>
+          renderDirectory({
+            templateDir: path.join(d, 't'),
+            outDir: path.join(d, 'out'),
+            extname: '.hbs',
+            view: {},
+          }),
+        { relPath: 'a.hbs', target: 'a', path: 'a' },
+      );
+    }));
+
+  it('OUTPUT_LINKED (a target with another hard link)', () =>
+    withTempDir(async (d) => {
+      await seed(d, { 't/a.hbs': 'A', 'elsewhere.txt': 'keep' });
+      await fs.mkdir(path.join(d, 'out'));
+      await fs.link(path.join(d, 'elsewhere.txt'), path.join(d, 'out', 'a'));
+      await expectCode(
+        ErrorCodes.OUTPUT_LINKED,
+        () =>
+          renderDirectory({
+            templateDir: path.join(d, 't'),
+            outDir: path.join(d, 'out'),
+            extname: '.hbs',
+            view: {},
+          }),
+        { relPath: 'a.hbs', target: 'a' },
+      );
+    }));
+
   it('MULTIPLE_ERRORS', () =>
     withTempDir(async (d) => {
       await seed(d, { 't/a.hbs': '{{a}}', 't/b.hbs': '{{b}}' });

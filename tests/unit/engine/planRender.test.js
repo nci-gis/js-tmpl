@@ -1,4 +1,5 @@
 import assert from 'node:assert';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -353,6 +354,131 @@ describe('comparePlan', () => {
         added: [],
         changed: [],
       });
+    });
+  });
+});
+
+// Round 11 — comparePlan and renderDirectory run one preflight, so --check
+// passes only when a render would succeed, and a render that would fail
+// writes nothing.
+describe('preflight — comparePlan and renderDirectory agree', () => {
+  /** Assert both reject with `code`, and the render wrote nothing new. */
+  async function bothReject(c, code, extra) {
+    const plan = await planRender(c);
+    assert.throws(() => comparePlan(plan, c.outDir), { code, ...extra });
+    const before = await fs.readdir(c.outDir, { recursive: true });
+    await assert.rejects(renderDirectory(c), { code, ...extra });
+    assert.deepStrictEqual(
+      await fs.readdir(c.outDir, { recursive: true }),
+      before,
+    );
+  }
+
+  it('a directory on disk where the plan puts a file', async () => {
+    await withTempDir(async (tmpDir) => {
+      await seed(path.join(tmpDir, 't'), { 'a.hbs': 'A', 'z.hbs': 'Z' });
+      await fs.mkdir(path.join(tmpDir, 'out', 'a'), { recursive: true });
+      await bothReject(cfg(tmpDir, {}), 'JSTMPL_OUTPUT_BLOCKED', {
+        message: /renders to 'a', which exists in outDir as a directory/,
+      });
+    });
+  });
+
+  it('a file on disk where the plan needs a directory', async () => {
+    await withTempDir(async (tmpDir) => {
+      await seed(path.join(tmpDir, 't'), { 'a/b/c.hbs': 'C', 'z.hbs': 'Z' });
+      await seed(path.join(tmpDir, 'out'), { a: 'a file' });
+      await bothReject(cfg(tmpDir, {}), 'JSTMPL_OUTPUT_BLOCKED', {
+        message: /but 'a' exists in outDir as a file, not a directory/,
+      });
+    });
+  });
+
+  it(
+    'something other than a file where the plan puts one (FIFO)',
+    { skip: process.platform === 'win32' },
+    async () => {
+      await withTempDir(async (tmpDir) => {
+        await seed(path.join(tmpDir, 't'), { 'a.hbs': 'A' });
+        await fs.mkdir(path.join(tmpDir, 'out'));
+        execFileSync('mkfifo', [path.join(tmpDir, 'out', 'a')]);
+        await bothReject(cfg(tmpDir, {}), 'JSTMPL_OUTPUT_BLOCKED', {
+          message: /exists in outDir as something other than a file/,
+        });
+      });
+    },
+  );
+
+  it('a hard link to a file outside outDir is refused, and that file kept', async () => {
+    await withTempDir(async (tmpDir) => {
+      await seed(path.join(tmpDir, 't'), { 'a.hbs': 'new' });
+      await seed(tmpDir, { 'elsewhere.txt': 'keep' });
+      await fs.mkdir(path.join(tmpDir, 'out'));
+      await fs.link(
+        path.join(tmpDir, 'elsewhere.txt'),
+        path.join(tmpDir, 'out', 'a'),
+      );
+      await bothReject(cfg(tmpDir, {}), 'JSTMPL_OUTPUT_LINKED');
+      assert.strictEqual(
+        await fs.readFile(path.join(tmpDir, 'elsewhere.txt'), 'utf8'),
+        'keep',
+      );
+    });
+  });
+
+  // The review's repro: comparePlan said clean, renderDirectory collided.
+  it('two targets that are one file on disk collide in both', async () => {
+    await withTempDir(async (tmpDir) => {
+      await seed(path.join(tmpDir, 't'), { '${a}.hbs': 'x', '${b}.hbs': 'x' });
+      await seed(path.join(tmpDir, 'out'), { Foo: 'x' });
+      await fs
+        .link(path.join(tmpDir, 'out', 'Foo'), path.join(tmpDir, 'out', 'foo'))
+        .catch(() => {}); // case-insensitive disk: already one file
+      await bothReject(
+        {
+          ...cfg(tmpDir, { a: 'Foo', b: 'foo' }),
+          targetFs: 'case-sensitive',
+        },
+        'JSTMPL_OUTPUT_COLLISION',
+        { message: /which this file system treats as one file/ },
+      );
+    });
+  });
+
+  it('collects every disk problem in one run', async () => {
+    await withTempDir(async (tmpDir) => {
+      await seed(path.join(tmpDir, 't'), { 'a.hbs': 'A', 'b/c.hbs': 'C' });
+      await seed(path.join(tmpDir, 'out'), { b: 'a file' });
+      await fs.mkdir(path.join(tmpDir, 'out', 'a'));
+      const plan = await planRender(cfg(tmpDir, {}));
+      assert.throws(
+        () => comparePlan(plan, path.join(tmpDir, 'out')),
+        (err) => {
+          assert.strictEqual(err.code, 'JSTMPL_MULTIPLE_ERRORS');
+          assert.deepStrictEqual(
+            err.details.errors.map((e) => e.code),
+            ['JSTMPL_OUTPUT_BLOCKED', 'JSTMPL_OUTPUT_BLOCKED'],
+          );
+          return true;
+        },
+      );
+    });
+  });
+
+  it('a symlink inside outDir to a file inside outDir is still written through', async () => {
+    await withTempDir(async (tmpDir) => {
+      await seed(path.join(tmpDir, 't'), { 'a.hbs': 'new' });
+      await seed(path.join(tmpDir, 'out'), { 'real.txt': 'old' });
+      try {
+        await fs.symlink('real.txt', path.join(tmpDir, 'out', 'a'));
+      } catch {
+        return; // file symlinks need privileges on Windows
+      }
+      await renderDirectory(cfg(tmpDir, {}));
+      assert.strictEqual(
+        await fs.readFile(path.join(tmpDir, 'out', 'real.txt'), 'utf8'),
+        'new',
+      );
     });
   });
 });
