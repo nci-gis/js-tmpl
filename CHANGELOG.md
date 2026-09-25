@@ -5,6 +5,37 @@ All notable changes to js-tmpl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-09-25
+
+### Added
+
+- **engine:** RegisterHelpers + strict-mode docs — Round 04 by @pasxd245
+
+### CI/CD
+
+- Hard gates, cross-platform matrix and golden examples — Round 05 by @pasxd245
+
+### Documentation
+
+- Add strict optional values roadmap item by @pasxd245
+- **plan:** Correct Round 01-03 status by @pasxd245
+- **principles:** Add Embedding Rule by @pasxd245
+- **roadmap:** Re-plan 0.1.1-0.2.x around trust and embedding by @pasxd245
+- **plan:** Missing-value design for Round 07 — spike, handler, collect-all by @pasxd245
+- **plan:** Mark Round 04 complete with learnings by @pasxd245
+- **plan:** Record Round 05 CI trial and mark it complete by @pasxd245
+- **plan:** Record Round 06 CI result by @pasxd245
+- **plan:** Mark Round 06 complete with learnings by @pasxd245
+
+### Fixed
+
+- **examples:** Path-guards referenced an empty partials dir git does not track by @pasxd245
+- Output confinement, target collisions, strict CLI, node bin — Round 06 by @pasxd245
+
+### Testing
+
+- Make path assertions separator-agnostic for Windows CI by @pasxd245
+
 ## [0.1.0] - 2026-04-24
 
 ### Added
