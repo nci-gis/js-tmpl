@@ -19,7 +19,7 @@ embedders.
 - `${var}` with a missing var renders `""` ([API.md:350](../../../docs/API.md#L350),
   documented). `t/${missing}/y.txt.hbs` → `out/y.txt`, so the file moves up a
   directory without any message. `$if{missing}` throws (G-4) and
-  `{{missing}}` throws (VP-9), so this is the only silent case left.
+  `{{missing}}` throws (VP-9); path interpolation is the odd one out.
 - `${var}` value containing `/` creates nested directories. Not documented
   either way.
 - `resolveConfig(cli, cwd)` (public engine API) auto-discovers
@@ -27,6 +27,14 @@ embedders.
   `cwd` only to prevent picking up the user's project config (see
   `a2scaffold/src/scaffold/index.js` comment). The engine is making a
   decision it does not need to make.
+- Handlebars `strict: true` checks simple mustaches only. A missing var as a
+  **helper argument** is passed as `undefined` — including built-ins:
+  `{{#if missing}}` renders the else branch, `{{#each missing}}` renders
+  nothing, `{{upper missing}}` gets `undefined` (found in Round 04; pinned by
+  "known gap" tests in `helpers.test.js` and `contentRenderer.test.js`).
+  API.md previously claimed "missing data is always loud"; corrected in
+  Round 04. a2scaffold templates use `{{#if …}}` on keys that may be absent,
+  so closing this is breaking.
 - All errors are plain `Error`; callers (a2scaffold, agents) can only match
   on message text. Handlebars' original error is lost on rethrow.
 
@@ -44,6 +52,13 @@ embedders.
 - [ ] **`${missing}` throws** with template `relPath` + var name (same shape
       as G-4). Present-but-empty (`''`) still renders empty. Update
       API.md:350 + migration note.
+- [ ] **Strict helper arguments** — make missing path expressions in helper
+      and block-helper arguments throw like `{{var}}`. Candidate: walk the
+      `hbs.parse()` AST and mark param `PathExpression`s strict before
+      `hbs.compile(ast, { strict: true })`; spike first (private compiler
+      flag — verify on the pinned Handlebars version and add a guard test).
+      Flip the "known gap" tests; migration note: declare optional keys
+      (`key: null` / `false` / `''`).
 - [ ] **Interpolated value must be one segment** — reject values that
       contain `/` or `\`, or that are `.` / `..` / empty after
       interpolation. Migration note: nested output dirs come from template

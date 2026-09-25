@@ -1,6 +1,6 @@
 # Round 04: `registerHelpers` — resumption of Round 01's deferred scope
 
-**Status**: Planning
+**Status**: Review
 **Date started**: 2026-04-23
 **Date completed**: —
 **Release target**: v0.1.1 (additive, non-breaking)
@@ -76,14 +76,14 @@ against the current tree with the revalidation notes above applied.
 Merged in from the draft rounds, since they are all "authoring under strict
 mode" and touch the same docs:
 
-- [ ] **Helper purity contract** — document that helpers must be pure and
+- [x] **Helper purity contract** — document that helpers must be pure and
       deterministic (no `Date.now()`, `Math.random()`, I/O, env reads). The
       engine cannot enforce it; Round 05's golden tests catch drift.
-- [ ] **Optional values under strict templates** — docs/API.md § Strict
+- [x] **Optional values under strict templates** — docs/API.md § Strict
       templates: explicit `""` / `false` / `null` in values, `{{#if}}`
       guards, and the rule that values inside a false `{{#if}}` block are
       not evaluated. One test per documented pattern.
-- [ ] **`examples/helpers/`** — `Handlebars.create()` → `registerHelpers`
+- [x] **`examples/helpers/`** — `Handlebars.create()` → `registerHelpers`
       → `renderDirectory`, with a helper used under strict mode.
 
 ## Out of Scope (carried from Round 01)
@@ -95,17 +95,49 @@ mode" and touch the same docs:
 
 ## Do
 
-[Progress log — update as work proceeds]
+- **2026-09-25** — Implemented on `feat/register-helpers`.
+  - `src/engine/helpers.js`: `registerHelpers(hbs, helpersMap)` per Round 01
+    rules. Deviations from the `handlebars-helpers` skill, both deliberate:
+    - Collision check uses `Object.hasOwn(hbs.helpers, name)`, not
+      `name in hbs.helpers`. With `in`, `toString` / `constructor` would be
+      rejected as "already registered", which is false. Built-ins are own
+      properties, so all 8 are still caught. Pinned by a test.
+    - Non-object `helpersMap` (array, string) throws explicitly instead of
+      failing later on a numeric "name".
+  - Exported from `src/index.js`; 22 tests in `tests/unit/engine/helpers.test.js`.
+  - **Revalidation finding (strict mode)**: Handlebars `strict: true` does
+    **not** check helper arguments. `{{upper missing}}` passes `undefined`;
+    built-in `{{#if missing}}` / `{{#each missing}}` are silent too. So the
+    Round 04 Check item "missing var inside a helper-arg position still
+    throws" is **false for Handlebars itself**, not something helpers
+    introduced. Handling:
+    - Fixing it is breaking (a2scaffold uses `{{#if …}}` on possibly absent
+      keys) → moved to Round 07 (v0.2.0), with a design candidate.
+    - API.md § Strict templates corrected (it claimed "missing data is always
+      loud"); limitation table + optional-values patterns added.
+    - Current behaviour pinned by "known gap" tests so the 0.2.0 change is
+      deliberate.
+  - Optional-values patterns: 5 tests in `contentRenderer.test.js`.
+  - `examples/helpers/` added; output matches its README.
+  - Removed unused `config` dependency and `config/default.yaml` (contained
+    only a comment line). Re-grep found no imports.
+  - Round 01 § Check: all 13 items verified — see `helpers.test.js`
+    (registration, scoping, type/name/collision errors, atomicity, no-op
+    map, hyphenated names) plus full suite 365/365, `src/` coverage 100%,
+    `docs:check` passing `registerHelpers`.
 
 ## Check
 
 Execute the checklist from [Round_01.md § Check](Round_01.md#check) plus
 one Round-04-specific item:
 
-- [ ] A helper invoked in a template participates correctly in VP-9 strict
+- [x] ~~A helper invoked in a template participates correctly in VP-9 strict
       mode (missing var inside a helper-arg position still throws with the
-      template's relPath).
-- [ ] Helper purity contract documented; optional-values patterns each have
+      template's relPath).~~ Not achievable within Handlebars strict mode;
+      re-scoped to Round 07. Verified instead: a missing `{{var}}` next to a
+      helper still throws, an unregistered helper throws, and a throwing
+      helper's error carries the template relPath.
+- [x] Helper purity contract documented; optional-values patterns each have
       a passing test; `examples/helpers/` renders.
 
 ## Act

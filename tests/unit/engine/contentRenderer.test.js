@@ -171,3 +171,52 @@ describe('renderContent', () => {
     });
   });
 });
+
+// Patterns documented in docs/API.md § Strict templates → Optional values.
+describe('renderContent — optional values under strict mode', () => {
+  /**
+   * @param {string} src
+   * @param {Record<string, unknown>} view
+   */
+  async function renderString(src, view) {
+    return withTempDir(async (tmpDir) => {
+      const templateFile = path.join(tmpDir, 'template.hbs');
+      await fs.writeFile(templateFile, src, 'utf8');
+      return renderContent(templateFile, view, undefined, 'template.hbs');
+    });
+  }
+
+  it('declared empty values render empty', async () => {
+    const result = await renderString('[{{a}}|{{b}}|{{#each c}}x{{/each}}]', {
+      a: '',
+      b: null,
+      c: [],
+    });
+    assert.strictEqual(result, '[||]');
+  });
+
+  it('boolean switch hides an optional block', async () => {
+    const src = '{{#if monitoring}}on{{else}}off{{/if}}';
+    assert.strictEqual(await renderString(src, { monitoring: false }), 'off');
+    assert.strictEqual(await renderString(src, { monitoring: true }), 'on');
+  });
+
+  it('body of a false {{#if}} is not evaluated', async () => {
+    const src = '{{#if db}}{{db.host}}{{/if}}';
+    assert.strictEqual(await renderString(src, { db: null }), '');
+    assert.strictEqual(await renderString(src, { db: false }), '');
+    assert.strictEqual(await renderString(src, { db: { host: 'h' } }), 'h');
+  });
+
+  it('nested read on a declared-but-empty object still throws', async () => {
+    await assert.rejects(
+      renderString('{{db.host}}', { db: {} }),
+      /Template 'template\.hbs': "host" not defined/,
+    );
+  });
+
+  // Known gap (Round 07): helper arguments are not strict-checked.
+  it('missing key in {{#if}} is treated as falsy (known gap)', async () => {
+    assert.strictEqual(await renderString('{{#if nope}}x{{/if}}', {}), '');
+  });
+});
