@@ -6,9 +6,10 @@ import { classifySegment } from './pathSegment.js';
 
 /**
  * Resolve one `${expr}` for a path. The variable must exist (like `$if{}`
- * guards and `{{var}}`), must be a primitive, and must not contain a path
- * separator: output directories come from template directories, not values.
- * `null` renders as an empty string (present-but-empty, as in templates).
+ * guards and `{{var}}`) and must be a primitive. A value may nest with `/`
+ * (e.g. `skills/group/name`, for depths the template tree cannot express);
+ * `\` is rejected on every OS so a tree renders the same everywhere. `null`
+ * renders as an empty string (present-but-empty, as in templates).
  *
  * @param {string} expr
  * @param {Record<string, unknown>} view
@@ -34,11 +35,11 @@ function interpolatedValue(expr, view, relPath) {
     );
   }
   const text = String(value ?? ''); // NOSONAR -- String conversion is intentional here
-  if (/[\\/]/.test(text)) {
+  if (text.includes('\\')) {
     throw new JsTmplError(
       ErrorCodes.PATH_INVALID_VALUE,
-      `Path variable '${expr}' is '${text}', which contains a path separator (in '${relPath}').\n` +
-        'Nested output directories come from template directories, not from values.',
+      `Path variable '${expr}' is '${text}', which contains '\\' (in '${relPath}').\n` +
+        "Use '/' to nest directories; it works on every OS.",
       { details: { relPath, variable: expr } },
     );
   }
@@ -46,9 +47,10 @@ function interpolatedValue(expr, view, relPath) {
 }
 
 /**
- * Replace every `${var}` placeholder in a segment. The rendered segment must
- * still name something: empty, `.` and `..` are rejected, since `path.join`
- * would silently drop or climb them and move the file.
+ * Replace every `${var}` placeholder in a segment. A value may add `/`, so
+ * the result can be several segments; each one must still name something:
+ * empty, `.` and `..` are rejected, since `path.join` would silently drop or
+ * climb them and move the file (this also rules out `/abs`, `a//b`, `../x`).
  *
  * @param {string} seg
  * @param {Record<string, unknown>} view
@@ -59,10 +61,13 @@ function expandInterpolations(seg, view, relPath) {
   const rendered = seg.replaceAll(/\$\{([^}]+)\}/g, (_, expr) =>
     interpolatedValue(expr.trim(), view, relPath),
   );
-  if (rendered === '' || rendered === '.' || rendered === '..') {
+  const invalid = rendered
+    .split('/')
+    .some((part) => part === '' || part === '.' || part === '..');
+  if (invalid) {
     throw new JsTmplError(
       ErrorCodes.PATH_EMPTY_SEGMENT,
-      `Path segment '${seg}' renders to '${rendered}', which does not name a file or directory (in '${relPath}').`,
+      `Path segment '${seg}' renders to '${rendered}'; every part must name a file or directory (no empty, '.' or '..' parts) (in '${relPath}').`,
       { details: { relPath, segment: seg } },
     );
   }

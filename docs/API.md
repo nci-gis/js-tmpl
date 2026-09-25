@@ -463,17 +463,18 @@ dist/production/my-app-config.yaml
 ### Rules
 
 - **Missing variables throw** — like `$if{var}` and `{{var}}`; the error names the variable and the template path
-- **One value, one segment** — a value must be a string, number, boolean or `null` (renders `""`), and must not contain `/` or `\`. Nested output directories come from template directories, not values
-- **Segments must name something** — a segment that renders to `""`, `.` or `..` throws (it would silently move the file)
+- **Values are primitives** — a string, number, boolean or `null` (renders `""`); objects and arrays throw
+- **Nest with `/` only** — a value may contain `/` (e.g. `skills/group/name`, for depths the template tree cannot express); `\` throws on every OS so a tree renders the same everywhere
+- **Every part must name something** — after rendering, each `/`-separated part must not be `""`, `.` or `..` (so `/abs`, `a//b`, `../x`, `a/..` throw); such parts would silently drop or climb and move the file
 - Nested access supported: `${a.b.c}`
 - Array access supported: `${items.0.name}`
 - No glob expansion
 - **Output stays inside `outDir`** — checked again for every target before any file is written
 - **One template per output file** — two templates rendering to the same path throw, naming both, before any file is written. Paths that differ only by case (`README.md` / `readme.md`) count as the same file, so a tree renders identically on Linux, macOS and Windows
 
-> **0.2.0 migration:** before 0.2.0 a missing `${var}` rendered `""` and a value
-> such as `a/b` created nested directories. Declare every path variable, and
-> move nesting into the template tree (`${group}/${name}.yaml.hbs`).
+> **0.2.0 migration:** before 0.2.0 a missing `${var}` rendered `""`, and values
+> such as `../x`, `/abs` or `a//b` were joined without checks. Declare every
+> path variable; nest with `/` inside values (`a/b` still works).
 
 ### Path Guards — conditional files
 
@@ -676,8 +677,8 @@ try {
 | `JSTMPL_NS_ROOT_COLLISION`         | A root value key and a value-partial namespace collide (C-2)         |                                         |
 | `JSTMPL_NS_RESERVED_ENV`           | A value partial resolves to the reserved `env` namespace (C-3)       |                                         |
 | `JSTMPL_PATH_MISSING_VAR`          | `${var}` in a template path is not in the view                       | `relPath`, `variable`                   |
-| `JSTMPL_PATH_INVALID_VALUE`        | A `${var}` value is an object/array or contains `/` or `\`           | `relPath`, `variable`                   |
-| `JSTMPL_PATH_EMPTY_SEGMENT`        | A path segment renders to `""`, `.` or `..`                          | `relPath`, `segment`                    |
+| `JSTMPL_PATH_INVALID_VALUE`        | A `${var}` value is an object/array or contains `\`                  | `relPath`, `variable`                   |
+| `JSTMPL_PATH_EMPTY_SEGMENT`        | A rendered path part is `""`, `.` or `..`                            | `relPath`, `segment`                    |
 | `JSTMPL_GUARD_MISSING_VAR`         | `$if{var}` / `$ifn{var}` names a variable not in the view (G-4)      | `relPath`, `segment`, `variable`        |
 | `JSTMPL_GUARD_MALFORMED`           | A guard is not a whole directory segment (G-5)                       | `relPath`, `segment`                    |
 | `JSTMPL_GUARD_IN_FILENAME`         | A guard is used as a file name (G-5)                                 | `relPath`, `segment`                    |
@@ -715,8 +716,8 @@ Error: Parse error on line 5:
 
 ```text
 Error: Path variable 'name' is not defined in the view (in '${name}/x.txt.hbs').
-Error: Path variable 'name' is '../x', which contains a path separator (in '${name}/x.txt.hbs').
-Error: Path segment '${name}' renders to '..', which does not name a file or directory (in '${name}/x.txt.hbs').
+Error: Path variable 'name' is 'a\b', which contains '\' (in '${name}/x.txt.hbs').
+Error: Path segment '${name}' renders to '../x'; every part must name a file or directory (no empty, '.' or '..' parts) (in '${name}/x.txt.hbs').
 ```
 
 **Two templates, one output file:**

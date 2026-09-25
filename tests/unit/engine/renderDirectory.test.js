@@ -849,9 +849,18 @@ describe('renderDirectory — output safety', () => {
             extname: '.hbs',
             view: { name },
           }),
-          // 0.2.0: rejected at the path level first (separator / '..');
-          // the outDir guard stays as a second line of defence.
-          /path separator|does not name a file or directory/,
+          // 0.2.0: rejected at the path level first ('..' part, or '\' on
+          // Windows); the outDir guard stays as a second line of defence.
+          (err) => {
+            assert.ok(
+              [
+                'JSTMPL_PATH_EMPTY_SEGMENT',
+                'JSTMPL_PATH_INVALID_VALUE',
+              ].includes(err.code),
+              err.message,
+            );
+            return true;
+          },
         );
         assert.strictEqual(await exists(path.join(tmpDir, 'escaped')), false);
         assert.strictEqual(await exists(path.join(tmpDir, 'x.txt')), false);
@@ -859,7 +868,7 @@ describe('renderDirectory — output safety', () => {
     });
   }
 
-  it('rejects a leading-slash value (path separator, 0.2.0)', async () => {
+  it('rejects a leading-slash value (empty first part, 0.2.0)', async () => {
     await withTempDir(async (tmpDir) => {
       const { templateDir, outDir } = await seed(tmpDir, {
         '${name}/x.txt.hbs': 'x',
@@ -872,7 +881,7 @@ describe('renderDirectory — output safety', () => {
           extname: '.hbs',
           view: { name: '/abs' },
         }),
-        /contains a path separator/,
+        /every part must name a file or directory/,
       );
       assert.strictEqual(await exists(outDir), false);
     });
@@ -909,9 +918,27 @@ describe('renderDirectory — output safety', () => {
           extname: '.hbs',
           view: { name: '..' },
         }),
-        /does not name a file or directory/,
+        /every part must name a file or directory/,
       );
       assert.strictEqual(await exists(outDir), false);
+    });
+  });
+
+  it('nests a value with / (variable depth)', async () => {
+    await withTempDir(async (tmpDir) => {
+      const { templateDir, outDir } = await seed(tmpDir, {
+        '${skill}/SKILL.md.hbs': 'S',
+      });
+
+      await renderDirectory({
+        templateDir,
+        outDir,
+        extname: '.hbs',
+        view: { skill: 'skills/group/nested' },
+      });
+
+      const out = path.join(outDir, 'skills', 'group', 'nested', 'SKILL.md');
+      assert.strictEqual(await fs.readFile(out, 'utf8'), 'S');
     });
   });
 

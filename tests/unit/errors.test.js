@@ -121,7 +121,7 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
   it('PATH_INVALID_VALUE', () =>
     expectCode(
       ErrorCodes.PATH_INVALID_VALUE,
-      () => renderPath('${x}', { x: 'a/b' }),
+      () => renderPath('${x}', { x: 'a\\b' }),
       { variable: 'x' },
     ));
 

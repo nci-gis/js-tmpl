@@ -100,39 +100,42 @@ embedders.
       `PathExpression`s strict on the `hbs.parse()` AST (private compiler
       flag — verify on the pinned Handlebars version, add a guard test),
       and defer collect-all.
-- [ ] **Collect-all diagnostics** — one run reports every missing value
-      (content, `${}` paths, `$if{}` guards) in a single aggregate error,
-      sorted by template then path, instead of stopping at the first.
-      Document the limit: only branches rendered with the current values
-      are checked.
-- [ ] **`${missing}` throws** with template `relPath` + var name (same shape
+- [x] ~~**Collect-all diagnostics**~~ — moved to Round 08 (2026-09-26).
+      Collecting across templates needs every template rendered in memory
+      before anything is written (otherwise a failure leaves a partial
+      output), which is `planRender`. Round 07 stays fail-fast. Rejected
+      alternative: a separate `validate` command that the error points to —
+      it would use the same engine and know nothing the failing run did not,
+      so it only adds a step; a branch-complete (static) validator would be
+      approximate and is evidence-gated. Missing values keep exit code 1;
+      detail goes in the error `code`.
+- [x] **`${missing}` throws** with template `relPath` + var name (same shape
       as G-4). Present-but-empty (`''`) still renders empty. Update
       API.md:350 + migration note.
 - [x] **Migration note for strict helper arguments** — declare optional
       keys (`key: null` / `false` / `''`); `{{#if missing}}` now throws.
-- [ ] **Interpolated value must be one segment** — reject values that
-      contain `/` or `\`, or that are `.` / `..` / empty after
-      interpolation. Migration note: nested output dirs come from template
-      directories, not from values.
-- [ ] **Case-insensitive target collisions** — treat targets equal under
+- [x] ~~**Interpolated value must be one segment**~~ — revised after
+      a2scaffold evidence: values may nest with `/`; every part must name
+      something; `\` rejected (see Do).
+- [x] **Case-insensitive target collisions** — treat targets equal under
       case folding as a collision on every OS, so a tree renders the same
       files everywhere. Breaking for trees relying on case-only
       differences (rare); migration note.
-- [ ] **Config discovery moves to the CLI layer** — `resolveConfig` only
+- [x] **Config discovery moves to the CLI layer** — `resolveConfig` only
       loads a config file when given one explicitly (`configFile`); the CLI
       keeps today's auto-discovery by resolving the path before calling it.
       Update README § "Fixed Rules for Minimal Auto-Discovery" to say it is
       CLI behaviour.
-- [ ] **`src/errors.js`** — `JsTmplError` + frozen `ErrorCodes`; export from
+- [x] **`src/errors.js`** — `JsTmplError` + frozen `ErrorCodes`; export from
       `src/index.js`. Migrate all 14 `throw new Error` sites and Round 06's
       `UsageError`. `contentRenderer` rethrows with `{ cause }`.
-- [ ] CLI prints `hint` when present; `--verbose` also prints `code`.
-- [ ] docs/API.md "Errors" table (code, when, `details` shape, hint);
+- [x] ~~CLI prints `hint` when present;~~ `--verbose` also prints `code` (no `hint` field; see Do).
+- [x] docs/API.md "Errors" table (code, when, `details` shape, hint);
       `scripts/check-doc-exports.js` fails on an undocumented code.
-- [ ] Tests: one per code (`assert.throws(fn, { code })`) + meta-test that
+- [x] Tests: one per code (`assert.throws(fn, { code })`) + meta-test that
       every `ErrorCodes` value is exercised; migration tests for each
       breaking item.
-- [ ] Before release: run a2scaffold against the build and record needed
+- [x] Before release: run a2scaffold against the build and record needed
       changes (expected: drop the `cwd` workaround).
 
 ### Out of Scope
@@ -179,6 +182,34 @@ embedders.
     compiled.
   - Docs: API.md § Strict templates rewritten (table, known limit,
     migration note); README and `examples/helpers` README updated.
+- **2026-09-26** — `${missing}` throws, single-segment values, empty /
+  `.` / `..` segments rejected (`03f2969`); case-insensitive collisions
+  (`93bf1d7`); config discovery CLI-only + `findProjectConfig` (`b9ddeb1`);
+  `JsTmplError` / `ErrorCodes` (27 codes), every code tested (meta-test)
+  and documented (`docs:check`) (`aa3984d`). Deviation: no separate `hint`
+  field — messages already carry the recovery line (project convention),
+  so a `hint` would duplicate it; `--verbose` prints `code:`.
+  - Round 06's outDir guard is unreachable once values cannot contain
+    separators or `..`; kept as defence in depth, logic moved to
+    `isInsideDir` (utils/fs) with direct tests; its code is listed as
+    intentionally unreachable in the error meta-test.
+- **2026-09-26 — a2scaffold 0.2.0 against this build: 227 / 237.**
+  - 9 failures: `JSTMPL_PATH_INVALID_VALUE`. The `skill-ref` template is
+    `${skill.path}/SKILL.md.hbs` with values such as `skills/test-skill`
+    and `skills/group/nested-skill`: **variable depth**, which template
+    directories cannot express. The single-segment rule blocks a legitimate
+    use with no alternative inside js-tmpl. Counter-evidence to the rule;
+    decision pending (see below).
+  - 1 failure: a2scaffold's own mirror test pins "`${missing}` renders
+    empty". Expected; the mirror goes away with `planRender` (Round 08).
+  - No failures from strict helper arguments: a2scaffold declares its keys.
+- **2026-09-26 — Rule revised (human-approved): values may nest with `/`.**
+  Each rendered `/`-part must not be `""`, `.` or `..` (rules out `/abs`,
+  `a//b`, `../x`, `a/..`); `\` rejected on every OS; primitives only;
+  missing still throws. Still stricter than 0.1.x (no `..`, no leading `/`,
+  no `\`), and a2scaffold's variable-depth `${skill.path}` keeps working.
+  a2scaffold re-run: **236 / 237**, the remaining failure being its mirror
+  test of the old `${missing}` → `""` rule (expected; Round 08).
 
 ## Check
 

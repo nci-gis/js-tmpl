@@ -170,8 +170,9 @@ describe('renderPath', () => {
     });
   });
 
-  // Round 07 (0.2.0): a placeholder must produce exactly one segment.
-  describe('single-segment values', () => {
+  // Round 07 (0.2.0): a value may nest with '/', but every resulting part
+  // must name something, and '\\' is rejected on every OS.
+  describe('path values', () => {
     it('throws for a missing nested variable', () => {
       assert.throws(
         () => render('${a.b}/x', { a: {} }),
@@ -179,29 +180,38 @@ describe('renderPath', () => {
       );
     });
 
-    for (const [label, value] of [
-      ['a slash', 'a/b'],
-      ['a backslash', 'a\\b'],
-      ['a leading slash', '/abs'],
-    ]) {
-      it(`throws for a value with ${label}`, () => {
-        assert.throws(
-          () => render('${v}/x', { v: value }),
-          /contains a path separator/,
-        );
+    it('nests with / (variable depth)', () => {
+      assert.strictEqual(
+        render('${skill}/SKILL.md', { skill: 'skills/group/nested' }),
+        'skills/group/nested/SKILL.md',
+      );
+      assert.strictEqual(render('pre-${v}.txt', { v: 'a/b' }), 'pre-a/b.txt');
+    });
+
+    it("throws for a value with '\\'", () => {
+      // Matched on the code: the message itself contains '\\', which the
+      // test helper would turn into '/' on Windows.
+      assert.throws(() => render('${v}/x', { v: 'a\\b' }), {
+        code: 'JSTMPL_PATH_INVALID_VALUE',
       });
-    }
+    });
 
     for (const [label, value] of [
       ['empty', ''],
       ['null', null],
       ['.', '.'],
       ['..', '..'],
+      ['a leading slash', '/abs'],
+      ['a trailing slash', 'a/'],
+      ['a double slash', 'a//b'],
+      ['a .. part', '../x'],
+      ['an inner .. part', 'a/../b'],
+      ['a . part', 'a/./b'],
     ]) {
-      it(`throws when a whole segment renders ${label}`, () => {
+      it(`throws when a part renders ${label}`, () => {
         assert.throws(
           () => render('${v}/x', { v: value }),
-          /does not name a file or directory/,
+          /every part must name a file or directory/,
         );
       });
     }
@@ -211,7 +221,7 @@ describe('renderPath', () => {
       assert.throws(() => render('${v}.txt', { v: [1] }), /is an array/);
     });
 
-    it('allows dots inside a value and empty values within a segment', () => {
+    it('allows dots inside a part and empty values within a segment', () => {
       assert.strictEqual(render('${v}.txt', { v: '..hidden' }), '..hidden.txt');
       assert.strictEqual(render('app-${v}.txt', { v: '' }), 'app-.txt');
       assert.strictEqual(render('${v}.txt', { v: null }), '.txt');
