@@ -75,6 +75,19 @@ Later versions may reinterpret guiding principles while preserving foundational 
 
 ---
 
+## Embedding Rule
+
+> **Expose decisions, don't adopt policies.**
+
+When an embedder asks for something, ask:
+
+1. Is the embedder **re-implementing** engine logic, or writing **its own**? Re-implementing → the engine should expose it. Its own → it stays with the embedder.
+2. Is the answer **fully determined by the inputs** (templates, values, config)? If embedders could reasonably want different answers, it is policy.
+
+When in doubt, pick the reversible option: stricter behaviour, narrower API, no policy. Loosening later is easy; tightening later breaks users.
+
+---
+
 ## Anti-Patterns to Avoid
 
 - **Auto-magic**: Don't infer user intent from filesystem layout or conventions
