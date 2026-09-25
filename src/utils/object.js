@@ -13,3 +13,5 @@ export function getNested(obj, key) {
       obj,
     );
 }
+
+var trialUnused = 1;
