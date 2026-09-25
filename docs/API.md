@@ -299,24 +299,32 @@ template partials system:
 
 ### Strict templates
 
-Templates are compiled with Handlebars `strict: true`. A simple mustache
-`{{var}}` on an undefined path throws an error that includes the template's
-relative path and the variable name. Present-but-empty values (`''`, `0`,
-`false`, `null`) render as normal — only **missing** properties fail.
+Every path a template reads must exist in the view. A missing path throws an
+error with the template's relative path, the variable name, and its
+line:column — in a simple mustache and in any argument position:
 
-**Limitation:** Handlebars checks simple mustaches only. A missing variable
-used as a **helper argument** is passed to the helper as `undefined` without
-an error — this includes built-in block helpers:
+| Template                    | View | Result |
+| --------------------------- | ---- | ------ |
+| `{{name}}`                  | `{}` | throws |
+| `{{upper name}}`            | `{}` | throws |
+| `{{#if name}}…{{/if}}`      | `{}` | throws |
+| `{{#each items}}…{{/each}}` | `{}` | throws |
+| `{{> card item}}`           | `{}` | throws |
 
-| Template                    | View | Result                            |
-| --------------------------- | ---- | --------------------------------- |
-| `{{name}}`                  | `{}` | throws                            |
-| `{{upper name}}`            | `{}` | helper receives `undefined`       |
-| `{{#if name}}…{{/if}}`      | `{}` | renders the `else` branch (empty) |
-| `{{#each items}}…{{/each}}` | `{}` | renders nothing                   |
+Present-but-empty values (`''`, `0`, `false`, `null`) render as normal —
+only **missing** properties fail. Partials follow the same rules.
 
-Closing this gap is planned for 0.2.0 (breaking). Until then, do not rely on
-a missing key being treated as falsy — declare it.
+Only paths the template itself reads are checked; what a helper does with
+its arguments in JavaScript is up to the helper.
+
+**Known limit (Handlebars):** fields on block parameters are not checked —
+`{{#each items as |item|}}{{item.missing}}{{/each}}` renders empty. Use
+`{{#each items}}{{missing}}{{/each}}` (context form) where you want the check.
+
+> **0.2.0 migration:** before 0.2.0, a missing key used in `{{#if}}`,
+> `{{#each}}`, `{{#with}}`, `{{#unless}}` or as a helper argument was treated
+> as `undefined`. Declare such keys in values (`key: null`, `false`, `''`,
+> `[]`) — see [Optional values](#optional-values).
 
 #### Optional values
 

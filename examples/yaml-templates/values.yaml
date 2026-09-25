@@ -20,11 +20,15 @@ logging:
   level: info
   format: json
   outputs:
+    # Every output declares every key the template reads; `{{#if}}` on a
+    # key that is absent is an error (strict mode), so "not set" is explicit.
     - type: file
       path: /var/log/app.log
       maxSize: 100mb
       maxFiles: 5
+      colorize: false
     - type: console
+      path: null
       colorize: true
 
 services:

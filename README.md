@@ -184,10 +184,9 @@ registerHelpers(hbs, { upper: (s) => s.toUpperCase() });
 await renderDirectory(resolveConfig({ valuesFile: './values.yaml' }), hbs);
 ```
 
-Helpers must be pure functions. Strict mode still applies to plain
-`{{var}}` lookups around them; see
-[Strict templates](docs/API.md#strict-templates) for what is not checked
-inside helper arguments.
+Helpers must be pure functions. Strict mode applies to their arguments too:
+`{{upper missing}}` throws; see
+[Strict templates](docs/API.md#strict-templates).
 
 ### 4. Get output
 

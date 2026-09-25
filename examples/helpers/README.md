@@ -42,7 +42,5 @@ block renders its `{{else}}` branch (`replicas: 1`).
   nothing from the map is registered.
 - **Pure helpers** — every helper here depends only on its arguments, so the
   same values always produce the same file.
-- **Strict mode** — `{{service.missing}}` would throw. A missing variable
-  passed _as a helper argument_ (`{{upper service.missing}}`) is not caught
-  by Handlebars strict mode; see
-  [Strict templates](../../docs/API.md#strict-templates).
+- **Strict mode** — `{{service.missing}}` and `{{upper service.missing}}`
+  both throw; see [Strict templates](../../docs/API.md#strict-templates).

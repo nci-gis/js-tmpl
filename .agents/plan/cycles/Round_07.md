@@ -1,6 +1,6 @@
 # Round 07: No Silent Outcomes — strict engine contract + error codes
 
-**Status**: Planning
+**Status**: In Progress
 **Date started**: 2026-09-25
 **Date completed**: —
 **Release target**: v0.2.0 (breaking — do not ship in 0.1.x; a2scaffold
@@ -86,14 +86,14 @@ embedders.
 
 ## Plan
 
-- [ ] **Spike first — Proxy on `view`** (shared with Round 09). Under
+- [x] **Spike first — Proxy on `view`** (shared with Round 09). Under
       Handlebars strict mode, measure: (a) every missing read is caught,
       including helper / block-helper arguments; (b) no false positives from
       Handlebars' internal probes (`hasOwnProperty`, `length`, `toJSON`,
       symbols, `each` over objects/arrays, partials, `@root`, `../`);
       (c) output byte-identical when nothing is missing; (d) overhead on the
       examples. Record the verdict in Do; it decides the next two items.
-- [ ] **Internal missing handler** (if spike passes) — default throws with
+- [x] ~~**Internal missing handler** (if spike passes)~~ — spike failed; took the AST fallback instead (see Do) — default throws with
       template `relPath` + path + position (`mustache` / `helper-arg` /
       `block-param`). Flips the Round 04 "known gap" tests.
       _If the spike fails:_ close the helper-argument gap by marking param
@@ -108,7 +108,7 @@ embedders.
 - [ ] **`${missing}` throws** with template `relPath` + var name (same shape
       as G-4). Present-but-empty (`''`) still renders empty. Update
       API.md:350 + migration note.
-- [ ] **Migration note for strict helper arguments** — declare optional
+- [x] **Migration note for strict helper arguments** — declare optional
       keys (`key: null` / `false` / `''`); `{{#if missing}}` now throws.
 - [ ] **Interpolated value must be one segment** — reject values that
       contain `/` or `\`, or that are `.` / `..` / empty after
@@ -144,7 +144,41 @@ embedders.
 
 ## Do
 
-[Progress log — update as work proceeds]
+- **2026-09-25 — Spike verdict: Proxy fails; AST path taken.** Throwaway
+  scripts, Handlebars 4.7.8.
+  - _Proxy on `view`_ (`has` trap records a miss and pretends present,
+    `get` wraps nested objects):
+    - (a) completeness ✗ — a missing parent (`{{a.b}}`, no `a`) is read
+      through `lookupProperty` (`get`), then `container.strict(undefined, …)` throws natively, so collecting stops there; block-param paths
+      are never seen.
+    - (b) false positives ✗ — a helper doing `'opt' in o` hits the `has`
+      trap: recorded as a miss, and in collect mode the lie changed the
+      helper's result (`y` instead of `n`). Behaviour change: rejected.
+    - (c) output identical when nothing is missing ✓.
+  - _AST marking_ (set `strict` on `PathExpression`s in params, hash values,
+    sub-expressions, partial contexts; skip `this` / `..`): 26 / 28 spike
+    cases as expected; the 2 others were a wrong expectation (HTML
+    escaping) and block params, which Handlebars never strict-checks, even
+    in `{{x.m}}` (native gap, documented and pinned as a known limit).
+    Errors come from Handlebars with `line:col`. Helper-internal JS reads
+    are untouched.
+  - Consequences: default throw via AST (below). Proxy-based collect-all
+    **not** built. Round 09 must re-verify its own Proxy use (read
+    recording only, no lying `has`) rather than assume this spike passed.
+- **Strict helper arguments** — `src/engine/strictCompile.js`
+  (`compileStrict(hbs, source)`), used by `contentRenderer` and by
+  `registerPartials`, which now registers pre-compiled partials (a string
+  partial would be compiled by Handlebars without the marking). 26 tests in
+  `strictCompile.test.js`; Round 04 "known gap" tests flipped.
+  - Golden tests caught the breaking change on a shipped example:
+    `examples/yaml-templates` used `{{#if colorize}}` / `{{#if path}}` on
+    list items that lacked those keys. Migrated by declaring them
+    (`colorize: false`, `path: null`); rendered output unchanged.
+  - `partials.test.js` asserted `hbs.partials[name] === source`; now asserts
+    the rendered partial (18 + 2 assertions), since partials are stored
+    compiled.
+  - Docs: API.md § Strict templates rewritten (table, known limit,
+    migration note); README and `examples/helpers` README updated.
 
 ## Check
 

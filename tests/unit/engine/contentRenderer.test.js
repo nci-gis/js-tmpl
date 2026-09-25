@@ -215,8 +215,11 @@ describe('renderContent — optional values under strict mode', () => {
     );
   });
 
-  // Known gap (Round 07): helper arguments are not strict-checked.
-  it('missing key in {{#if}} is treated as falsy (known gap)', async () => {
-    assert.strictEqual(await renderString('{{#if nope}}x{{/if}}', {}), '');
+  // Round 07: helper and block-helper arguments are strict too (0.2.0).
+  it('missing key in {{#if}} throws with the template path', async () => {
+    await assert.rejects(
+      renderString('{{#if nope}}x{{/if}}', {}),
+      /Template 'template\.hbs': "nope" not defined .* - 1:6/,
+    );
   });
 });
