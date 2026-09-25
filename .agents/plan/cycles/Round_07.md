@@ -26,7 +26,10 @@ embedders.
   `js-tmpl.config.*` in `cwd`. a2scaffold passes its own template root as
   `cwd` only to prevent picking up the user's project config (see
   `a2scaffold/src/scaffold/index.js` comment). The engine is making a
-  decision it does not need to make.
+  decision it does not need to make. README § "Override Auto-Discovery"
+  also claims "No config file (use defaults only)" by omitting
+  `--config-file`, which is false when a config file exists in `cwd`
+  (found in Round 05).
 - Handlebars `strict: true` checks simple mustaches only. A missing var as a
   **helper argument** is passed as `undefined` — including built-ins:
   `{{#if missing}}` renders the else branch, `{{#each missing}}` renders

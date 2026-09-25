@@ -16,6 +16,7 @@ tests/
 │   ├── engine/             # Engine layer (68 tests)
 │   └── utils/              # Utils layer (31 tests)
 ├── integration/            # End-to-end tests (11 tests)
+├── golden/                 # Byte-exact example output (pnpm examples:update)
 ├── fixtures/               # Test data and templates
 │   ├── config/            # Config test fixtures
 │   └── project-template/  # Realistic project templates

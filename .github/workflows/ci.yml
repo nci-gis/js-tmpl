@@ -11,8 +11,81 @@ on:
       - dev
 
 jobs:
-  ci:
+  # Library behaviour on every supported Node version and OS.
+  # Node support: primary 22, 24; compatible 20 (see ROADMAP.md).
+  test:
+    name: test (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ['20', '22', '24']
+        exclude:
+          - os: macos-latest
+            node: '20'
+          - os: windows-latest
+            node: '20'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+
+  # Every quality gate, once. Same command as release and publish.
+  verify:
+    name: verify (lint, format, docs, package, coverage)
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run all gates
+        run: pnpm verify
+
+  # The packed tarball installs and its CLI starts, on every OS.
+  cli:
+    name: cli (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    # Known broken on every OS: bin/js-tmpl is a bash wrapper that resolves
+    # main.js relative to the node_modules/.bin symlink. Round 06 replaces it
+    # with a Node entry and must remove this line.
+    continue-on-error: true
 
     steps:
       - name: Checkout code
@@ -21,23 +94,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.22.0
+      - name: Pack and install into a scratch project
+        shell: bash
+        run: |
+          TARBALL="$(npm pack --ignore-scripts --silent)"
+          mkdir -p "$RUNNER_TEMP/consumer"
+          cd "$RUNNER_TEMP/consumer"
+          npm init -y > /dev/null
+          npm install "$GITHUB_WORKSPACE/$TARBALL"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run lint
-        run: pnpm lint
-        continue-on-error: true
-
-      - name: Run tests
-        run: pnpm test
-
-      - name: Run build
-        run: pnpm build
-        continue-on-error: true
+      - name: Run js-tmpl --help from the installed package
+        working-directory: ${{ runner.temp }}/consumer
+        run: npx --no-install js-tmpl --help

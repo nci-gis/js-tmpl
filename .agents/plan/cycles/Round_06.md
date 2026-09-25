@@ -13,14 +13,18 @@ bugs, not features. The first one is a security fix.
 
 ### Evidence (reproduced on `dev` @ `fac1bfd`)
 
-| #   | Input                                                     | Today                                             | Class      |
-| --- | --------------------------------------------------------- | ------------------------------------------------- | ---------- |
-| 1   | `t/${name}/x.txt.hbs`, `view.name = '../escaped'`         | Writes `./escaped/x.txt`, **outside `outDir`**    | Security   |
-| 2   | `t/${a}/x.txt.hbs` + `t/${b}/x.txt.hbs`, `a = b = 'same'` | Only `out/same/x.txt` = B; A silently overwritten | Silent     |
-| 3   | `js-tmpl --bogus foo`                                     | Flag and positional ignored                       | Silent     |
-| 4   | `js-tmpl --env-keys` / `js-tmpl -o`                       | `TypeError` from `args.js` / `resolver.js`        | Crash      |
-| 5   | Any runtime error                                         | `Error: Error: …` + full stack                    | Legibility |
-| 6   | `bin/js-tmpl`                                             | Bash wrapper; Windows result comes from Round 05  | Platform   |
+| #   | Input                                                     | Today                                                                            | Class      |
+| --- | --------------------------------------------------------- | -------------------------------------------------------------------------------- | ---------- |
+| 1   | `t/${name}/x.txt.hbs`, `view.name = '../escaped'`         | Writes `./escaped/x.txt`, **outside `outDir`**                                   | Security   |
+| 2   | `t/${a}/x.txt.hbs` + `t/${b}/x.txt.hbs`, `a = b = 'same'` | Only `out/same/x.txt` = B; A silently overwritten                                | Silent     |
+| 3   | `js-tmpl --bogus foo`                                     | Flag and positional ignored                                                      | Silent     |
+| 4   | `js-tmpl --env-keys` / `js-tmpl -o`                       | `TypeError` from `args.js` / `resolver.js`                                       | Crash      |
+| 5   | Any runtime error                                         | `Error: Error: …` + full stack                                                   | Legibility |
+| 6   | `npx js-tmpl` from an installed package                   | `Cannot find module …/node_modules/src/cli/main.js` on Linux (found in Round 05) | Broken     |
+
+Root cause of 6: the bash wrapper resolves `$(dirname "$0")/../src/…`, and
+`$0` is the `node_modules/.bin/js-tmpl` symlink, not its target. The CLI has
+never worked from an installed package, on any OS; only from the repo.
 
 Root cause of 3–4: [main.js](../../../src/cli/main.js) passes the whole
 `process.argv` (node path + script path included) to `parseArgs`; unit tests
@@ -51,8 +55,11 @@ CHANGELOG note.
       Exit codes: `0` ok, `1` render/config error, `2` usage error.
       Print `js-tmpl: <message>`; stack only with `--verbose`.
 - [ ] **Node `bin` (#6)**: replace the bash wrapper with a Node entry
-      (`#!/usr/bin/env node`), keeping `isDirectRun` working through
-      `node_modules/.bin` symlinks.
+      (`#!/usr/bin/env node`) that imports and calls `main()` explicitly,
+      with the error boundary moved there. The `isDirectRun` check in
+      `main.js` cannot see through the bin (argv[1] is the bin path), so
+      don't rely on it. Then remove `continue-on-error` from the `cli` job
+      in `ci.yml`.
 - [ ] Spawn-based CLI test that runs the real binary (covers the argv gap).
 - [ ] Docs: README / API.md CLI table (exit codes, `--verbose`); CHANGELOG
       security note for #1.
@@ -72,7 +79,7 @@ CHANGELOG note.
 - [ ] All existing tests pass unchanged, except where a row above changes
       behaviour (each noted in Do).
 - [ ] `npx js-tmpl --help` works from a packed tarball on ubuntu, macOS and
-      Windows CI.
+      Windows CI, and the `cli` job no longer has `continue-on-error`.
 - [ ] a2scaffold's test suite passes against a local build (no regression
       for the one known embedder).
 

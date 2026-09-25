@@ -1,0 +1,3 @@
+project: my-service
+mode: dev-debug-panel
+enabled: true

@@ -40,15 +40,10 @@ Scale work (0.4.x) follows only once real users show where scale is needed.
 - [x] **Strict templates** — Handlebars compiled with `strict: true`; missing `{{var}}` throws with template relPath + var name. Shipped in **0.1.0** (Round 03, VP-9).
 - [x] **CLI `--help` without `--values`** — closed by VP-8 making `valuesFile` optional. Shipped in **0.1.0**.
 
-Release gate:
-
-- [ ] `pnpm test`
-- [ ] `pnpm lint`
-- [ ] `pnpm format:check`
-- [ ] `pnpm docs:check`
-- [ ] `pnpm test:coverage` with coverage >= 99%
-- [ ] `npm pack --dry-run` confirms the tarball version, file list, and npm metadata
-- [ ] GitHub release workflow bumps `package.json`, regenerates `CHANGELOG.md`, tags the release commit, and publish workflow validates tag == package version
+Release gate: not machine-checked for 0.1.0. From 0.1.1 every item —
+tests, lint, format, docs, coverage ≥ 99%, package contents — runs as
+`pnpm verify` in CI, release, and publish ([Round 05](.agents/plan/cycles/Round_05.md)).
+The publish workflow still validates tag == `package.json` version.
 
 - [x] **Locatable error messages** — Path-guard missing-var, strict-template undefined-var, C-1/C-2/C-3 collision errors all name the source file(s) and variable. Shipped in **0.1.0**.
 

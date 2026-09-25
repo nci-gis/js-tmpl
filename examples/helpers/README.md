@@ -8,6 +8,7 @@ helpers on a scoped Handlebars instance, then rendering with that instance.
 ```text
 helpers/
 ├── index.js                 → creates the instance, registers helpers, renders
+├── helpers.js               → the helper map (pure functions)
 ├── values.yaml
 └── templates/
     └── service.yaml.hbs     → uses upper, kebab, join, and the block helper eq
