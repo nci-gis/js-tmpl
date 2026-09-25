@@ -1,8 +1,8 @@
 # Round 07: No Silent Outcomes — strict engine contract + error codes
 
-**Status**: Review
+**Status**: Complete
 **Date started**: 2026-09-25
-**Date completed**: —
+**Date completed**: 2026-09-26
 **Release target**: v0.2.0 (breaking — do not ship in 0.1.x; a2scaffold
 pins `^0.1.0`)
 
@@ -262,9 +262,25 @@ embedders.
 
 **Learnings**:
 
-- ...
+- **Spike before committing to a mechanism.** The Proxy idea looked like
+  one tool for three features; the spike showed it changes helper
+  behaviour and misses missing parents. The AST route is narrower and
+  exact. Record the verdict where the next round (09) will read it.
+- **The embedder is the fastest reviewer.** Running a2scaffold against the
+  build overturned "one value, one segment" in minutes — before it
+  shipped, when changing it cost nothing. Run the embedder before calling
+  a breaking round done.
+- **Name options after the fact the user declares, not the behaviour they
+  toggle.** `targetFs: case-sensitive` says "my output lives here";
+  `caseSensitiveOutput: true` would invite reading it as a preference.
+- **Security checks belong at the last moment and on the real object.**
+  A lexical `outDir` check missed symlinks, including dangling ones that
+  `existsSync` reports as absent. Check the real path right before writing.
+- **Cross-platform CI keeps finding the canonical form.** Windows 8.3 names
+  made two "real paths" of one directory differ; use the OS's resolution.
 
 **Promotions**:
 
+- [ ] → skills/ : `handlebars-helpers` — note that helper arguments are
+      now strict-checked by js-tmpl (compileStrict); pending human edit.
 - [ ] → context/ : [topic]
-- [ ] → skills/ : [topic]
