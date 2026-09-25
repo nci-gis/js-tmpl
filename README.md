@@ -407,3 +407,5 @@ See [LICENSE](LICENSE).
 ## Transparency
 
 AI-assisted development (e.g., Claude Code, Copilot) was used for scaffolding and iteration.
+
+[broken link](docs/DOES-NOT-EXIST.md)
