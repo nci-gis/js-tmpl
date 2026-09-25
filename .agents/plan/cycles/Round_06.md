@@ -118,8 +118,9 @@ CHANGELOG note.
 - [x] Every row of the evidence table behaves as fixed, with a test.
 - [x] All existing tests pass unchanged, except where a row above changes
       behaviour (each noted in Do). No existing test needed changing.
-- [ ] `npx js-tmpl --help` works from a packed tarball on ubuntu, macOS and
-      Windows CI, and the `cli` job no longer has `continue-on-error`.
+- [x] `npx js-tmpl --help` works from a packed tarball on ubuntu, macOS and
+      Windows CI, and the `cli` job no longer has `continue-on-error`
+      (PR #12 @ `beb6bce`: all 11 checks green).
 - [x] a2scaffold's test suite passes against a local build (no regression
       for the one known embedder): 237/237.
 
