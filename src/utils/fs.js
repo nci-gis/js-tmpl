@@ -63,7 +63,8 @@ export function isInsideDir(parent, child) {
  * ancestor when `p` does not exist yet — i.e. where a write to `p` would
  * really land. A dangling symlink counts as existing: writing through it
  * would create its target, so its target is followed (up to 40 links, like
- * the OS; a loop throws).
+ * the OS; a loop throws). Uses the OS's own resolution (`realpath.native`),
+ * so Windows 8.3 short names and junctions come back in canonical form.
  *
  * @param {string} p
  * @param {number} [depth] - Links followed so far (internal)
@@ -81,7 +82,7 @@ export function realPathOfNearest(p, depth = 0) {
       return realPathOfNearest(linked, depth + 1);
     }
     if (st) {
-      return fsSync.realpathSync(cur);
+      return fsSync.realpathSync.native(cur);
     }
     const parent = path.dirname(cur);
     if (parent === cur) {

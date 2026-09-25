@@ -105,7 +105,7 @@ export async function renderDirectory(cfg, hbs) {
 async function writeTargets(planned, cfg, render) {
   const { outDir } = cfg;
   await ensureDir(outDir);
-  const realOut = fs.realpathSync(outDir);
+  const realOut = fs.realpathSync.native(outDir);
   /** @type {Map<string, { target: string, relPath: string }>} */
   const written = new Map();
 
