@@ -959,8 +959,8 @@ describe('renderDirectory — output safety', () => {
         }),
         (err) => {
           assert.match(err.message, /both render to/);
-          assert.ok(err.message.includes(path.join('${a}', 'x.txt.hbs')));
-          assert.ok(err.message.includes(path.join('${b}', 'x.txt.hbs')));
+          assert.ok(err.message.includes('${a}/x.txt.hbs'));
+          assert.ok(err.message.includes('${b}/x.txt.hbs'));
           return true;
         },
       );

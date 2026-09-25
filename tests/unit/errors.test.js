@@ -137,7 +137,7 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
   it('PATH_EMPTY_SEGMENT', () =>
     expectCode(
       ErrorCodes.PATH_EMPTY_SEGMENT,
-      () => renderPath(path.join('${x}', 'y'), { x: '' }),
+      () => renderPath('${x}/y', { x: '' }),
       { segment: '${x}' },
     ));
 
@@ -150,12 +150,12 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
 
   it('GUARD_MALFORMED', () =>
     expectCode(ErrorCodes.GUARD_MALFORMED, () =>
-      renderPath(path.join('$if{a}b', 'x'), { a: 1 }),
+      renderPath('$if{a}b/x', { a: 1 }),
     ));
 
   it('GUARD_IN_FILENAME', () =>
     expectCode(ErrorCodes.GUARD_IN_FILENAME, () =>
-      renderPath(path.join('d', '$if{a}'), { a: 1 }),
+      renderPath('d/$if{a}', { a: 1 }),
     ));
 
   for (const [code, src, details] of [
@@ -208,7 +208,7 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
             extname: '.hbs',
             view: { a: 'link' },
           }),
-        { relPath: path.join('${a}', 'x.hbs') },
+        { relPath: '${a}/x.hbs' },
       );
     }));
 
