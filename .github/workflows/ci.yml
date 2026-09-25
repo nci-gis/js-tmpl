@@ -82,10 +82,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-    # Known broken on every OS: bin/js-tmpl is a bash wrapper that resolves
-    # main.js relative to the node_modules/.bin symlink. Round 06 replaces it
-    # with a Node entry and must remove this line.
-    continue-on-error: true
 
     steps:
       - name: Checkout code

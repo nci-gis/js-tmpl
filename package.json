@@ -4,7 +4,7 @@
   "description": "The pure JavaScript templating engine that uses handlebars.",
   "type": "module",
   "bin": {
-    "js-tmpl": "bin/js-tmpl"
+    "js-tmpl": "bin/js-tmpl.js"
   },
   "exports": {
     ".": {

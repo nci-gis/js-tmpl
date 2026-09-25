@@ -16,7 +16,13 @@ const FORBIDDEN = [
   'examples/',
   'scripts/',
 ];
-const REQUIRED = ['package.json', 'README.md', 'LICENSE', 'src/index.js'];
+const REQUIRED = [
+  'package.json',
+  'README.md',
+  'LICENSE',
+  'src/index.js',
+  'bin/js-tmpl.js',
+];
 
 const out = execFileSync(
   'npm',

@@ -306,6 +306,12 @@ js-tmpl render [options]
 | `--config-file FILE`     | Explicit config file                     | Auto-discovered |
 | `--env-keys KEYS`        | Comma-separated env var names to expose  | None            |
 | `--env-prefix PREFIX`    | Auto-include env vars with this prefix   | None            |
+| `--verbose`              | Print stack traces on error              | Off             |
+| `-h, --help`             | Show usage                               |                 |
+
+The CLI is strict: an unknown option, an option without its value, a
+repeated option, or an unexpected argument is an error. Exit codes: `0`
+success, `1` render or configuration error, `2` usage error.
 
 Both `--values` and `--values-dir` are optional (VP-8, VP-6). If neither is
 supplied, `view` is `{ env: {...} }` only. Missing `{{var}}` in a template
