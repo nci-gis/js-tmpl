@@ -445,7 +445,7 @@ dist/production/my-app-config.yaml
 - Array access supported: `${items.0.name}`
 - No glob expansion
 - **Output stays inside `outDir`** — checked again for every target before any file is written
-- **One template per output file** — two templates rendering to the same path throw, naming both, before any file is written
+- **One template per output file** — two templates rendering to the same path throw, naming both, before any file is written. Paths that differ only by case (`README.md` / `readme.md`) count as the same file, so a tree renders identically on Linux, macOS and Windows
 
 > **0.2.0 migration:** before 0.2.0 a missing `${var}` rendered `""` and a value
 > such as `a/b` created nested directories. Declare every path variable, and

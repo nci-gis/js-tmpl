@@ -940,6 +940,26 @@ describe('renderDirectory — output safety', () => {
     });
   });
 
+  it('treats targets differing only by case as a collision (0.2.0)', async () => {
+    await withTempDir(async (tmpDir) => {
+      const { templateDir, outDir } = await seed(tmpDir, {
+        '${a}.txt.hbs': 'A',
+        '${b}.txt.hbs': 'B',
+      });
+
+      await assert.rejects(
+        renderDirectory({
+          templateDir,
+          outDir,
+          extname: '.hbs',
+          view: { a: 'README', b: 'readme' },
+        }),
+        /render to 'README\.txt' and 'readme\.txt', the same file on case-insensitive file systems/,
+      );
+      assert.strictEqual(await exists(outDir), false);
+    });
+  });
+
   it('renders both when path values differ', async () => {
     await withTempDir(async (tmpDir) => {
       const { templateDir, outDir } = await seed(tmpDir, {

@@ -37,7 +37,7 @@ function assertInsideOutDir(target, outDir, relPath, rendered) {
  */
 function planTargets(files, cfg) {
   const { outDir, view, extname } = cfg;
-  /** @type {Map<string, string>} */
+  /** @type {Map<string, { relPath: string, rendered: string }>} */
   const owners = new Map();
 
   return files.map((file) => {
@@ -48,14 +48,22 @@ function planTargets(files, cfg) {
     const target = path.join(outDir, rendered);
     assertInsideOutDir(target, outDir, file.relPath, rendered);
 
-    const owner = owners.get(target);
+    // Keyed case-insensitively: README.md and readme.md are one file on the
+    // default macOS and Windows file systems, so the output would depend on
+    // the OS.
+    const key = target.toLowerCase();
+    const owner = owners.get(key);
     if (owner) {
+      const where =
+        owner.rendered === rendered
+          ? `both render to '${rendered}'`
+          : `render to '${owner.rendered}' and '${rendered}', the same file on case-insensitive file systems (macOS, Windows)`;
       throw new Error(
-        `Templates '${owner}' and '${file.relPath}' both render to '${rendered}'.\n` +
+        `Templates '${owner.relPath}' and '${file.relPath}' ${where}.\n` +
           'Each output file must come from exactly one template; check the path values.',
       );
     }
-    owners.set(target, file.relPath);
+    owners.set(key, { relPath: file.relPath, rendered });
     return { file, target };
   });
 }
