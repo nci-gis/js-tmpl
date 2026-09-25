@@ -160,5 +160,39 @@ describe('scanValuePartials', () => {
         );
       });
     });
+
+    it('rejects __proto__ and leaves Object.prototype untouched', async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.mkdir(path.join(tmpDir, '__proto__'));
+        await fs.writeFile(
+          path.join(tmpDir, '__proto__', 'polluted.yaml'),
+          '1\n',
+          'utf8',
+        );
+        assert.throws(
+          () => scanValuePartials(tmpDir),
+          /Invalid value partial segment '__proto__'.*reserved name/,
+        );
+        assert.strictEqual(Object.hasOwn(Object.prototype, 'polluted'), false);
+      });
+    });
+
+    it('places constructor/prototype as own keys, not on built-ins', async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.mkdir(path.join(tmpDir, 'constructor', 'prototype'), {
+          recursive: true,
+        });
+        await fs.writeFile(
+          path.join(tmpDir, 'constructor', 'prototype', 'polluted.yaml'),
+          '1\n',
+          'utf8',
+        );
+        const result = scanValuePartials(tmpDir);
+        assert.deepStrictEqual(JSON.parse(JSON.stringify(result)), {
+          constructor: { prototype: { polluted: 1 } },
+        });
+        assert.strictEqual(Object.hasOwn(Object.prototype, 'polluted'), false);
+      });
+    });
   });
 });
