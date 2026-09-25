@@ -21,12 +21,11 @@ path-guards/
 ├── index.js
 ├── js-tmpl.config.yaml
 ├── values.yaml
-├── templates/
-│   ├── common.yaml.hbs                                      → always written
-│   ├── $if{prod}/alerts.yaml.hbs                            → only when prod truthy
-│   ├── $ifn{prod}/debug-panel.yaml.hbs                      → only when prod falsy
-│   └── $if{features.monitoring.enabled}/dashboard.yaml.hbs  → only when monitoring on
-└── templates.partials/
+└── templates/
+    ├── common.yaml.hbs                                      → always written
+    ├── $if{prod}/alerts.yaml.hbs                            → only when prod truthy
+    ├── $ifn{prod}/debug-panel.yaml.hbs                      → only when prod falsy
+    └── $if{features.monitoring.enabled}/dashboard.yaml.hbs  → only when monitoring on
 ```
 
 ## Run it

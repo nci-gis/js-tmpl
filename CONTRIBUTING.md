@@ -16,7 +16,8 @@ Before contributing, please read [docs/PRINCIPLES.md](docs/PRINCIPLES.md) to und
 
 ### Prerequisites
 
-- Node.js ≥ 20
+- Node.js 22 or 24 (primary). Node 20 is supported for running the
+  library, but `pnpm verify` needs Node ≥ 22.8 (coverage thresholds).
 - pnpm 10.22.0 (specified in `package.json`)
 
 ### Setup
@@ -144,10 +145,13 @@ git checkout -b fix/my-bugfix
 ### 3. Run Tests
 
 ```bash
-pnpm test
+pnpm test     # fast loop
+pnpm verify   # every gate CI runs: lint, format, docs, package, coverage ≥ 99%
 ```
 
-Ensure all tests pass and coverage remains high.
+Examples are golden-tested: each renders byte-for-byte to
+`tests/golden/<example>/<mode>/`. If you change an example's output on
+purpose, run `pnpm examples:update` and review the diff.
 
 ### 4. Commit Changes
 
@@ -262,6 +266,19 @@ Ensure `NPM_TOKEN` secret is configured in GitHub repository settings:
    - Name: `NPM_TOKEN`
    - Value: Your npm token
 
+### Preflight
+
+On `main`, with `dev` merged:
+
+1. `pnpm verify` passes locally (Node ≥ 22.8).
+2. `npm pack --dry-run` lists only `bin/`, `src/`, `README.md`, `LICENSE`,
+   `package.json` (`pnpm pack:check` enforces this).
+3. CI is green on the commit you release.
+
+Required status checks for branch protection on `main` / `dev`:
+`test (…)` (every OS/Node combination), `verify (lint, format, docs,
+package, coverage)`, `cli (…)`.
+
 ### Creating a Release
 
 1. Go to GitHub [Actions](https://github.com/nci-gis/js-tmpl/actions) tab
@@ -269,15 +286,25 @@ Ensure `NPM_TOKEN` secret is configured in GitHub repository settings:
 3. Click **Run workflow**
 4. Choose:
    - **Channel:** `stable`, `beta`, or `alpha`
-   - **Version bump:** `patch`, `minor`, `major`, or `custom`
-   - **Prerelease number:** (for alpha/beta only)
+   - **Version bump:** `patch`, `minor`, `major`, `prerelease`, or `custom`
+   - **Custom version:** only with `custom` (e.g. `1.2.3`)
+   - **Prerelease number:** for alpha/beta only (default `1`)
 5. Click **Run workflow**
+
+Examples, from `0.1.0`:
+
+| Goal                  | Channel  | Version bump | Result           |
+| --------------------- | -------- | ------------ | ---------------- |
+| Patch release         | `stable` | `patch`      | `v0.1.1`         |
+| First beta of 0.2.0   | `beta`   | `minor`      | `v0.2.0-beta.1`  |
+| Next beta             | `beta`   | `prerelease` | `v0.2.0-beta.2`  |
+| Alpha of a major line | `alpha`  | `major`      | `v1.0.0-alpha.1` |
 
 **What Happens:**
 
 The workflow automatically:
 
-1. Runs full test suite (must pass)
+1. Runs `pnpm verify` — the same gates as CI (must pass)
 2. Bumps version in `package.json`
 3. Creates a git tag (e.g., `v1.2.3-beta.1`)
 4. Creates a GitHub Release (marked as prerelease for alpha/beta)

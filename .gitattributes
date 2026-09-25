@@ -1,0 +1,3 @@
+# Byte-exact golden tests (tests/golden/) need identical line endings on
+# every OS, so checkouts use LF everywhere.
+* text=auto eol=lf

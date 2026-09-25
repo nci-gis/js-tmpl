@@ -13,9 +13,9 @@
   },
   "scripts": {
     "prepare": "husky",
-    "test": "node --test $(find tests -name '*.test.js')",
-    "test:watch": "node --test --watch $(find tests -name '*.test.js')",
-    "test:coverage": "node --experimental-test-coverage --test $(find tests -name '*.test.js')",
+    "test": "node --test",
+    "test:watch": "node --test --watch",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-exclude=\"tests/**\" --test-coverage-exclude=\"examples/**\" --test-coverage-lines=99 --test-coverage-branches=99 --test-coverage-functions=99",
     "format": "pnpm format:code && pnpm format:md",
     "format:check": "pnpm format:code:check && pnpm format:md:check",
     "format:code": "prettier --write src/ tests/",
@@ -31,7 +31,10 @@
     "tool": "node src/cli/main.js",
     "docs:check-links": "remark --frail --quiet *.md docs/*.md tests/README.md examples/**/*.md",
     "docs:check-exports": "node scripts/check-doc-exports.js",
-    "docs:check": "pnpm docs:check-links && pnpm docs:check-exports"
+    "docs:check": "pnpm docs:check-links && pnpm docs:check-exports",
+    "examples:update": "node scripts/update-golden.js",
+    "pack:check": "node scripts/check-pack.js",
+    "verify": "pnpm lint && pnpm format:check && pnpm docs:check && pnpm pack:check && pnpm test:coverage"
   },
   "keywords": [
     "js",

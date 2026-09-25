@@ -1,1 +1,4 @@
 *.hbs
+
+# Golden snapshots are byte-exact render output; never reformat.
+tests/golden/

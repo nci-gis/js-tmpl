@@ -61,8 +61,8 @@ describe('assertNoDuplicate', () => {
     try {
       assertNoDuplicate(seen, 'foo', '/root/b/foo.yaml', '/root');
     } catch (err) {
-      assert.match(err.message, /a\/foo\.yaml/);
-      assert.match(err.message, /b\/foo\.yaml/);
+      assert.ok(err.message.includes(path.join('a', 'foo.yaml')));
+      assert.ok(err.message.includes(path.join('b', 'foo.yaml')));
     }
   });
 });
