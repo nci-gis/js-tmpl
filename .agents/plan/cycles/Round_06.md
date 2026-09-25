@@ -1,8 +1,8 @@
 # Round 06: Trust Fixes — output confinement, target collisions, strict CLI
 
-**Status**: Review
+**Status**: Complete
 **Date started**: 2026-09-25
-**Date completed**: —
+**Date completed**: 2026-09-25
 **Release target**: v0.1.1 (fixes only; safe under a2scaffold's `^0.1.0`)
 
 ## Goal
@@ -128,7 +128,20 @@ CHANGELOG note.
 
 **Learnings**:
 
-- ...
+- **Plan before writing.** Computing every target before rendering made
+  both checks (confinement, collisions) all-or-nothing for free: a failure
+  leaves `outDir` untouched. The same shape is what `planRender` (Round 08)
+  will expose.
+- **Test the real entry point.** The argv bug and the broken bin both
+  lived between `process.argv` and `parseArgs`, which unit tests never
+  crossed. One spawn-based test covers that seam, and coverage is still
+  collected from the child process.
+- **Prefer the platform's parser.** `node:util` `parseArgs` gave unknown
+  option, missing value, and option-as-value errors with no new
+  dependency; only repeats and positionals needed custom checks.
+- **Verify the harness before the result.** The first a2scaffold run
+  "failed" 23 tests because the package was swapped in by hand under a
+  pnpm layout; installing the tarball properly gave 237/237.
 
 **Promotions**:
 
