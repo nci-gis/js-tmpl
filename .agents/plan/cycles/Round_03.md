@@ -1,8 +1,8 @@
 # Round 03: Value Partials — `--values-dir` + namespaced-by-path composition
 
-**Status**: Review
+**Status**: Complete
 **Date started**: 2026-04-22
-**Date completed**: —
+**Date completed**: 2026-04-24
 
 ## Goal
 
@@ -190,7 +190,15 @@ CHANGELOG + migration note.
 
 **Learnings**:
 
-- ...
+- Extracting the shared namespacing primitive (Phase 0) first paid off:
+  value partials and template partials now share one `@`-flatten and
+  collision rule, and a latent first-segment-only `@` bug was fixed.
+- Strict templates (VP-9) are a cross-cutting change: fixtures that relied
+  on silent-empty had to be updated, and optional output now needs a
+  documented authoring pattern (tracked in ROADMAP 0.1.2).
+- Breaking `valuesDir` pre-1.0 was acceptable because the migration note
+  landed in the same change as the code.
+- Shipped in v0.1.0 (2026-04-24).
 
 **Promotions**:
 
