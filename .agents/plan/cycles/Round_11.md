@@ -208,6 +208,14 @@ stays in Review until then). Phases 7–8 land on `dev` before the release.
 - **Phase 6.** The stale-files recipe needs a render from empty: a normal
   render leaves stale files untouched, so `git status` shows nothing
   (checked in a scratch repo).
+- **Phase 7** (branch `feat/strict-config`, stacked on `feat/render-plan`).
+  Deviations: unknown keys get their own code `JSTMPL_CONFIG_UNKNOWN_KEY`
+  (not `CONFIG_INVALID_VALUE`: a typo is not a bad value). Value types
+  are checked too (`outDir: 5`, empty `outDir:` crashed with a raw
+  `TypeError`). `undefined` options count as absent. a2scaffold: 250 / 251;
+  the one failure (`${missing}` mirror) is the same on `dev` (Round 07).
+- **Phase 8** waits for v0.1.2 (PR #16) and the `main` → `dev` merge: it
+  edits the SECURITY.md lines Round 10 changed.
 
 ## Check
 

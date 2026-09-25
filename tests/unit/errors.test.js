@@ -72,6 +72,15 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
       ),
     ));
 
+  it('CONFIG_UNKNOWN_KEY', () =>
+    withTempDir((d) =>
+      expectCode(
+        ErrorCodes.CONFIG_UNKNOWN_KEY,
+        () => resolveConfig({ outdir: 'x' }, d),
+        { key: 'outdir', suggestion: 'outDir' },
+      ),
+    ));
+
   it('VALUES_NOT_FOUND', () =>
     expectCode(ErrorCodes.VALUES_NOT_FOUND, () =>
       loadYamlOrJson('/nonexistent/values.yaml'),

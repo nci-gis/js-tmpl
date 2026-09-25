@@ -72,8 +72,16 @@ export function loadProjectConfig(cwd, configFile) {
   }
 
   const raw = fs.readFileSync(abs, 'utf8');
-  if (/\.json$/i.test(abs)) {
-    return /** @type {Record<string, unknown>} */ (JSON.parse(raw));
+  // An empty YAML file is an empty config; any other non-mapping is a mistake.
+  const parsed = /\.json$/i.test(abs)
+    ? JSON.parse(raw)
+    : (YAML.load(raw) ?? {});
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new JsTmplError(
+      ErrorCodes.CONFIG_INVALID_VALUE,
+      `Config file ${abs} must contain options as key: value pairs, got ${JSON.stringify(parsed)}.`,
+      { details: { file: abs, value: parsed } },
+    );
   }
-  return /** @type {Record<string, unknown>} */ (YAML.load(raw) || {});
+  return /** @type {Record<string, unknown>} */ (parsed);
 }

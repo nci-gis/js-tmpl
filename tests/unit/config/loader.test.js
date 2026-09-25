@@ -213,6 +213,23 @@ describe('loadProjectConfig', () => {
     });
   });
 
+  for (const [label, file, content] of [
+    ['a YAML scalar', 'c.yaml', 'hello\n'],
+    ['YAML false', 'c.yaml', 'false\n'],
+    ['a YAML list', 'c.yaml', '- a\n- b\n'],
+    ['JSON null', 'c.json', 'null'],
+  ]) {
+    it(`rejects a config file that is not key: value pairs (${label})`, async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.writeFile(path.join(tmpDir, file), content, 'utf8');
+        assert.throws(() => loadProjectConfig(tmpDir, file), {
+          code: 'JSTMPL_CONFIG_INVALID_VALUE',
+          message: /must contain options as key: value pairs/,
+        });
+      });
+    });
+  }
+
   it('throws when explicit config file does not exist (absolute path)', () => {
     assert.throws(
       () => loadProjectConfig('/tmp', '/tmp/nonexistent-config.yaml'),
