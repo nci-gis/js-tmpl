@@ -774,7 +774,7 @@ try {
 | `JSTMPL_NS_RESERVED_ENV`           | A value partial resolves to the reserved `env` namespace (C-3)                |                                                  |
 | `JSTMPL_PATH_MISSING_VAR`          | `${var}` in a template path is not in the view                                | `relPath`, `variable`                            |
 | `JSTMPL_PATH_INVALID_VALUE`        | A `${var}` value is an object/array or contains `\`                           | `relPath`, `variable`                            |
-| `JSTMPL_PATH_EMPTY_SEGMENT`        | A rendered path part is `""`, `.` or `..`                                     | `relPath`, `segment`                             |
+| `JSTMPL_PATH_EMPTY_SEGMENT`        | A rendered path part is `""`, `.` or `..` (also once `extname` is removed)    | `relPath`, `segment` or `target`                 |
 | `JSTMPL_GUARD_MISSING_VAR`         | `$if{var}` / `$ifn{var}` names a variable not in the view (G-4)               | `relPath`, `segment`, `variable`                 |
 | `JSTMPL_GUARD_MALFORMED`           | A guard is not a whole directory segment (G-5)                                | `relPath`, `segment`                             |
 | `JSTMPL_GUARD_IN_FILENAME`         | A guard is used as a file name (G-5)                                          | `relPath`, `segment`                             |

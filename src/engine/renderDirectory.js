@@ -138,7 +138,7 @@ async function planTargets(files, cfg, errors) {
 
   for (const file of files) {
     const target = await collectSync(errors, () =>
-      renderPath(file.relPath, view).replace(new RegExp(`${extname}$`), ''),
+      targetOf(file.relPath, view, extname),
     );
     if (target === undefined) {
       continue;
@@ -158,6 +158,35 @@ async function planTargets(files, cfg, errors) {
     planned.set(file, target);
   }
   return planned;
+}
+
+/**
+ * Output path of one template: its rendered path without `extname`. Every
+ * part is checked again after the extension is removed: `${name}.hbs`
+ * with `name: ''` renders to `.hbs`, a valid segment, but would target
+ * `outDir` itself.
+ *
+ * @param {string} relPath
+ * @param {Record<string, unknown>} view
+ * @param {string} extname
+ * @returns {string}
+ */
+function targetOf(relPath, view, extname) {
+  const rendered = renderPath(relPath, view);
+  const target = rendered.endsWith(extname)
+    ? rendered.slice(0, -extname.length)
+    : rendered;
+  const invalid = target
+    .split('/')
+    .some((part) => part === '' || part === '.' || part === '..');
+  if (invalid) {
+    throw new JsTmplError(
+      ErrorCodes.PATH_EMPTY_SEGMENT,
+      `Template '${relPath}' renders to '${target}' once '${extname}' is removed; every part must name a file or directory (no empty, '.' or '..' parts).`,
+      { details: { relPath, target } },
+    );
+  }
+  return target;
 }
 
 /**

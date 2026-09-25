@@ -170,6 +170,41 @@ describe('planRender', () => {
     });
   });
 
+  for (const [label, file, name] of [
+    ['empty value at the root', '${name}.hbs', ''],
+    ["'.' value at the root", '${name}.hbs', '.'],
+    ["'..' value at the root", '${name}.hbs', '..'],
+    ['empty value in a directory', 'x/${name}.hbs', ''],
+  ]) {
+    it(`rejects a target with no name once the extension is removed (${label})`, async () => {
+      await withTempDir(async (tmpDir) => {
+        await seed(path.join(tmpDir, 't'), { [file]: 'x' });
+        await assert.rejects(planRender(cfg(tmpDir, { name })), {
+          code: 'JSTMPL_PATH_EMPTY_SEGMENT',
+          message: /once '\.hbs' is removed/,
+        });
+        await assert.rejects(renderDirectory(cfg(tmpDir, { name })), {
+          code: 'JSTMPL_PATH_EMPTY_SEGMENT',
+        });
+        assert.strictEqual(await exists(path.join(tmpDir, 'out')), false);
+      });
+    });
+  }
+
+  it('strips an extname that contains RegExp characters', async () => {
+    await withTempDir(async (tmpDir) => {
+      await seed(path.join(tmpDir, 't'), { 'a.txt.c++': 'A' });
+      const plan = await planRender({
+        ...cfg(tmpDir, {}),
+        extname: '.c++',
+      });
+      assert.deepStrictEqual(
+        plan.map((e) => e.target),
+        ['a.txt'],
+      );
+    });
+  });
+
   // Only js-tmpl's own errors are collected; I/O failures stop the run.
   it(
     'rethrows I/O errors instead of collecting them',
