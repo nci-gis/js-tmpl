@@ -25,13 +25,26 @@ js-tmpl renders Handlebars templates with user-provided data. Be aware of:
 - **Validate template sources** before rendering
 - **Review generated output** before deploying to production
 
-### File System Access
+### Filesystem Threat Model
 
-js-tmpl writes files to the filesystem. Ensure:
+Trusted: templates, partials, values, config, and the user running js-tmpl.
+Not assumed plain: what already exists in `outDir` (links left by other
+tools or earlier runs).
 
-- Output directory (`outDir`) is properly constrained
-- Template directory (`templateDir`) is from a trusted source
-- File permissions are set appropriately
+js-tmpl guarantees:
+
+- A write never lands outside the real `outDir`, including through
+  symbolic links already in it (`JSTMPL_OUTPUT_OUTSIDE_OUTDIR`).
+- A write never goes through a file that has another hard link
+  (`JSTMPL_OUTPUT_LINKED`).
+- Nothing is written if planning or the pre-write check fails.
+
+Not defended:
+
+- Another process changing `outDir` during a run (e.g. a link swapped
+  between the check and the write).
+- Transactional writes: an I/O error while writing (permissions, full
+  disk) can leave earlier files written.
 
 ## Reporting a Vulnerability
 
