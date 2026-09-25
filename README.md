@@ -337,8 +337,18 @@ added   config/worker.yaml
 js-tmpl: 2 of 14 files out of date (1 added, 1 changed). Run without --check to update.
 ```
 
-`--check` renders in memory and writes nothing. Files in the output directory
-that the templates do not produce are ignored.
+`--check` renders in memory and writes nothing. It exits `0` only if a render
+would succeed and change nothing; when a render would fail, it fails the same
+way (exit `1`).
+
+- **Line endings:** keep Git from converting generated files, or a CRLF
+  checkout (Windows `core.autocrlf`) shows every file as changed. In
+  `.gitattributes`: `dist/** -text` (use your output directory).
+- **Stale files:** files in the output directory that the templates no
+  longer produce are ignored (js-tmpl does not own that directory). If the
+  directory holds only generated files, render into it from empty and let Git
+  show them as deleted:
+  `rm -rf dist && js-tmpl render --values values.yaml && git status --porcelain dist`.
 
 Both `--values` and `--values-dir` are optional (VP-8, VP-6). If neither is
 supplied, `view` is `{ env: {...} }` only. Missing `{{var}}` in a template

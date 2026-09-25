@@ -191,6 +191,23 @@ stays in Review until then). Phases 7–8 land on `dev` before the release.
   Phase 6.
 - **Phase 1.** Threat model replaces SECURITY.md "File System Access"
   (a section Round 10 did not touch, so `main` → `dev` merges cleanly).
+- **Phase 2** (`79abfa0`). Bodies rendered for every walked template.
+- **Phase 3** (`175d71f`). Deviation: `assertInside` stays non-strict. A
+  target that does not exist resolves to its nearest existing ancestor,
+  often `outDir` itself, so strict would reject every first write. An
+  existing directory at the target is caught by Phase 5 instead. The
+  "through a symbolic link" message is now always accurate, because `..`
+  targets are rejected before containment.
+- **Phase 4** (`521dc1c`). Conflict reuses `OUTPUT_COLLISION` (no new code).
+- **Phase 5** (`e966148`). Extra code `JSTMPL_OUTPUT_BLOCKED` (target is a
+  directory or FIFO, or a parent is a file). Order within preflight:
+  blocked before containment, because `lstat` below a file throws raw
+  `ENOTDIR`. Inode sharing checked before `nlink`: two targets on one inode
+  are a collision (existing test), and a lone linked target is `LINKED`.
+  Without the fix, the FIFO test hangs (a write blocks on a FIFO).
+- **Phase 6.** The stale-files recipe needs a render from empty: a normal
+  render leaves stale files untouched, so `git status` shows nothing
+  (checked in a scratch repo).
 
 ## Check
 

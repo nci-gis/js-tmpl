@@ -130,9 +130,11 @@ const config = resolveConfig(configFile ? { configFile } : {});
 Executes the complete rendering process.
 
 **Process:** [`planRender`](#planrenderconfig-hbs) (every template rendered
-in memory, every problem collected), then write. **Nothing is written unless
-the whole plan succeeds.** Each write is checked against the real disk
-first (see [Rules](#rules)).
+in memory, every problem collected), then the disk checks that
+[`comparePlan`](#compareplanplan-outdir) also runs, then write. **Nothing is
+written if planning or the disk checks fail.** Writes are not
+transactional: an I/O error while writing (permissions, full disk) can leave
+earlier files written; fix it and render again.
 
 #### Parameters
 

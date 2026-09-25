@@ -137,6 +137,13 @@ generated output.
   `\` in `relPath`. Fixed the tests, removed the unused `toNative`
   (`9b480e6`). Run 2: 11 / 11 green.
 
+- **2026-09-26 — review fixes (Round 11, phases 1–6).** Review of PR #15
+  found gaps between `planRender`, `--check` and the write: path errors
+  hid body errors; empty targets; `a` + `a/b`; disk conflicts crashing
+  `--check`; hard links. Fixed on this branch before merge. The Design
+  note "nothing is written" now reads: nothing is written if planning or
+  preflight fails; writes are not transactional.
+
 ## Check
 
 - [x] `renderDirectory` output byte-identical before/after the refactor

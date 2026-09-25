@@ -72,8 +72,9 @@ export async function planRender(cfg, hbs) {
 }
 
 /**
- * Main rendering orchestrator: `planRender`, then write. Nothing is written
- * unless the whole plan succeeds.
+ * Main rendering orchestrator: `planRender`, then `preflight`, then write.
+ * Nothing is written if planning or preflight fails; an I/O error while
+ * writing can leave earlier files written (not transactional).
  *
  * @param {import('../types.js').TemplateConfig} cfg
  * @param {typeof import('handlebars')} [hbs] - Optional Handlebars instance (creates an isolated one if omitted)
