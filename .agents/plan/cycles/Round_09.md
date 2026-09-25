@@ -31,9 +31,11 @@ ties each output change back to it.
   (e.g. a2scaffold's `deepMerge` of CLI overrides), keys that are not in the
   source index are labelled `caller-supplied`, never attributed to a file.
   Provenance must never claim a source it cannot prove.
-- Recording reads: **spike first** with a read-recording `Proxy` on `view`
-  under Handlebars strict mode. Static AST analysis rejected (approximate →
-  can be wrong, which is worse than no answer).
+- Recording reads: reuse the **`view` Proxy from Round 07's spike** (data
+  boundary). Static AST analysis rejected (approximate → can be wrong,
+  which is worse than no answer).
+- **Handler-supplied values**: if a public `onMissing` exists by then,
+  values it returns are labelled `handler-supplied`.
 - **Fallback if the spike fails**: ship `template` + `guards` + `pruned`
   only; drop `values` and record why.
 - `buildView` returns a source index (namespace chain → file) internally.
@@ -42,8 +44,9 @@ ties each output change back to it.
 
 ## Plan
 
-- [ ] Spike: Proxy view through `renderContent` in strict mode — reads
-      recorded, output identical, no new errors. Record result in Do.
+- [ ] Extend the Round 07 Proxy to record reads (not only misses); confirm
+      output identical and no new errors. If Round 07 took the AST path
+      instead, run the Proxy spike here.
 - [ ] Source index from `buildView`; `caller-supplied` labelling.
 - [ ] Walker reports guard decisions when explain is on.
 - [ ] `planRender` `explain` option; CLI `--explain`.
