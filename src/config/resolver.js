@@ -12,6 +12,8 @@ import {
 import { scanValuePartials } from './valuePartials.js';
 import { buildView, pickEnv } from './view.js';
 
+const TARGET_FS = ['portable', 'case-sensitive'];
+
 /**
  * C-1 — throw if the resolved `valuesFile` sits inside the resolved
  * `valuesDir`. A file loaded both as root and as a value partial would
@@ -98,11 +100,20 @@ export function resolveConfig(cli, cwd = process.cwd()) {
       })
     : {};
 
+  if (!TARGET_FS.includes(mergedConfig.targetFs)) {
+    throw new JsTmplError(
+      ErrorCodes.CONFIG_INVALID_VALUE,
+      `targetFs must be one of ${TARGET_FS.map((v) => `'${v}'`).join(', ')}, got '${mergedConfig.targetFs}'.`,
+      { details: { key: 'targetFs', value: mergedConfig.targetFs } },
+    );
+  }
+
   return {
     templateDir: abs(mergedConfig.templateDir),
     partialsDir: mergedConfig.partialsDir ? abs(mergedConfig.partialsDir) : '',
     outDir: abs(mergedConfig.outDir),
     extname: mergedConfig.extname,
+    targetFs: mergedConfig.targetFs,
     view: buildView({
       rootValues,
       partials,

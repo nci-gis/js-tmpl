@@ -1,3 +1,4 @@
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -55,4 +56,39 @@ export function safeResolvePath(...segments) {
 export function isInsideDir(parent, child) {
   const rel = path.relative(path.resolve(parent), path.resolve(child));
   return rel !== '' && rel.split(path.sep)[0] !== '..' && !path.isAbsolute(rel);
+}
+
+/**
+ * Real path (symlinks resolved) of `p`, or of its nearest existing
+ * ancestor when `p` does not exist yet — i.e. where a write to `p` would
+ * really land. A dangling symlink counts as existing: writing through it
+ * would create its target, so its target is followed (up to 40 links, like
+ * the OS; a loop throws).
+ *
+ * @param {string} p
+ * @param {number} [depth] - Links followed so far (internal)
+ * @returns {string}
+ */
+export function realPathOfNearest(p, depth = 0) {
+  let cur = path.resolve(p);
+  for (;;) {
+    const st = fsSync.lstatSync(cur, { throwIfNoEntry: false });
+    if (st?.isSymbolicLink() && !fsSync.existsSync(cur)) {
+      if (depth >= 40) {
+        throw new Error(`Too many symbolic links resolving '${p}'`);
+      }
+      const linked = path.resolve(path.dirname(cur), fsSync.readlinkSync(cur));
+      return realPathOfNearest(linked, depth + 1);
+    }
+    if (st) {
+      return fsSync.realpathSync(cur);
+    }
+    const parent = path.dirname(cur);
+    if (parent === cur) {
+      // Root reached without finding anything: only a path on a drive that
+      // does not exist (Windows). Stop instead of looping.
+      return cur;
+    }
+    cur = parent;
+  }
 }

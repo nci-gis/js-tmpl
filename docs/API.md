@@ -31,17 +31,18 @@ Resolves configuration by merging user options with project config and defaults.
 
 `options` (Object):
 
-| Property      | Type     | Required | Default        | Description                                      |
-| ------------- | -------- | -------- | -------------- | ------------------------------------------------ |
-| `valuesFile`  | string   | No       | —              | Path to values file (`.yaml` / `.yml` / `.json`) |
-| `valuesDir`   | string   | No       | —              | Value-partials root (see "Value Partials" below) |
-| `templateDir` | string   | No       | `"templates"`  | Path to template directory                       |
-| `partialsDir` | string   | No       | `""` (skipped) | Path to partials directory                       |
-| `outDir`      | string   | No       | `"dist"`       | Path to output directory                         |
-| `extname`     | string   | No       | `".hbs"`       | Template file extension                          |
-| `configFile`  | string   | No       | None           | Config file to read (the engine never searches)  |
-| `envKeys`     | string[] | No       | `[]`           | Env var names to expose                          |
-| `envPrefix`   | string   | No       | `""`           | Auto-include env vars with prefix                |
+| Property      | Type     | Required | Default        | Description                                                                            |
+| ------------- | -------- | -------- | -------------- | -------------------------------------------------------------------------------------- |
+| `valuesFile`  | string   | No       | —              | Path to values file (`.yaml` / `.yml` / `.json`)                                       |
+| `valuesDir`   | string   | No       | —              | Value-partials root (see "Value Partials" below)                                       |
+| `templateDir` | string   | No       | `"templates"`  | Path to template directory                                                             |
+| `partialsDir` | string   | No       | `""` (skipped) | Path to partials directory                                                             |
+| `outDir`      | string   | No       | `"dist"`       | Path to output directory                                                               |
+| `extname`     | string   | No       | `".hbs"`       | Template file extension                                                                |
+| `configFile`  | string   | No       | None           | Config file to read (the engine never searches)                                        |
+| `envKeys`     | string[] | No       | `[]`           | Env var names to expose                                                                |
+| `envPrefix`   | string   | No       | `""`           | Auto-include env vars with prefix                                                      |
+| `targetFs`    | string   | No       | `"portable"`   | File system the output is for — see [Target file system](#target-file-system-targetfs) |
 
 Both `valuesFile` and `valuesDir` are optional (VP-5, VP-6, VP-8). If neither
 is supplied, `view` is `{ env: {...} }` only — the CLI invocation itself is
@@ -256,6 +257,7 @@ extname: .hbs
 envKeys: # optional — env var names to expose
   - NODE_ENV
 envPrefix: JS_TMPL_ # optional — auto-include vars with this prefix
+targetFs: portable # optional — or case-sensitive; see "Target file system"
 ```
 
 **JSON:**
@@ -268,9 +270,37 @@ envPrefix: JS_TMPL_ # optional — auto-include vars with this prefix
   "outDir": "dist",
   "extname": ".hbs",
   "envKeys": ["NODE_ENV"],
-  "envPrefix": "JS_TMPL_"
+  "envPrefix": "JS_TMPL_",
+  "targetFs": "portable"
 }
 ```
+
+### Target file system (`targetFs`)
+
+By default output is **portable**: two templates whose paths differ only by
+case (`README.md`, `readme.md`) are a collision, because they are one file
+on default macOS and Windows file systems.
+
+If the output is only ever used on a case-sensitive file system — for
+example files baked into a Linux container image — declare it:
+
+```yaml
+# js-tmpl.config.yaml
+targetFs: case-sensitive
+```
+
+js-tmpl does not detect the OS: you declare where the output goes, since you
+may render on macOS for a Linux target. If you declare `case-sensitive` and
+render onto a case-insensitive disk, the write that would overwrite a file
+fails instead of silently losing it (files written before it stay on disk):
+
+```text
+Error: Templates '${a}.md.hbs' and '${b}.md.hbs' render to 'README.md' and
+'readme.md', which this file system treats as one file.
+Render on a case-sensitive file system, or use targetFs: 'portable'.
+```
+
+Any other value throws `JSTMPL_CONFIG_INVALID_VALUE`.
 
 ## View Object
 
@@ -469,7 +499,7 @@ dist/production/my-app-config.yaml
 - Nested access supported: `${a.b.c}`
 - Array access supported: `${items.0.name}`
 - No glob expansion
-- **Output stays inside `outDir`** — checked again for every target before any file is written
+- **Output stays inside `outDir`** — `outDir` is the only place js-tmpl writes. Every target is checked before rendering starts, and again against the real disk right before it is written: a symbolic link already inside `outDir` (including a dangling one) cannot redirect a write outside it
 - **One template per output file** — two templates rendering to the same path throw, naming both, before any file is written. Paths that differ only by case (`README.md` / `readme.md`) count as the same file, so a tree renders identically on Linux, macOS and Windows
 
 > **0.2.0 migration:** before 0.2.0 a missing `${var}` rendered `""`, and values
@@ -668,6 +698,7 @@ try {
 | Code                               | Raised when                                                          | `details`                               |
 | ---------------------------------- | -------------------------------------------------------------------- | --------------------------------------- |
 | `JSTMPL_CONFIG_NOT_FOUND`          | An explicit config file does not exist                               |                                         |
+| `JSTMPL_CONFIG_INVALID_VALUE`      | A config value is not one of its allowed values (`targetFs`)         | `key`, `value`                          |
 | `JSTMPL_VALUES_NOT_FOUND`          | The values file does not exist                                       |                                         |
 | `JSTMPL_VALUES_UNSUPPORTED_FORMAT` | The values file is not `.yaml` / `.yml` / `.json`                    |                                         |
 | `JSTMPL_VALUES_FILE_IN_DIR`        | `valuesFile` is inside `valuesDir` (C-1)                             |                                         |
@@ -685,7 +716,7 @@ try {
 | `JSTMPL_TEMPLATE_MISSING_VALUE`    | A template reads a path not in the view (strict mode)                | `relPath`, `variable`, `line`, `column` |
 | `JSTMPL_TEMPLATE_SYNTAX`           | Handlebars cannot parse a template                                   | `relPath`                               |
 | `JSTMPL_TEMPLATE_RENDER_FAILED`    | Rendering failed otherwise (missing partial, a helper threw, …)      | `relPath`                               |
-| `JSTMPL_OUTPUT_OUTSIDE_OUTDIR`     | A target would be outside `outDir` (defence in depth)                | `relPath`, `target`                     |
+| `JSTMPL_OUTPUT_OUTSIDE_OUTDIR`     | A write would land outside `outDir` (e.g. through a symlink in it)   | `relPath`, `target`                     |
 | `JSTMPL_OUTPUT_COLLISION`          | Two templates render to one file (case-insensitive)                  | `templates`, `target`                   |
 | `JSTMPL_HELPER_NO_INSTANCE`        | `registerHelpers` got no Handlebars instance                         |                                         |
 | `JSTMPL_HELPER_INVALID_MAP`        | `helpersMap` is not an object                                        |                                         |

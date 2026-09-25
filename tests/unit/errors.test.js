@@ -63,6 +63,15 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
       ),
     ));
 
+  it('CONFIG_INVALID_VALUE', () =>
+    withTempDir((d) =>
+      expectCode(
+        ErrorCodes.CONFIG_INVALID_VALUE,
+        () => resolveConfig({ targetFs: 'linux' }, d),
+        { key: 'targetFs', value: 'linux' },
+      ),
+    ));
+
   it('VALUES_NOT_FOUND', () =>
     expectCode(ErrorCodes.VALUES_NOT_FOUND, () =>
       loadYamlOrJson('/nonexistent/values.yaml'),
@@ -180,6 +189,29 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
       });
     }));
 
+  it('OUTPUT_OUTSIDE_OUTDIR (through a symlink in outDir)', () =>
+    withTempDir(async (d) => {
+      await seed(d, { 't/${a}/x.hbs': 'X' });
+      await fs.mkdir(path.join(d, 'elsewhere'));
+      await fs.mkdir(path.join(d, 'out'));
+      await fs.symlink(
+        path.join(d, 'elsewhere'),
+        path.join(d, 'out', 'link'),
+        'junction',
+      );
+      await expectCode(
+        ErrorCodes.OUTPUT_OUTSIDE_OUTDIR,
+        () =>
+          renderDirectory({
+            templateDir: path.join(d, 't'),
+            outDir: path.join(d, 'out'),
+            extname: '.hbs',
+            view: { a: 'link' },
+          }),
+        { relPath: path.join('${a}', 'x.hbs') },
+      );
+    }));
+
   it('OUTPUT_COLLISION', () =>
     withTempDir(async (d) => {
       await seed(d, { 't/${a}.hbs': 'A', 't/${b}.hbs': 'B' });
@@ -236,14 +268,9 @@ describe('JsTmplError', () => {
   });
 });
 
-// Codes that no input can reach today, by design. Listed so the meta-test
-// stays honest: adding a code means adding a test or an entry here.
-const UNREACHABLE = new Map([
-  [
-    ErrorCodes.OUTPUT_OUTSIDE_OUTDIR,
-    'second line of defence; path rules reject escapes first (isInsideDir is tested directly)',
-  ],
-]);
+// Codes that no input can reach today, by design (none at the moment).
+// Listed so the meta-test stays honest: a new code needs a test or an entry.
+const UNREACHABLE = new Map();
 
 after(() => {
   const missing = Object.values(ErrorCodes).filter(

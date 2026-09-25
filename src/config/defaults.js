@@ -7,4 +7,5 @@ export const DEFAULTS = {
   extname: '.hbs',
   envKeys: [],
   envPrefix: '',
+  targetFs: 'portable',
 };

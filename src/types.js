@@ -20,6 +20,7 @@
  * @property {string} outDir
  * @property {string} extname
  * @property {Record<string, unknown>} view
+ * @property {'portable' | 'case-sensitive'} [targetFs] - File system the output is for (default `portable`)
  */
 
 /**
