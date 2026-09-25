@@ -1,8 +1,8 @@
 # Round 04: `registerHelpers` — resumption of Round 01's deferred scope
 
-**Status**: Review
+**Status**: Complete
 **Date started**: 2026-04-23
-**Date completed**: —
+**Date completed**: 2026-09-25
 **Release target**: v0.1.1 (additive, non-breaking)
 
 ## Goal
@@ -148,8 +148,20 @@ one Round-04-specific item:
   fixed once a round's work ships in git**. Out-of-order execution
   should be captured via a superseding round (this file) rather than by
   renumbering.
+- **Revalidation pays off.** The "what changed since drafting" step caught
+  that Handlebars strict mode does not check helper arguments, and that
+  API.md over-claimed. Without it, the round's own Check item would have
+  been ticked on an assumption.
+- **Pin known gaps with tests.** Tests that assert today's (imperfect)
+  behaviour make the future fix a deliberate, visible change.
+- **Semver shapes scope.** A fix that would change behaviour for a
+  `^0.1.0` consumer moves to the next minor, even when it is "just" a gap.
+- `name in obj` checks inherited keys; use `Object.hasOwn` for
+  "already registered" checks on plain-object registries.
 
 **Promotions**:
 
-- [ ] → context/ : [topic]
-- [ ] → skills/ : [topic]
+- [ ] → skills/ : `handlebars-helpers` — use `Object.hasOwn` for the
+      collision check; reject non-object `helpersMap`; note that strict mode
+      does not cover helper arguments. (Skill is human-maintained; pending
+      human edit.)
