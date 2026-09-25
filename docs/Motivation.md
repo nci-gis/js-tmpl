@@ -237,7 +237,7 @@ If a decision cannot be made explicitly, js-tmpl prefers to fail loudly rather t
 
 ## The Path Forward
 
-js-tmpl v0.0.1 is intentionally minimal. It proves the concept:
+js-tmpl v0.0.1 was intentionally minimal. It proved the concept:
 
 ✅ Config resolution works
 ✅ Path rendering works
@@ -245,36 +245,10 @@ js-tmpl v0.0.1 is intentionally minimal. It proves the concept:
 ✅ Partials work
 ✅ The engine can be embedded
 
-From here, the project can grow along a clear path:
+Where it goes next lives in [ROADMAP.md](../ROADMAP.md) — the single source
+of truth for milestones and versions.
 
-### v0.1.x - Refinement
-
-- Custom Handlebars helpers API
-- Ignore patterns
-- Better error messages
-- Comprehensive test suite
-
-### v0.2.x - Orchestration
-
-- Multi-pass rendering
-- Template composition
-- Advanced partial management
-
-### v0.3.x - Developer Experience
-
-- Better CLI (yargs-based)
-- Watch mode
-- Interactive mode
-- Validation helpers
-
-### v1.0.x - Production Ready
-
-- Plugin system
-- Performance optimization
-- Production hardening
-- Full documentation
-
-But at every step, the core principles remain:
+At every step, the core principles remain:
 
 - Engine-first
 - Deterministic

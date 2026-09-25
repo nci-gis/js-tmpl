@@ -8,6 +8,26 @@ This document outlines the planned features and improvements for js-tmpl.
 - **0.x.0** - Feature additions, may have breaking changes
 - **x.0.0** - Stable API, semantic versioning guarantees
 
+## Node.js Support
+
+- **Primary**: 22, 24
+- **Compatible**: 20
+
+## Milestones
+
+Direction, not a contract — revised as real usage produces evidence.
+Milestones are themes, not a queue: cheap items from a later milestone may
+land early.
+
+| Milestone             | Versions      | Goal                                                         |
+| --------------------- | ------------- | ------------------------------------------------------------ |
+| M1 Trustworthy Core   | 0.1.1 – 0.2.0 | Every promise (strictness, gates, coverage) machine-checked. |
+| M2 Explainable Output | 0.2.0 – 0.2.x | Every output file traceable to its template, guards, values. |
+| M3 Community-Ready    | 0.3.x         | Others can use, embed, and contribute without asking.        |
+| M4 Trust Contract     | 1.0.0         | Stable API, semver and support guarantees.                   |
+
+Scale work (0.4.x) follows only once real users show where scale is needed.
+
 ## 🟥 0.1.x — Block Phase: Correctness & Trust
 
 > This phase prioritizes determinism, explicitness, and clear failure modes.
@@ -37,33 +57,23 @@ These directly support:
 - [x] Explicit > Implicit
 - [x] Deterministic > Clever
 
-### 0.1.1 — CLI Trust & Release Gates
+### 0.1.1 — Trust Fixes, Gates & Helpers
 
-Goal: close small correctness gaps around the command surface and make local
-quality gates match release quality gates.
+Fixes and additive features only. Consumers on `^0.1.0` receive 0.1.x
+automatically, so nothing here may break documented behaviour.
 
-- [ ] **Strict CLI argument validation** — unknown flags, missing option values, and unexpected positional arguments should fail with clear usage guidance.
-- [ ] **Hard CI gates** — run `pnpm lint`, `pnpm format:check`, `pnpm docs:check`, and `pnpm test` as blocking checks on PRs and pushes.
-- [ ] **Hard release gates** — release and publish workflows should block on the same checks as CI, plus `pnpm test:coverage`.
-- [ ] **Release process documentation** — document the release workflow, required manual inputs, and preflight checklist in `CONTRIBUTING.md`.
-- [ ] **Further error-message polish** — add recovery suggestions and proximity hints where errors already identify the source.
-
-### 0.1.2 — Template Ergonomics Without Hidden Behavior
-
-Goal: add narrowly scoped authoring conveniences that preserve the pure
-`f(config, view, templates) -> files` contract.
-
-- [ ] **Custom Handlebars helpers registration API** — planned via [Round 04](.agents/plan/cycles/Round_04.md); helpers must be explicitly supplied and registered on scoped Handlebars instances.
-- [ ] **Helper documentation and examples** — add one minimal example that demonstrates explicit helper registration without introducing lifecycle hooks.
-- [ ] **Optional values under strict templates** — document recommended authoring patterns for optional output without disabling VP-9 strict-mode; cover explicit `""`, `false`, `null`, and `{{#if ...}}` guards, including the rule that values inside false `{{#if}}` blocks are not evaluated.
-- [ ] **Additional examples** — Kubernetes and Terraform examples, if they can be written as plain richer-inputs examples rather than new engine behavior.
+- [ ] **Custom Handlebars helpers** — `registerHelpers(hbs, map)` on scoped instances, purity contract, `examples/helpers/`, optional-values patterns under strict mode ([Round 04](.agents/plan/cycles/Round_04.md)).
+- [ ] **Hard CI & release gates** — one `pnpm verify` (lint, format, docs, coverage ≥ 99%) in CI, release and publish; Node/OS matrix; package contents check; golden example tests; release docs ([Round 05](.agents/plan/cycles/Round_05.md)).
+- [ ] **Output confinement (security)** — a rendered path can never escape `outDir` ([Round 06](.agents/plan/cycles/Round_06.md)).
+- [ ] **Target collisions** — two templates rendering to one path is an error, not an overwrite ([Round 06](.agents/plan/cycles/Round_06.md)).
+- [ ] **Strict CLI** — unknown flags, missing values and stray arguments fail with usage guidance; exit codes `0`/`1`/`2`; Node `bin` entry ([Round 06](.agents/plan/cycles/Round_06.md)).
 
 ### 0.1.x Candidates Requiring Evidence
 
 These remain possible within 0.1.x, but should not be scheduled without a
 concrete issue describing the user problem and acceptance criteria.
 
-- [ ] **Dry-run mode (`--dry-run`)** — useful for trust, but must define output format and failure semantics before implementation.
+- [ ] ~~**Dry-run mode (`--dry-run`)**~~ — superseded by `--check` in 0.2.0 (defined output format and failure semantics).
 - [ ] **Multi-pass rendering orchestration** — engine-level only, explicitly configured, no inferred lifecycle or project orchestration.
 
 > ⚠️ Note: multi-pass must be explicitly configured, never inferred.
@@ -74,13 +84,40 @@ The following are intentionally deferred to avoid premature scaling:
 
 - [ ] ⏸ Watch mode — DX, not correctness.
 - [ ] ⏸ Progress indicators — DX, not correctness.
-- [ ] ⏸ Parallel rendering optimization — performance belongs in 0.2.x (Scale phase); must preserve deterministic output.
+- [ ] ⏸ Parallel rendering optimization — performance belongs in 0.4.x (Scale phase); must preserve deterministic output.
 
 Reason:
 
 > These features improve developer experience but do not increase correctness.
 
-## 🟦 0.2.x — Scale Phase: Extension & Performance
+## 🟨 0.2.x — Strict Contract & Explainable Output (M1 → M2)
+
+> Value partials give every value exactly one source (VP-4) and path guards
+> are visible in the tree. That makes output traceable by construction —
+> something merge-based tools cannot offer.
+
+### 0.2.0 — No Silent Outcomes + Render Plan (breaking)
+
+- [ ] **`${missing}` throws** — path interpolation joins G-4 / VP-9; interpolated values must be a single path segment ([Round 07](.agents/plan/cycles/Round_07.md)).
+- [ ] **Engine API does not auto-discover config** — discovery becomes CLI-only ([Round 07](.agents/plan/cycles/Round_07.md)).
+- [ ] **Stable error codes** — `JsTmplError` with `code` / `hint` / `cause`, documented as public API ([Round 07](.agents/plan/cycles/Round_07.md)).
+- [ ] **`planRender()`** — the engine's decisions as data, without writing ([Round 08](.agents/plan/cycles/Round_08.md)).
+- [ ] **`--check`** — fail CI when committed output drifts; exit `3` ([Round 08](.agents/plan/cycles/Round_08.md)). Replaces the 0.1.x "dry-run" candidate.
+
+### 0.2.x — Explain
+
+- [ ] **`--explain` / provenance** — per output file: source template, guards passed/pruned, value sources read; caller-supplied values labelled as such ([Round 09](.agents/plan/cycles/Round_09.md)).
+
+## 🟪 0.3.x — Community-Ready (M3)
+
+- [ ] **Template-tree spec + conformance suite** — path language (`${}`, `$if`/`$ifn`, `@` flatten, namespacing, strict mode) written down and tested as a spec.
+- [ ] **TypeScript declarations** — handwritten `.d.ts` for the public API.
+- [ ] **RFC process** — required for any change touching [PRINCIPLES.md](docs/PRINCIPLES.md).
+- [ ] **Community files** — `SECURITY.md`, issue/PR templates, good-first-issue labels.
+- [ ] **Embedding case studies** — at least one real system built on js-tmpl.
+- [ ] **Real-world examples** — e.g. Kubernetes multi-environment, written with existing features only.
+
+## 🟦 0.4.x — Scale Phase: Extension & Performance
 
 Entry criteria:
 
