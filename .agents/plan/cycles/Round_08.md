@@ -1,6 +1,6 @@
 # Round 08: Render Plan — `planRender()` + `--check`
 
-**Status**: In Progress
+**Status**: Review
 **Date started**: 2026-09-25
 **Date completed**: —
 **Release target**: v0.2.0 (additive; ships with Round 07)
@@ -131,13 +131,19 @@ generated output.
     added.
   - First real collect-all output: 11 errors (8 guards, 3 templates) in one
     run, with the hint line.
+- **2026-09-26 — CI (PR #15).** Run 1: Windows red — the engine was right,
+  the tests were not: they still converted template paths to native
+  separators (`toNative`, `path.join`) before `renderPath`, and expected
+  `\` in `relPath`. Fixed the tests, removed the unused `toNative`
+  (`9b480e6`). Run 2: 11 / 11 green.
 
 ## Check
 
 - [x] `renderDirectory` output byte-identical before/after the refactor
       (golden tests unchanged; `examples:update` produced no diff).
-- [ ] `planRender` output (relPath, target, order) identical on the
-      Windows and POSIX CI jobs. _Pending CI._
+- [x] `planRender` output (relPath, target, order) identical on the
+      Windows and POSIX CI jobs (the `/`-path `deepStrictEqual` test runs on
+      all three OSes; PR #15 @ `9b480e6`, 11 / 11).
 - [x] `--check` exit codes match the design (spawn tests: 3 / 0 / 3 / 1).
 - [x] Several missing values in several templates are reported in one run,
       and `outDir` is untouched (`planRender.test.js`).
