@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
 import { getNested, hasNested } from '../utils/object.js';
 import { classifySegment } from './pathSegment.js';
 
@@ -16,23 +17,29 @@ import { classifySegment } from './pathSegment.js';
  */
 function interpolatedValue(expr, view, relPath) {
   if (!hasNested(view, expr)) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.PATH_MISSING_VAR,
       `Path variable '${expr}' is not defined in the view (in '${relPath}').\n` +
         'Add it to values, or remove the placeholder from the template path.',
+      { details: { relPath, variable: expr } },
     );
   }
   const value = getNested(view, expr);
   if (value !== null && typeof value === 'object') {
     const type = Array.isArray(value) ? 'an array' : 'an object';
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.PATH_INVALID_VALUE,
       `Path variable '${expr}' is ${type}; path values must be strings, numbers or booleans (in '${relPath}').`,
+      { details: { relPath, variable: expr } },
     );
   }
   const text = String(value ?? ''); // NOSONAR -- String conversion is intentional here
   if (/[\\/]/.test(text)) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.PATH_INVALID_VALUE,
       `Path variable '${expr}' is '${text}', which contains a path separator (in '${relPath}').\n` +
         'Nested output directories come from template directories, not from values.',
+      { details: { relPath, variable: expr } },
     );
   }
   return text;
@@ -53,8 +60,10 @@ function expandInterpolations(seg, view, relPath) {
     interpolatedValue(expr.trim(), view, relPath),
   );
   if (rendered === '' || rendered === '.' || rendered === '..') {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.PATH_EMPTY_SEGMENT,
       `Path segment '${seg}' renders to '${rendered}', which does not name a file or directory (in '${relPath}').`,
+      { details: { relPath, segment: seg } },
     );
   }
   return rendered;
@@ -81,13 +90,19 @@ function renderSegment(seg, isFilename, view, relPath) {
     return expandInterpolations(seg, view, relPath);
   }
   if (c.kind === 'malformed') {
-    throw new Error(`${c.reason} (in '${relPath}')`);
+    throw new JsTmplError(
+      ErrorCodes.GUARD_MALFORMED,
+      `${c.reason} (in '${relPath}')`,
+      { details: { relPath, segment: seg } },
+    );
   }
 
   // if-formula or ifn-formula
   if (isFilename) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.GUARD_IN_FILENAME,
       `Path formula '${seg}' is not allowed in a filename (directories only) — in '${relPath}'`,
+      { details: { relPath, segment: seg } },
     );
   }
   return '';

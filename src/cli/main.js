@@ -48,6 +48,10 @@ export async function run(argv) {
       return 2;
     }
     if (argv.includes('--verbose')) {
+      const code = /** @type {{ code?: string }} */ (err).code;
+      if (code) {
+        console.error(`code: ${code}`);
+      }
       console.error(err.stack);
     }
     return 1;

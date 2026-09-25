@@ -1,3 +1,5 @@
+import { ErrorCodes, JsTmplError } from '../errors.js';
+
 /**
  * @typedef {object} BuildViewArgs
  * @property {Record<string, unknown>} [rootValues]   - Top-level values from `valuesFile`.
@@ -49,7 +51,8 @@ export function buildView(args = {}) {
  */
 function assertReservedEnvNotInPartials(partials, valuesDir) {
   if (RESERVED_ENV in partials) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.NS_RESERVED_ENV,
       `Value partial conflicts with reserved 'env' namespace.\n` +
         `  Source: ${valuesDir} produced a top-level 'env' namespace.\n` +
         `  Rename the directory/file so it does not resolve to 'env'.`,
@@ -74,7 +77,8 @@ function assertNoRootNamespaceCollision(
       continue;
     }
     if (key in partials) {
-      throw new Error(
+      throw new JsTmplError(
+        ErrorCodes.NS_ROOT_COLLISION,
         `Duplicate view key '${key}' — registered by both:\n` +
           `  - ${valuesFile} top-level key\n` +
           `  - ${valuesDir}/${key}.(yaml|yml|json)`,

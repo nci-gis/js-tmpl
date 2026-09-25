@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import YAML from 'js-yaml';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
+
 /**
  * Load YAML or JSON values.
  *
@@ -12,7 +14,8 @@ import YAML from 'js-yaml';
 export function loadYamlOrJson(filePath) {
   // Check if file exists before attempting to read
   if (!fs.existsSync(filePath)) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.VALUES_NOT_FOUND,
       `Values file not found: ${filePath}\n` +
         'Check that the file exists and the path is correct.',
     );
@@ -27,7 +30,10 @@ export function loadYamlOrJson(filePath) {
     return /** @type {Record<string, unknown>} */ (JSON.parse(raw));
   }
 
-  throw new Error(`Unsupported values file: ${filePath}`);
+  throw new JsTmplError(
+    ErrorCodes.VALUES_UNSUPPORTED_FORMAT,
+    `Unsupported values file: ${filePath}`,
+  );
 }
 
 /**
@@ -58,7 +64,8 @@ export function loadProjectConfig(cwd, configFile) {
     ? configFile
     : path.join(cwd, configFile);
   if (!fs.existsSync(abs)) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.CONFIG_NOT_FOUND,
       `Config file not found: ${abs}\n` +
         'The config file path was explicitly provided but does not exist.',
     );

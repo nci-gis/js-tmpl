@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import Handlebars from 'handlebars';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
 import { compileStrict } from './strictCompile.js';
 
 /**
@@ -27,6 +28,35 @@ export async function renderContent(filePath, view, hbs, relPath) {
   } catch (err) {
     const label = relPath || path.basename(filePath);
     const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Template '${label}': ${msg}`);
+    const { code, details } = classify(msg);
+    throw new JsTmplError(code, `Template '${label}': ${msg}`, {
+      details: { relPath: label, ...details },
+      cause: err,
+    });
   }
+}
+
+/**
+ * Map a Handlebars 4.x error message to an error code. Handlebars has no
+ * codes of its own; the patterns are pinned by tests.
+ *
+ * @param {string} message
+ * @returns {{ code: string, details?: Record<string, unknown> }}
+ */
+function classify(message) {
+  const missing = message.match(/^"([^"]+)" not defined in .* - (\d+):(\d+)/);
+  if (missing) {
+    return {
+      code: ErrorCodes.TEMPLATE_MISSING_VALUE,
+      details: {
+        variable: missing[1],
+        line: Number(missing[2]),
+        column: Number(missing[3]),
+      },
+    };
+  }
+  if (/^Parse error|^Expecting/.test(message)) {
+    return { code: ErrorCodes.TEMPLATE_SYNTAX };
+  }
+  return { code: ErrorCodes.TEMPLATE_RENDER_FAILED };
 }

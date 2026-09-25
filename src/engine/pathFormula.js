@@ -1,3 +1,4 @@
+import { ErrorCodes, JsTmplError } from '../errors.js';
 import { getNested, hasNested } from '../utils/object.js';
 import { classifySegment } from './pathSegment.js';
 
@@ -26,10 +27,12 @@ export function evalFormula(segment, view, relPath) {
   }
 
   if (c.kind === 'malformed') {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.GUARD_MALFORMED,
       relPath
         ? `${c.reason} (in '${relPath}')`
         : /** @type {string} */ (c.reason),
+      { details: { relPath, segment } },
     );
   }
 
@@ -37,8 +40,10 @@ export function evalFormula(segment, view, relPath) {
 
   if (!hasNested(view, varPath)) {
     const where = relPath ? ` in '${relPath}'` : '';
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.GUARD_MISSING_VAR,
       `Path formula '${segment}'${where} references undefined view variable '${varPath}'`,
+      { details: { relPath, segment, variable: varPath } },
     );
   }
 

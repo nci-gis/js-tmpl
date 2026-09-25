@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
 import { DEFAULTS } from './defaults.js';
 import {
   CONFIG_CANDIDATES,
@@ -23,7 +24,8 @@ function assertValuesFileNotInside(valuesFileAbs, valuesDirAbs) {
   const rel = path.relative(valuesDirAbs, valuesFileAbs);
   const inside = rel && !rel.startsWith('..') && !path.isAbsolute(rel);
   if (inside) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.VALUES_FILE_IN_DIR,
       `valuesFile '${valuesFileAbs}' is inside valuesDir '${valuesDirAbs}'.\n` +
         `Move the file out, or drop valuesDir.`,
     );

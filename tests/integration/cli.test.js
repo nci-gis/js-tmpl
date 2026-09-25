@@ -69,6 +69,16 @@ describe('CLI (bin/js-tmpl.js)', () => {
       const verbose = await cli(['--verbose'], tmpDir);
       assert.strictEqual(verbose.code, 1);
       assert.match(verbose.stderr, /\n\s+at /);
+
+      await fs.mkdir(path.join(tmpDir, 'templates'));
+      await fs.writeFile(
+        path.join(tmpDir, 'templates', '${nope}.hbs'),
+        'x',
+        'utf8',
+      );
+      const coded = await cli(['--verbose'], tmpDir);
+      assert.strictEqual(coded.code, 1);
+      assert.match(coded.stderr, /\ncode: JSTMPL_PATH_MISSING_VAR\n/);
     });
   });
 

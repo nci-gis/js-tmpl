@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
+
 /**
  * Valid namespace segment: letters, digits, underscore (matches Handlebars
  * bare-identifier convention and the partials system's historical rule).
@@ -22,7 +24,8 @@ const FLATTEN_SEGMENT_RE = /^@\w+$/;
  */
 export function assertValidSegments(segments, filePath, label = 'namespace') {
   if (!SEGMENT_RE.test(segments.join(''))) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.NS_INVALID_SEGMENT,
       `Invalid ${label} segment '${segments.join('>')}' in ${filePath} — only alphanumeric and underscore allowed`,
     );
   }
@@ -48,7 +51,8 @@ export function assertNoDuplicate(
   if (existing) {
     const rel1 = path.relative(rootDir, existing);
     const rel2 = path.relative(rootDir, filePath);
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.NS_DUPLICATE,
       `Duplicate ${label} '${key}' — registered by both:\n` +
         `  - ${rel1}\n` +
         `  - ${rel2}\n` +

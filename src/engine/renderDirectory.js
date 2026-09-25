@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import Handlebars from 'handlebars';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
 import { ensureDir, isInsideDir, writeFileSafe } from '../utils/fs.js';
 import { renderContent } from './contentRenderer.js';
 import { registerPartials } from './partials.js';
@@ -20,8 +21,10 @@ import { walkTemplateTree } from './treeWalker.js';
  */
 function assertInsideOutDir(target, outDir, relPath, rendered) {
   if (!isInsideDir(outDir, target)) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.OUTPUT_OUTSIDE_OUTDIR,
       `Template '${relPath}' renders to '${rendered}', which is outside outDir '${outDir}'.`,
+      { details: { relPath, target: rendered } },
     );
   }
 }
@@ -58,9 +61,16 @@ function planTargets(files, cfg) {
         owner.rendered === rendered
           ? `both render to '${rendered}'`
           : `render to '${owner.rendered}' and '${rendered}', the same file on case-insensitive file systems (macOS, Windows)`;
-      throw new Error(
+      throw new JsTmplError(
+        ErrorCodes.OUTPUT_COLLISION,
         `Templates '${owner.relPath}' and '${file.relPath}' ${where}.\n` +
           'Each output file must come from exactly one template; check the path values.',
+        {
+          details: {
+            templates: [owner.relPath, file.relPath],
+            target: rendered,
+          },
+        },
       );
     }
     owners.set(key, { relPath: file.relPath, rendered });

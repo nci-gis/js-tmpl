@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
 import {
   assertNoDuplicate,
   assertValidSegments,
@@ -48,7 +49,8 @@ function assertNoPrefixShadow(entries, rootDir) {
         continue;
       }
       if (key.startsWith(`${other}.`)) {
-        throw new Error(
+        throw new JsTmplError(
+          ErrorCodes.NS_SHADOW,
           `Value partial shadow collision between '${other}' and '${key}':\n` +
             `  - ${path.relative(rootDir, /** @type {string} */ (byKey.get(other)))}\n` +
             `  - ${path.relative(rootDir, abs)}\n` +

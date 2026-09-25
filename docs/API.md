@@ -644,6 +644,58 @@ If two partials resolve to the same name (e.g., `_date.hbs` and `@helpers/date.h
 
 ## Error Handling
 
+### Error codes
+
+Every error js-tmpl raises itself is a `JsTmplError` with a stable `code`
+(public API from 0.2.0 — match on `code`, not on message text), optional
+`details`, and `cause` when it wraps another error. Errors from Node itself
+(e.g. `ENOENT` for a missing template directory) keep Node's `code`.
+
+```javascript
+import { ErrorCodes, JsTmplError } from '@nci-gis/js-tmpl';
+
+try {
+  await renderDirectory(config);
+} catch (err) {
+  if (err instanceof JsTmplError && err.code === ErrorCodes.PATH_MISSING_VAR) {
+    console.error(`Declare '${err.details.variable}' in values`);
+  }
+  throw err;
+}
+```
+
+| Code                               | Raised when                                                          | `details`                               |
+| ---------------------------------- | -------------------------------------------------------------------- | --------------------------------------- |
+| `JSTMPL_CONFIG_NOT_FOUND`          | An explicit config file does not exist                               |                                         |
+| `JSTMPL_VALUES_NOT_FOUND`          | The values file does not exist                                       |                                         |
+| `JSTMPL_VALUES_UNSUPPORTED_FORMAT` | The values file is not `.yaml` / `.yml` / `.json`                    |                                         |
+| `JSTMPL_VALUES_FILE_IN_DIR`        | `valuesFile` is inside `valuesDir` (C-1)                             |                                         |
+| `JSTMPL_NS_INVALID_SEGMENT`        | A partial or value-partial name segment is not `\w+`                 |                                         |
+| `JSTMPL_NS_DUPLICATE`              | Two files resolve to the same partial or namespace                   |                                         |
+| `JSTMPL_NS_SHADOW`                 | A value partial is both a leaf and a sub-tree (`a.yaml`, `a/b.yaml`) |                                         |
+| `JSTMPL_NS_ROOT_COLLISION`         | A root value key and a value-partial namespace collide (C-2)         |                                         |
+| `JSTMPL_NS_RESERVED_ENV`           | A value partial resolves to the reserved `env` namespace (C-3)       |                                         |
+| `JSTMPL_PATH_MISSING_VAR`          | `${var}` in a template path is not in the view                       | `relPath`, `variable`                   |
+| `JSTMPL_PATH_INVALID_VALUE`        | A `${var}` value is an object/array or contains `/` or `\`           | `relPath`, `variable`                   |
+| `JSTMPL_PATH_EMPTY_SEGMENT`        | A path segment renders to `""`, `.` or `..`                          | `relPath`, `segment`                    |
+| `JSTMPL_GUARD_MISSING_VAR`         | `$if{var}` / `$ifn{var}` names a variable not in the view (G-4)      | `relPath`, `segment`, `variable`        |
+| `JSTMPL_GUARD_MALFORMED`           | A guard is not a whole directory segment (G-5)                       | `relPath`, `segment`                    |
+| `JSTMPL_GUARD_IN_FILENAME`         | A guard is used as a file name (G-5)                                 | `relPath`, `segment`                    |
+| `JSTMPL_TEMPLATE_MISSING_VALUE`    | A template reads a path not in the view (strict mode)                | `relPath`, `variable`, `line`, `column` |
+| `JSTMPL_TEMPLATE_SYNTAX`           | Handlebars cannot parse a template                                   | `relPath`                               |
+| `JSTMPL_TEMPLATE_RENDER_FAILED`    | Rendering failed otherwise (missing partial, a helper threw, …)      | `relPath`                               |
+| `JSTMPL_OUTPUT_OUTSIDE_OUTDIR`     | A target would be outside `outDir` (defence in depth)                | `relPath`, `target`                     |
+| `JSTMPL_OUTPUT_COLLISION`          | Two templates render to one file (case-insensitive)                  | `templates`, `target`                   |
+| `JSTMPL_HELPER_NO_INSTANCE`        | `registerHelpers` got no Handlebars instance                         |                                         |
+| `JSTMPL_HELPER_INVALID_MAP`        | `helpersMap` is not an object                                        |                                         |
+| `JSTMPL_HELPER_INVALID_NAME`       | A helper name is not a bare identifier                               |                                         |
+| `JSTMPL_HELPER_NOT_FUNCTION`       | A helper value is not a function                                     |                                         |
+| `JSTMPL_HELPER_ALREADY_REGISTERED` | A helper name is already on the instance                             |                                         |
+| `JSTMPL_CLI_USAGE`                 | CLI: unknown option, missing value, unexpected argument (exit 2)     |                                         |
+
+The CLI prints `js-tmpl: <message>`; with `--verbose` it also prints
+`code: <CODE>` and the stack.
+
 ### Common Errors
 
 **Values file not found:**
