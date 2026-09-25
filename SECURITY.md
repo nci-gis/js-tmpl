@@ -4,9 +4,10 @@
 
 Currently supported versions for security updates:
 
-| Version      | Supported          |
-| ------------ | ------------------ |
-| 0.0.x (beta) | :white_check_mark: |
+| Version | Supported                                  |
+| ------- | ------------------------------------------ |
+| 0.1.x   | :white_check_mark: (continues after 0.2.0) |
+| 0.0.x   | :x:                                        |
 
 ## Security Considerations
 
@@ -15,8 +16,8 @@ Currently supported versions for security updates:
 js-tmpl renders Handlebars templates with user-provided data. Be aware of:
 
 1. **Template Injection**: Only use templates from trusted sources
-2. **Path Traversal**: Validate template paths to prevent directory traversal
-3. **Environment Variables**: The `env` object in templates exposes `process.env` - be cautious with sensitive values
+2. **Path Traversal**: A rendered path that would leave `outDir` (e.g. `..` in a path value) is rejected; keep `outDir` free of symbolic links you do not control
+3. **Environment Variables**: `env` in templates holds only the variables allowed by `envKeys` / `envPrefix` - allow only what templates need
 
 ### Best Practices
 
@@ -72,7 +73,7 @@ Include:
 
 Security updates are released as:
 
-- Patch versions (0.0.x) for beta releases
+- Patch versions of each supported line (e.g. 0.1.x)
 - Published to npm with release notes
 - Announced in CHANGELOG.md
 

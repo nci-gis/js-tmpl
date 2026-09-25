@@ -1,6 +1,6 @@
 # Round 10 — Patch 0.1.2: value trees use own properties only, and the walker cannot loop
 
-**Status**: Planning
+**Status**: In Progress
 **Date started**: 2026-09-26
 **Date completed**: —
 **Release target**: v0.1.2 (patch; branch `fix/0.1.2` from `main` = `v0.1.1`)
@@ -72,12 +72,24 @@ PR #15, 2026-09-26 (findings R1, A3).
   - SECURITY.md (R6): supported versions `0.1.x`; `env` is allowlisted
     (`envKeys` / `envPrefix`), not all of `process.env`.
   - ROADMAP (R6): tick the shipped 0.1.1 items; add 0.1.2 line.
-  - CHANGELOG 0.1.2; release per Round 05 workflow; merge `main` → `dev`.
+  - Release per Round 05 workflow (it bumps the version and writes the
+    CHANGELOG); merge `main` → `dev`.
 - **Gate:** `pnpm verify`; publish workflow tag == version.
 
 ## Do
 
-[Progress log — update as work proceeds]
+- **2026-09-26 — decisions (human):** 0.1.x keeps getting security fixes
+  after 0.2.0; hard links in `outDir` are refused (Round 11).
+- **Phase 1** (`05960af`). `__proto__` rejected in `assertValidSegments`
+  (shared with partial names); own-key checks in `placeInTree`, C-2, C-3,
+  `pickEnv`. Verified: js-yaml and `JSON.parse` both keep a `__proto__:`
+  key as an own property, and the view spread keeps it own, so
+  `valuesFile` could not pollute; it only hit the false C-2.
+- **Phase 2** (`e040d7d`). Deviation: `main` has no `JsTmplError` (Round
+  07 is on `dev`), so the loop error is a plain `Error`. Add a code
+  when merging `main` into `dev`. Without the fix the new test hangs.
+- **Phase 3.** SECURITY.md and ROADMAP only. Version and CHANGELOG are
+  written by the release workflow (git-cliff on `main`), not by hand.
 
 ## Check
 

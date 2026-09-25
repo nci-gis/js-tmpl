@@ -57,11 +57,16 @@ These directly support:
 Fixes and additive features only. Consumers on `^0.1.0` receive 0.1.x
 automatically, so nothing here may break documented behaviour.
 
-- [ ] **Custom Handlebars helpers** — `registerHelpers(hbs, map)` on scoped instances, purity contract, `examples/helpers/`, optional-values patterns under strict mode ([Round 04](.agents/plan/cycles/Round_04.md)).
-- [ ] **Hard CI & release gates** — one `pnpm verify` (lint, format, docs, coverage ≥ 99%) in CI, release and publish; Node/OS matrix; package contents check; golden example tests; release docs ([Round 05](.agents/plan/cycles/Round_05.md)).
-- [ ] **Output confinement (security)** — a rendered path can never escape `outDir` ([Round 06](.agents/plan/cycles/Round_06.md)).
-- [ ] **Target collisions** — two templates rendering to one path is an error, not an overwrite ([Round 06](.agents/plan/cycles/Round_06.md)).
-- [ ] **Strict CLI** — unknown flags, missing values and stray arguments fail with usage guidance; exit codes `0`/`1`/`2`; Node `bin` entry ([Round 06](.agents/plan/cycles/Round_06.md)).
+- [x] **Custom Handlebars helpers** — `registerHelpers(hbs, map)` on scoped instances, purity contract, `examples/helpers/`, optional-values patterns under strict mode ([Round 04](.agents/plan/cycles/Round_04.md)).
+- [x] **Hard CI & release gates** — one `pnpm verify` (lint, format, docs, coverage ≥ 99%) in CI, release and publish; Node/OS matrix; package contents check; golden example tests; release docs ([Round 05](.agents/plan/cycles/Round_05.md)).
+- [x] **Output confinement (security)** — a rendered path can never escape `outDir` ([Round 06](.agents/plan/cycles/Round_06.md)).
+- [x] **Target collisions** — two templates rendering to one path is an error, not an overwrite ([Round 06](.agents/plan/cycles/Round_06.md)).
+- [x] **Strict CLI** — unknown flags, missing values and stray arguments fail with usage guidance; exit codes `0`/`1`/`2`; Node `bin` entry ([Round 06](.agents/plan/cycles/Round_06.md)).
+
+### 0.1.2 — Security Patch
+
+- [x] **Value trees use own properties only** — a `__proto__` value-partial segment is rejected (it polluted `Object.prototype`); inherited names no longer cause false collisions ([Round 10](.agents/plan/cycles/Round_10.md)).
+- [x] **Walker stops on symlink cycles** — instead of hanging ([Round 10](.agents/plan/cycles/Round_10.md)).
 
 ### 0.1.x Candidates Requiring Evidence
 
