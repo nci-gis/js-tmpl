@@ -12,7 +12,9 @@ npm install @nci-gis/js-tmpl
 
 ```javascript
 import {
+  comparePlan,
   findProjectConfig,
+  planRender,
   resolveConfig,
   renderDirectory,
   registerHelpers,
@@ -127,17 +129,10 @@ const config = resolveConfig(configFile ? { configFile } : {});
 
 Executes the complete rendering process.
 
-**Process:**
-
-1. Load values file (YAML/JSON)
-2. Build view object (`{...values, env: pickEnv({keys, prefix})}`) — only allowlisted env vars
-3. Use the provided Handlebars instance, or create a scoped one (`Handlebars.create()`)
-4. Register partials from `partialsDir` (if configured)
-5. Discover templates via BFS tree walk
-6. For each template:
-   - Render path placeholders (`${var}`)
-   - Render content (Handlebars, scoped instance)
-   - Write to `outDir`
+**Process:** [`planRender`](#planrenderconfig-hbs) (every template rendered
+in memory, every problem collected), then write. **Nothing is written unless
+the whole plan succeeds.** Each write is checked against the real disk
+first (see [Rules](#rules)).
 
 #### Parameters
 
@@ -151,9 +146,8 @@ Executes the complete rendering process.
 
 #### Throws
 
-- `Error` - If values file cannot be loaded
-- `Error` - If template rendering fails
-- `Error` - If file writing fails
+- `JsTmplError` - see [Error codes](#error-codes); several problems at once are thrown together as `JSTMPL_MULTIPLE_ERRORS`
+- Node errors (e.g. `ENOENT`, `EACCES`) - if reading templates or writing files fails
 
 #### Example
 
@@ -172,6 +166,77 @@ async function generate() {
 }
 
 generate().catch(console.error);
+```
+
+### planRender(config[, hbs])
+
+Renders every template **in memory** and returns what `renderDirectory`
+would write, without touching `outDir` — the engine's decisions as data.
+Use it to preview, to diff, or to apply your own write policy (merging,
+confirmation prompts, managed regions) instead of re-implementing path rules.
+
+#### Returns
+
+`Promise<Array<{ relPath, target, content }>>`, sorted by `target`:
+
+| Field     | Description                                            |
+| --------- | ------------------------------------------------------ |
+| `relPath` | Template path relative to `templateDir`, `/`-separated |
+| `target`  | Output path relative to `outDir`, `/`-separated        |
+| `content` | Rendered content                                       |
+
+Paths use `/` on every OS, so a plan is identical on Linux, macOS and
+Windows.
+
+#### Collect-all errors
+
+Every problem is reported in one run instead of stopping at the first:
+each failing path guard, each `${var}` error, each collision, and the
+first missing value in each template (Handlebars stops at one per
+template). A single problem is thrown as-is; several are thrown as one
+`JsTmplError` with code `JSTMPL_MULTIPLE_ERRORS` and `details.errors`:
+
+```text
+Error: 3 errors:
+  - Path formula '$if{agents.gemini}' in '$if{agents.gemini}' references undefined view variable 'agents.gemini'
+  - Template 'AGENTS.md.hbs': "kb_path" is not defined in the view (line 5, column 4)
+  - Template 'CLAUDE.md.hbs': "plan" is not defined in the view (line 3, column 6)
+Declare optional keys in values (null, false, '', []).
+```
+
+Only branches rendered with the current values are checked (strict mode
+checks what runs).
+
+#### Example
+
+```javascript
+import { planRender, resolveConfig } from '@nci-gis/js-tmpl';
+
+const plan = await planRender(resolveConfig({ valuesFile: './values.yaml' }));
+for (const { target, content } of plan) {
+  console.log(target, content.length);
+}
+```
+
+> **Memory:** the plan holds all rendered output (typically KB to MB).
+
+### comparePlan(plan, outDir)
+
+Compares a plan with `outDir` without writing. Returns sorted target lists:
+
+- `added` — the file does not exist in `outDir`
+- `changed` — the file exists but its bytes differ (line endings and
+  trailing newlines count)
+
+Files in `outDir` that the plan does not produce are **ignored**: js-tmpl
+does not own `outDir` and keeps no manifest. This is what the CLI's
+`--check` uses.
+
+```javascript
+import { comparePlan, planRender, resolveConfig } from '@nci-gis/js-tmpl';
+
+const config = resolveConfig({ valuesFile: './values.yaml' });
+const { added, changed } = comparePlan(await planRender(config), config.outDir);
 ```
 
 ### registerHelpers(hbs, helpersMap)
@@ -695,35 +760,36 @@ try {
 }
 ```
 
-| Code                               | Raised when                                                          | `details`                               |
-| ---------------------------------- | -------------------------------------------------------------------- | --------------------------------------- |
-| `JSTMPL_CONFIG_NOT_FOUND`          | An explicit config file does not exist                               |                                         |
-| `JSTMPL_CONFIG_INVALID_VALUE`      | A config value is not one of its allowed values (`targetFs`)         | `key`, `value`                          |
-| `JSTMPL_VALUES_NOT_FOUND`          | The values file does not exist                                       |                                         |
-| `JSTMPL_VALUES_UNSUPPORTED_FORMAT` | The values file is not `.yaml` / `.yml` / `.json`                    |                                         |
-| `JSTMPL_VALUES_FILE_IN_DIR`        | `valuesFile` is inside `valuesDir` (C-1)                             |                                         |
-| `JSTMPL_NS_INVALID_SEGMENT`        | A partial or value-partial name segment is not `\w+`                 |                                         |
-| `JSTMPL_NS_DUPLICATE`              | Two files resolve to the same partial or namespace                   |                                         |
-| `JSTMPL_NS_SHADOW`                 | A value partial is both a leaf and a sub-tree (`a.yaml`, `a/b.yaml`) |                                         |
-| `JSTMPL_NS_ROOT_COLLISION`         | A root value key and a value-partial namespace collide (C-2)         |                                         |
-| `JSTMPL_NS_RESERVED_ENV`           | A value partial resolves to the reserved `env` namespace (C-3)       |                                         |
-| `JSTMPL_PATH_MISSING_VAR`          | `${var}` in a template path is not in the view                       | `relPath`, `variable`                   |
-| `JSTMPL_PATH_INVALID_VALUE`        | A `${var}` value is an object/array or contains `\`                  | `relPath`, `variable`                   |
-| `JSTMPL_PATH_EMPTY_SEGMENT`        | A rendered path part is `""`, `.` or `..`                            | `relPath`, `segment`                    |
-| `JSTMPL_GUARD_MISSING_VAR`         | `$if{var}` / `$ifn{var}` names a variable not in the view (G-4)      | `relPath`, `segment`, `variable`        |
-| `JSTMPL_GUARD_MALFORMED`           | A guard is not a whole directory segment (G-5)                       | `relPath`, `segment`                    |
-| `JSTMPL_GUARD_IN_FILENAME`         | A guard is used as a file name (G-5)                                 | `relPath`, `segment`                    |
-| `JSTMPL_TEMPLATE_MISSING_VALUE`    | A template reads a path not in the view (strict mode)                | `relPath`, `variable`, `line`, `column` |
-| `JSTMPL_TEMPLATE_SYNTAX`           | Handlebars cannot parse a template                                   | `relPath`                               |
-| `JSTMPL_TEMPLATE_RENDER_FAILED`    | Rendering failed otherwise (missing partial, a helper threw, …)      | `relPath`                               |
-| `JSTMPL_OUTPUT_OUTSIDE_OUTDIR`     | A write would land outside `outDir` (e.g. through a symlink in it)   | `relPath`, `target`                     |
-| `JSTMPL_OUTPUT_COLLISION`          | Two templates render to one file (case-insensitive)                  | `templates`, `target`                   |
-| `JSTMPL_HELPER_NO_INSTANCE`        | `registerHelpers` got no Handlebars instance                         |                                         |
-| `JSTMPL_HELPER_INVALID_MAP`        | `helpersMap` is not an object                                        |                                         |
-| `JSTMPL_HELPER_INVALID_NAME`       | A helper name is not a bare identifier                               |                                         |
-| `JSTMPL_HELPER_NOT_FUNCTION`       | A helper value is not a function                                     |                                         |
-| `JSTMPL_HELPER_ALREADY_REGISTERED` | A helper name is already on the instance                             |                                         |
-| `JSTMPL_CLI_USAGE`                 | CLI: unknown option, missing value, unexpected argument (exit 2)     |                                         |
+| Code                               | Raised when                                                                   | `details`                                        |
+| ---------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
+| `JSTMPL_CONFIG_NOT_FOUND`          | An explicit config file does not exist                                        |                                                  |
+| `JSTMPL_CONFIG_INVALID_VALUE`      | A config value is not one of its allowed values (`targetFs`)                  | `key`, `value`                                   |
+| `JSTMPL_VALUES_NOT_FOUND`          | The values file does not exist                                                |                                                  |
+| `JSTMPL_VALUES_UNSUPPORTED_FORMAT` | The values file is not `.yaml` / `.yml` / `.json`                             |                                                  |
+| `JSTMPL_VALUES_FILE_IN_DIR`        | `valuesFile` is inside `valuesDir` (C-1)                                      |                                                  |
+| `JSTMPL_NS_INVALID_SEGMENT`        | A partial or value-partial name segment is not `\w+`                          |                                                  |
+| `JSTMPL_NS_DUPLICATE`              | Two files resolve to the same partial or namespace                            |                                                  |
+| `JSTMPL_NS_SHADOW`                 | A value partial is both a leaf and a sub-tree (`a.yaml`, `a/b.yaml`)          |                                                  |
+| `JSTMPL_NS_ROOT_COLLISION`         | A root value key and a value-partial namespace collide (C-2)                  |                                                  |
+| `JSTMPL_NS_RESERVED_ENV`           | A value partial resolves to the reserved `env` namespace (C-3)                |                                                  |
+| `JSTMPL_PATH_MISSING_VAR`          | `${var}` in a template path is not in the view                                | `relPath`, `variable`                            |
+| `JSTMPL_PATH_INVALID_VALUE`        | A `${var}` value is an object/array or contains `\`                           | `relPath`, `variable`                            |
+| `JSTMPL_PATH_EMPTY_SEGMENT`        | A rendered path part is `""`, `.` or `..`                                     | `relPath`, `segment`                             |
+| `JSTMPL_GUARD_MISSING_VAR`         | `$if{var}` / `$ifn{var}` names a variable not in the view (G-4)               | `relPath`, `segment`, `variable`                 |
+| `JSTMPL_GUARD_MALFORMED`           | A guard is not a whole directory segment (G-5)                                | `relPath`, `segment`                             |
+| `JSTMPL_GUARD_IN_FILENAME`         | A guard is used as a file name (G-5)                                          | `relPath`, `segment`                             |
+| `JSTMPL_TEMPLATE_MISSING_VALUE`    | A template reads a path not in the view (strict mode)                         | `relPath`, `variable`, `line`, `column`          |
+| `JSTMPL_TEMPLATE_SYNTAX`           | Handlebars cannot parse a template                                            | `relPath`                                        |
+| `JSTMPL_TEMPLATE_RENDER_FAILED`    | Rendering failed otherwise (missing partial, a helper threw, …)               | `relPath`                                        |
+| `JSTMPL_OUTPUT_OUTSIDE_OUTDIR`     | A write would land outside `outDir` (e.g. through a symlink in it)            | `relPath`, `target`                              |
+| `JSTMPL_OUTPUT_COLLISION`          | Two templates render to one file (case-insensitive)                           | `templates`, `target`                            |
+| `JSTMPL_MULTIPLE_ERRORS`           | Several of the errors above in one run (`planRender`, `renderDirectory`, CLI) | `errors` (the individual `JsTmplError`s, sorted) |
+| `JSTMPL_HELPER_NO_INSTANCE`        | `registerHelpers` got no Handlebars instance                                  |                                                  |
+| `JSTMPL_HELPER_INVALID_MAP`        | `helpersMap` is not an object                                                 |                                                  |
+| `JSTMPL_HELPER_INVALID_NAME`       | A helper name is not a bare identifier                                        |                                                  |
+| `JSTMPL_HELPER_NOT_FUNCTION`       | A helper value is not a function                                              |                                                  |
+| `JSTMPL_HELPER_ALREADY_REGISTERED` | A helper name is already on the instance                                      |                                                  |
+| `JSTMPL_CLI_USAGE`                 | CLI: unknown option, missing value, unexpected argument (exit 2)              |                                                  |
 
 The CLI prints `js-tmpl: <message>`; with `--verbose` it also prints
 `code: <CODE>` and the stack.
@@ -861,6 +927,16 @@ declare module '@nci-gis/js-tmpl' {
   ): Promise<void>;
 
   export function findProjectConfig(cwd?: string): string | null;
+
+  export function planRender(
+    config: any,
+    hbs?: typeof Handlebars,
+  ): Promise<Array<{ relPath: string; target: string; content: string }>>;
+
+  export function comparePlan(
+    plan: Array<{ relPath: string; target: string; content: string }>,
+    outDir: string,
+  ): { added: string[]; changed: string[] };
 
   export function registerHelpers(
     hbs: typeof Handlebars,

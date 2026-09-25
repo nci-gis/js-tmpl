@@ -11,6 +11,7 @@
  * @property {string[]} [envKeys]
  * @property {string} [envPrefix]
  * @property {boolean} [verbose] - CLI only: print stack traces on error
+ * @property {boolean} [check] - CLI only: compare with outDir instead of writing
  */
 
 /**

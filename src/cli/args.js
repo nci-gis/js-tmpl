@@ -31,6 +31,7 @@ const FIELDS = {
 const OPTIONS = {
   help: { type: 'boolean', short: 'h' },
   verbose: { type: 'boolean' },
+  check: { type: 'boolean' },
   'template-dir': { type: 'string', short: 't' },
   values: { type: 'string', short: 'c' },
   'values-dir': { type: 'string' },
@@ -123,6 +124,9 @@ export function parseArgs(args) {
   const opts = { command: values.help ? 'help' : command };
   if (values.verbose) {
     opts.verbose = true;
+  }
+  if (values.check) {
+    opts.check = true;
   }
 
   for (const [option, field] of Object.entries(FIELDS)) {

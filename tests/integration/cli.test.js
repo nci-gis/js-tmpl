@@ -132,4 +132,46 @@ describe('CLI (bin/js-tmpl.js)', () => {
       assert.strictEqual(out, 'Hello CLI');
     });
   });
+
+  it('--check: exit 3 on drift, 0 when up to date, and never writes', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'templates'));
+      await fs.writeFile(
+        path.join(tmpDir, 'templates', 'a.txt.hbs'),
+        'v{{n}}',
+        'utf8',
+      );
+      await fs.writeFile(path.join(tmpDir, 'v.yaml'), 'n: 1\n');
+
+      const before = await cli(['-c', 'v.yaml', '--check'], tmpDir);
+      assert.strictEqual(before.code, 3, before.stderr);
+      assert.strictEqual(before.stdout, 'added   a.txt\n');
+      assert.match(
+        before.stderr,
+        /1 of 1 files out of date \(1 added, 0 changed\)/,
+      );
+      await assert.rejects(fs.stat(path.join(tmpDir, 'dist')));
+
+      assert.strictEqual((await cli(['-c', 'v.yaml'], tmpDir)).code, 0);
+      const clean = await cli(['-c', 'v.yaml', '--check'], tmpDir);
+      assert.strictEqual(clean.code, 0, clean.stderr);
+
+      await fs.writeFile(path.join(tmpDir, 'v.yaml'), 'n: 2\n');
+      const drift = await cli(['-c', 'v.yaml', '--check'], tmpDir);
+      assert.strictEqual(drift.code, 3);
+      assert.strictEqual(drift.stdout, 'changed a.txt\n');
+      const out = await fs.readFile(path.join(tmpDir, 'dist', 'a.txt'), 'utf8');
+      assert.strictEqual(out, 'v1');
+    });
+  });
+
+  it('--check: render errors still exit 1', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'templates'));
+      await fs.writeFile(path.join(tmpDir, 'templates', 'a.hbs'), '{{x}}');
+      const r = await cli(['--check'], tmpDir);
+      assert.strictEqual(r.code, 1);
+      assert.match(r.stderr, /"x" is not defined in the view/);
+    });
+  });
 });

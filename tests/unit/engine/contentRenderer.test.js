@@ -100,7 +100,7 @@ describe('renderContent', () => {
       const view = {};
       await assert.rejects(
         renderContent(templateFile, view, undefined, 'template.hbs'),
-        /Template 'template\.hbs': "missing" not defined/,
+        /Template 'template\.hbs': "missing" is not defined in the view \(line 1, column 9\)/,
       );
     });
   });
@@ -211,7 +211,7 @@ describe('renderContent — optional values under strict mode', () => {
   it('nested read on a declared-but-empty object still throws', async () => {
     await assert.rejects(
       renderString('{{db.host}}', { db: {} }),
-      /Template 'template\.hbs': "host" not defined/,
+      /Template 'template\.hbs': "host" is not defined in the view/,
     );
   });
 
@@ -219,7 +219,7 @@ describe('renderContent — optional values under strict mode', () => {
   it('missing key in {{#if}} throws with the template path', async () => {
     await assert.rejects(
       renderString('{{#if nope}}x{{/if}}', {}),
-      /Template 'template\.hbs': "nope" not defined .* - 1:6/,
+      /Template 'template\.hbs': "nope" is not defined in the view \(line 1, column 6\)/,
     );
   });
 });

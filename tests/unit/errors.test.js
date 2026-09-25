@@ -228,6 +228,19 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
       );
     }));
 
+  it('MULTIPLE_ERRORS', () =>
+    withTempDir(async (d) => {
+      await seed(d, { 't/a.hbs': '{{a}}', 't/b.hbs': '{{b}}' });
+      await expectCode(ErrorCodes.MULTIPLE_ERRORS, () =>
+        renderDirectory({
+          templateDir: path.join(d, 't'),
+          outDir: path.join(d, 'out'),
+          extname: '.hbs',
+          view: {},
+        }),
+      );
+    }));
+
   it('HELPER_NO_INSTANCE', () =>
     expectCode(ErrorCodes.HELPER_NO_INSTANCE, () => registerHelpers(null, {})));
 
