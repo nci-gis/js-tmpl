@@ -14,6 +14,48 @@ import { buildView, pickEnv } from './view.js';
 
 const TARGET_FS = ['portable', 'case-sensitive'];
 
+/** Keys a config file may set. */
+const FILE_KEYS = Object.keys(DEFAULTS);
+/** Keys `resolveConfig` options may set: the file keys plus `configFile`. */
+const OPTION_KEYS = [...FILE_KEYS, 'configFile'];
+
+/**
+ * Throw on an unknown key (with a suggestion for a near miss such as
+ * `outdir` or `out-dir`) or a value of the wrong type. A typo must not
+ * silently fall back to a default and write somewhere else.
+ *
+ * @param {Record<string, unknown>} options
+ * @param {string[]} allowed
+ * @param {string} source - Where the options came from, for messages
+ */
+function assertKnownOptions(options, allowed, source) {
+  /** @param {string} k */
+  const loose = (k) => k.replaceAll(/[-_]/g, '').toLowerCase();
+  for (const [key, value] of Object.entries(options)) {
+    if (!allowed.includes(key)) {
+      const near = allowed.find((k) => loose(k) === loose(key));
+      throw new JsTmplError(
+        ErrorCodes.CONFIG_UNKNOWN_KEY,
+        `Unknown config key '${key}' in ${source}.` +
+          (near ? ` Did you mean '${near}'?` : '') +
+          `\nKnown keys: ${allowed.join(', ')}.`,
+        { details: { key, source, ...(near ? { suggestion: near } : {}) } },
+      );
+    }
+    const list = Array.isArray(DEFAULTS[/** @type {keyof DEFAULTS} */ (key)]);
+    const ok = list
+      ? Array.isArray(value) && value.every((v) => typeof v === 'string')
+      : typeof value === 'string';
+    if (!ok) {
+      throw new JsTmplError(
+        ErrorCodes.CONFIG_INVALID_VALUE,
+        `Config key '${key}' in ${source} must be ${list ? 'a list of strings' : 'a string'}, got ${JSON.stringify(value) ?? String(value)}.`,
+        { details: { key, value } },
+      );
+    }
+  }
+}
+
 /**
  * C-1 — throw if the resolved `valuesFile` sits inside the resolved
  * `valuesDir`. A file loaded both as root and as a value partial would
@@ -72,8 +114,20 @@ export function findProjectConfig(cwd = process.cwd()) {
  * @returns {import('../types.js').TemplateConfig}
  */
 export function resolveConfig(cli, cwd = process.cwd()) {
-  const projectConfig = loadProjectConfig(cwd, cli.configFile);
-  const mergedConfig = { ...DEFAULTS, ...projectConfig, ...cli };
+  // Options left `undefined` mean "not given", as if the key were absent.
+  const options = Object.fromEntries(
+    Object.entries(cli).filter(([, v]) => v !== undefined),
+  );
+  assertKnownOptions(options, OPTION_KEYS, 'resolveConfig options');
+  const projectConfig = loadProjectConfig(cwd, options.configFile);
+  if (projectConfig) {
+    assertKnownOptions(
+      projectConfig,
+      FILE_KEYS,
+      path.resolve(cwd, /** @type {string} */ (options.configFile)),
+    );
+  }
+  const mergedConfig = { ...DEFAULTS, ...projectConfig, ...options };
 
   /** @param {string} p */
   const abs = (p) => (path.isAbsolute(p) ? p : path.join(cwd, p));

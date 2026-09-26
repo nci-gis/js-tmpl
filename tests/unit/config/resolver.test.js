@@ -545,3 +545,81 @@ describe('config discovery (Round 07)', () => {
     });
   });
 });
+
+// Round 11 — a config mistake must fail, not silently render to `dist`.
+describe('resolveConfig — config shape', () => {
+  for (const [label, file, key, near] of [
+    ['a case typo', 'outdir: elsewhere\n', 'outdir', 'outDir'],
+    ['kebab case', 'out-dir: elsewhere\n', 'out-dir', 'outDir'],
+    ['an unrelated key', 'colour: red\n', 'colour', undefined],
+    [
+      'configFile inside a config file',
+      'configFile: x.yaml\n',
+      'configFile',
+      undefined,
+    ],
+  ]) {
+    it(`rejects an unknown key in the config file (${label})`, async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.writeFile(path.join(tmpDir, 'c.yaml'), file);
+        assert.throws(
+          () => resolveConfig({ configFile: 'c.yaml' }, tmpDir),
+          (err) => {
+            assert.strictEqual(err.code, 'JSTMPL_CONFIG_UNKNOWN_KEY');
+            assert.strictEqual(err.details.key, key);
+            assert.strictEqual(err.details.suggestion, near);
+            assert.strictEqual(err.details.source, path.join(tmpDir, 'c.yaml'));
+            if (near) {
+              assert.match(
+                err.message,
+                new RegExp(`Did you mean '${near}'\\?`),
+              );
+            }
+            assert.match(err.message, /Known keys: templateDir, /);
+            return true;
+          },
+        );
+      });
+    });
+  }
+
+  it('rejects an unknown option, including CLI-only flags', async () => {
+    await withTempDir(async (tmpDir) => {
+      for (const option of [{ outdir: 'x' }, { check: true }]) {
+        assert.throws(() => resolveConfig(option, tmpDir), {
+          code: 'JSTMPL_CONFIG_UNKNOWN_KEY',
+          message: /in resolveConfig options/,
+        });
+      }
+    });
+  });
+
+  it('treats an option set to undefined as not given', async () => {
+    await withTempDir(async (tmpDir) => {
+      const config = resolveConfig({ outDir: undefined }, tmpDir);
+      assert.strictEqual(config.outDir, path.join(tmpDir, 'dist'));
+    });
+  });
+
+  for (const [label, file, key] of [
+    ['a number for a path', 'outDir: 5\n', 'outDir'],
+    ['an empty YAML value (null)', 'outDir:\n', 'outDir'],
+    ['a string for a list', 'envKeys: HOME\n', 'envKeys'],
+    ['a list with a non-string', 'envKeys: [HOME, 1]\n', 'envKeys'],
+  ]) {
+    it(`rejects a value of the wrong type (${label})`, async () => {
+      await withTempDir(async (tmpDir) => {
+        await fs.writeFile(path.join(tmpDir, 'c.yaml'), file);
+        assert.throws(
+          () => resolveConfig({ configFile: 'c.yaml' }, tmpDir),
+          (err) => {
+            assert.strictEqual(err.code, 'JSTMPL_CONFIG_INVALID_VALUE');
+            assert.strictEqual(err.details.key, key);
+            assert.match(err.message, new RegExp(`'${key}' in .* must be a`));
+            return true;
+          },
+        );
+      });
+    });
+  }
+});

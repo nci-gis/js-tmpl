@@ -30,7 +30,14 @@ export async function main(argv) {
   // Config-file discovery is CLI behaviour; the engine only reads a file it
   // is given.
   const configFile = cli.configFile ?? findProjectConfig();
-  const cfg = resolveConfig(configFile ? { ...cli, configFile } : cli);
+  // command / check / verbose steer the CLI; they are not config.
+  const {
+    command: _command,
+    check: _check,
+    verbose: _verbose,
+    ...options
+  } = cli;
+  const cfg = resolveConfig(configFile ? { ...options, configFile } : options);
 
   if (cli.check) {
     return check(cfg);

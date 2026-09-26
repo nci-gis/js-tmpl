@@ -177,6 +177,24 @@ describe('CLI (bin/js-tmpl.js)', () => {
     });
   });
 
+  it('a config typo fails with a suggestion instead of rendering to dist', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'templates'));
+      await fs.writeFile(path.join(tmpDir, 'templates', 'a.hbs'), 'A');
+      await fs.writeFile(
+        path.join(tmpDir, 'js-tmpl.config.yaml'),
+        'outdir: elsewhere\n',
+      );
+      const r = await cli([], tmpDir);
+      assert.strictEqual(r.code, 1);
+      assert.match(
+        r.stderr,
+        /Unknown config key 'outdir'.*Did you mean 'outDir'\?/,
+      );
+      await assert.rejects(fs.stat(path.join(tmpDir, 'dist')));
+    });
+  });
+
   it('--check: render errors still exit 1', async () => {
     await withTempDir(async (tmpDir) => {
       await fs.mkdir(path.join(tmpDir, 'templates'));

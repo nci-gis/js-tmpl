@@ -57,11 +57,16 @@ These directly support:
 Fixes and additive features only. Consumers on `^0.1.0` receive 0.1.x
 automatically, so nothing here may break documented behaviour.
 
-- [ ] **Custom Handlebars helpers** — `registerHelpers(hbs, map)` on scoped instances, purity contract, `examples/helpers/`, optional-values patterns under strict mode ([Round 04](.agents/plan/cycles/Round_04.md)).
-- [ ] **Hard CI & release gates** — one `pnpm verify` (lint, format, docs, coverage ≥ 99%) in CI, release and publish; Node/OS matrix; package contents check; golden example tests; release docs ([Round 05](.agents/plan/cycles/Round_05.md)).
-- [ ] **Output confinement (security)** — a rendered path can never escape `outDir` ([Round 06](.agents/plan/cycles/Round_06.md)).
-- [ ] **Target collisions** — two templates rendering to one path is an error, not an overwrite ([Round 06](.agents/plan/cycles/Round_06.md)).
-- [ ] **Strict CLI** — unknown flags, missing values and stray arguments fail with usage guidance; exit codes `0`/`1`/`2`; Node `bin` entry ([Round 06](.agents/plan/cycles/Round_06.md)).
+- [x] **Custom Handlebars helpers** — `registerHelpers(hbs, map)` on scoped instances, purity contract, `examples/helpers/`, optional-values patterns under strict mode ([Round 04](.agents/plan/cycles/Round_04.md)).
+- [x] **Hard CI & release gates** — one `pnpm verify` (lint, format, docs, coverage ≥ 99%) in CI, release and publish; Node/OS matrix; package contents check; golden example tests; release docs ([Round 05](.agents/plan/cycles/Round_05.md)).
+- [x] **Output confinement (security)** — a rendered path can never escape `outDir` ([Round 06](.agents/plan/cycles/Round_06.md)).
+- [x] **Target collisions** — two templates rendering to one path is an error, not an overwrite ([Round 06](.agents/plan/cycles/Round_06.md)).
+- [x] **Strict CLI** — unknown flags, missing values and stray arguments fail with usage guidance; exit codes `0`/`1`/`2`; Node `bin` entry ([Round 06](.agents/plan/cycles/Round_06.md)).
+
+### 0.1.2 — Security Patch
+
+- [x] **Value trees use own properties only** — a `__proto__` value-partial segment is rejected (it polluted `Object.prototype`); inherited names no longer cause false collisions ([Round 10](.agents/plan/cycles/Round_10.md)).
+- [x] **Walker stops on symlink cycles** — instead of hanging ([Round 10](.agents/plan/cycles/Round_10.md)).
 
 ### 0.1.x Candidates Requiring Evidence
 
@@ -93,20 +98,24 @@ Reason:
 
 ### 0.2.0 — No Silent Outcomes + Render Plan (breaking)
 
-- [ ] **`${missing}` throws** — path interpolation joins G-4 / VP-9; interpolated values must be a single path segment ([Round 07](.agents/plan/cycles/Round_07.md)).
-- [ ] **Strict helper arguments** — a missing variable passed to a helper (`{{#if missing}}`, `{{upper missing}}`) throws like `{{missing}}` ([Round 07](.agents/plan/cycles/Round_07.md)).
-- [ ] **Engine API does not auto-discover config** — discovery becomes CLI-only ([Round 07](.agents/plan/cycles/Round_07.md)).
-- [ ] **Stable error codes** — `JsTmplError` with `code` / `hint` / `cause`, documented as public API ([Round 07](.agents/plan/cycles/Round_07.md)).
-- [ ] **`planRender()`** — the engine's decisions as data, without writing ([Round 08](.agents/plan/cycles/Round_08.md)).
-- [ ] **`--check`** — fail CI when committed output drifts; exit `3` ([Round 08](.agents/plan/cycles/Round_08.md)). Replaces the 0.1.x "dry-run" candidate.
+- [x] **`${missing}` throws** — path interpolation joins G-4 / VP-9; interpolated values must be a single path segment ([Round 07](.agents/plan/cycles/Round_07.md)).
+- [x] **Strict helper arguments** — a missing variable passed to a helper (`{{#if missing}}`, `{{upper missing}}`) throws like `{{missing}}` ([Round 07](.agents/plan/cycles/Round_07.md)).
+- [x] **Engine API does not auto-discover config** — discovery becomes CLI-only ([Round 07](.agents/plan/cycles/Round_07.md)).
+- [x] **Stable error codes** — `JsTmplError` with `code` / `hint` / `cause`, documented as public API ([Round 07](.agents/plan/cycles/Round_07.md)).
+- [x] **`planRender()`** — the engine's decisions as data, without writing ([Round 08](.agents/plan/cycles/Round_08.md)).
+- [x] **`--check`** — fail CI when committed output drifts; exit `3` ([Round 08](.agents/plan/cycles/Round_08.md)). Replaces the 0.1.x "dry-run" candidate.
+- [x] **Plan, check and write agree** — every template body checked; empty targets, file-vs-directory targets and disk conflicts rejected before any write; hard-linked targets refused; `--check` passes only if a render would succeed and change nothing ([Round 11](.agents/plan/cycles/Round_11.md)).
+- [x] **Strict config** — unknown keys (with a suggestion), wrong types and non-mapping config files throw ([Round 11](.agents/plan/cycles/Round_11.md)).
 
 ### 0.2.x — Explain
 
+- [ ] **EOL-insensitive `--check`** — only if a real CI report shows `.gitattributes` (`-text`) is not enough.
 - [ ] **`--explain` / provenance** — per output file: source template, guards passed/pruned, value sources read; caller-supplied values labelled as such ([Round 09](.agents/plan/cycles/Round_09.md)). Starts only with a real user case.
 
 ## 🟪 0.3.x — Community-Ready (M3)
 
-- [ ] **Template-tree spec + conformance suite** — path language (`${}`, `$if`/`$ifn`, `@` flatten, namespacing, strict mode) written down and tested as a spec.
+- [ ] **Template-tree spec + conformance suite** — path language (`${}`, `$if`/`$ifn`, `@` flatten, namespacing, strict mode) written down and tested as a spec, including what `targetFs: portable` rejects (Windows reserved names and characters).
+- [ ] **Type-check gate** — `tsc --noEmit --checkJs` in `pnpm verify`, before `.d.ts`.
 - [ ] **TypeScript declarations** — handwritten `.d.ts` for the public API.
 - [ ] **RFC process** — required for any change touching [PRINCIPLES.md](docs/PRINCIPLES.md).
 - [ ] **Community files** — `SECURITY.md`, issue/PR templates, good-first-issue labels.

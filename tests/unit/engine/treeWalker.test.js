@@ -365,3 +365,49 @@ describe('walkTemplateTree', () => {
     });
   });
 });
+
+describe('walkTemplateTree — symbolic link cycles', () => {
+  // Junctions work without privileges on Windows; elsewhere the type is ignored.
+  const link = (target, at) => fs.symlink(target, at, 'junction');
+
+  it('throws on a link to an ancestor instead of looping', async () => {
+    await withTempDir(async (root) => {
+      await fs.writeFile(path.join(root, 'a.hbs'), 'x');
+      await link(root, path.join(root, 'l1'));
+      await link(root, path.join(root, 'l2'));
+      const started = Date.now();
+      await assert.rejects(
+        () => walk(root),
+        /Template directory 'l1' links back to '\.' \(a symbolic link cycle/,
+      );
+      assert.ok(Date.now() - started < 1000);
+    });
+  });
+
+  it('throws on a nested link to a parent directory', async () => {
+    await withTempDir(async (root) => {
+      await fs.mkdir(path.join(root, 'sub'));
+      await link(path.join(root, 'sub'), path.join(root, 'sub', 'up'));
+      await assert.rejects(
+        () => walk(root),
+        /Template directory 'sub\/up' links back to 'sub'/,
+      );
+    });
+  });
+
+  it('walks a shared directory linked from two places', async () => {
+    await withTempDir(async (root) => {
+      const shared = path.join(root, 'shared');
+      await fs.mkdir(shared);
+      await fs.writeFile(path.join(shared, 'x.hbs'), 'x');
+      await fs.mkdir(path.join(root, 't'));
+      await link(shared, path.join(root, 't', 'a'));
+      await link(shared, path.join(root, 't', 'b'));
+      const results = await walk(path.join(root, 't'));
+      assert.deepStrictEqual(
+        results.map((r) => r.relPath),
+        ['a/x.hbs', 'b/x.hbs'],
+      );
+    });
+  });
+});
