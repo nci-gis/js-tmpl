@@ -25,7 +25,7 @@ function placeInTree(tree, chain, value) {
   let cur = tree;
   for (let i = 0; i < chain.length - 1; i++) {
     const seg = chain[i];
-    if (!(seg in cur)) {
+    if (!Object.hasOwn(cur, seg)) {
       cur[seg] = {};
     }
     cur = /** @type {Record<string, unknown>} */ (cur[seg]);

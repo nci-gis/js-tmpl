@@ -23,6 +23,12 @@ const FLATTEN_SEGMENT_RE = /^@\w+$/;
  * @param {string} [label='namespace'] - Noun used in the error message (e.g. "partial name").
  */
 export function assertValidSegments(segments, filePath, label = 'namespace') {
+  if (segments.includes('__proto__')) {
+    throw new JsTmplError(
+      ErrorCodes.NS_INVALID_SEGMENT,
+      `Invalid ${label} segment '__proto__' in ${filePath} — reserved name`,
+    );
+  }
   if (!SEGMENT_RE.test(segments.join(''))) {
     throw new JsTmplError(
       ErrorCodes.NS_INVALID_SEGMENT,

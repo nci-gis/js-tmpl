@@ -198,6 +198,27 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
       });
     }));
 
+  it('TEMPLATE_DIR_LOOP (a directory linked back to its parent)', () =>
+    withTempDir(async (d) => {
+      await seed(d, { 't/sub/a.hbs': 'A' });
+      await fs.symlink(
+        path.join(d, 't', 'sub'),
+        path.join(d, 't', 'sub', 'up'),
+        'junction',
+      );
+      await expectCode(
+        ErrorCodes.TEMPLATE_DIR_LOOP,
+        () =>
+          renderDirectory({
+            templateDir: path.join(d, 't'),
+            outDir: path.join(d, 'out'),
+            extname: '.hbs',
+            view: {},
+          }),
+        { relPath: 'sub/up', target: 'sub' },
+      );
+    }));
+
   it('OUTPUT_OUTSIDE_OUTDIR (through a symlink in outDir)', () =>
     withTempDir(async (d) => {
       await seed(d, { 't/${a}/x.hbs': 'X' });

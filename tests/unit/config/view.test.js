@@ -135,6 +135,23 @@ describe('buildView', () => {
       assert.strictEqual(view.project, 'x');
       assert.deepStrictEqual(view.services, { api: {} });
     });
+
+    it('C-2 — inherited names (toString, constructor) do not collide', () => {
+      const view = buildView({
+        rootValues: { toString: 'a', constructor: 'b' },
+        partials: { services: {} },
+      });
+      assert.strictEqual(view.toString, 'a');
+      assert.strictEqual(view.constructor, 'b');
+    });
+
+    it('a __proto__ key in the values file stays an own key', () => {
+      const rootValues = JSON.parse('{"__proto__": {"polluted": 1}}');
+      const view = buildView({ rootValues, partials: {} });
+      assert.strictEqual(Object.hasOwn(view, '__proto__'), true);
+      assert.strictEqual(Object.getPrototypeOf(view), Object.prototype);
+      assert.strictEqual(Object.hasOwn(Object.prototype, 'polluted'), false);
+    });
   });
 });
 
@@ -198,5 +215,21 @@ describe('pickEnv', () => {
   it('handles empty source object', () => {
     const result = pickEnv({ keys: ['NODE_ENV'], prefix: 'JS_TMPL_' }, {});
     assert.deepStrictEqual(result, {});
+  });
+
+  it('ignores inherited names such as toString', () => {
+    const result = pickEnv({ keys: ['toString', 'constructor'] }, {});
+    assert.deepStrictEqual(result, {});
+  });
+
+  it('picks from process.env by default', () => {
+    process.env.JS_TMPL_PICK_TEST = 'yes';
+    try {
+      assert.deepStrictEqual(pickEnv({ keys: ['JS_TMPL_PICK_TEST'] }), {
+        JS_TMPL_PICK_TEST: 'yes',
+      });
+    } finally {
+      delete process.env.JS_TMPL_PICK_TEST;
+    }
   });
 });

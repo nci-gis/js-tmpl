@@ -782,7 +782,7 @@ try {
 | `JSTMPL_VALUES_NOT_FOUND`          | The values file does not exist                                                                                 |                                                  |
 | `JSTMPL_VALUES_UNSUPPORTED_FORMAT` | The values file is not `.yaml` / `.yml` / `.json`                                                              |                                                  |
 | `JSTMPL_VALUES_FILE_IN_DIR`        | `valuesFile` is inside `valuesDir` (C-1)                                                                       |                                                  |
-| `JSTMPL_NS_INVALID_SEGMENT`        | A partial or value-partial name segment is not `\w+`                                                           |                                                  |
+| `JSTMPL_NS_INVALID_SEGMENT`        | A partial or value-partial name segment is not `\w+`, or is `__proto__`                                        |                                                  |
 | `JSTMPL_NS_DUPLICATE`              | Two files resolve to the same partial or namespace                                                             |                                                  |
 | `JSTMPL_NS_SHADOW`                 | A value partial is both a leaf and a sub-tree (`a.yaml`, `a/b.yaml`)                                           |                                                  |
 | `JSTMPL_NS_ROOT_COLLISION`         | A root value key and a value-partial namespace collide (C-2)                                                   |                                                  |
@@ -796,6 +796,7 @@ try {
 | `JSTMPL_TEMPLATE_MISSING_VALUE`    | A template reads a path not in the view (strict mode)                                                          | `relPath`, `variable`, `line`, `column`          |
 | `JSTMPL_TEMPLATE_SYNTAX`           | Handlebars cannot parse a template                                                                             | `relPath`                                        |
 | `JSTMPL_TEMPLATE_RENDER_FAILED`    | Rendering failed otherwise (missing partial, a helper threw, …)                                                | `relPath`                                        |
+| `JSTMPL_TEMPLATE_DIR_LOOP`         | A template directory links back to one of its own parent directories                                           | `relPath`, `target`                              |
 | `JSTMPL_OUTPUT_OUTSIDE_OUTDIR`     | A write would land outside `outDir` (e.g. through a symlink in it)                                             | `relPath`, `target`                              |
 | `JSTMPL_OUTPUT_COLLISION`          | Two templates render to one file (see `targetFs`), or one needs the other's file as a directory                | `templates`, `target`                            |
 | `JSTMPL_OUTPUT_BLOCKED`            | A target exists in `outDir` as a directory (or non-file), or its parent exists as a file                       | `relPath`, `target`, `path`                      |
