@@ -5,6 +5,20 @@ All notable changes to js-tmpl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-09-26
+
+### CI/CD
+
+- Pin actions to commit SHAs and default CI to read-only — Round 12 by @pasxd245
+
+### Documentation
+
+- **plan:** Open Round 12 and add 0.1.3 to ROADMAP — Round 12 by @pasxd245
+
+### Fixed
+
+- **deps:** Raise handlebars to ^4.7.9 and js-yaml to ^4.3.2 — Round 12 by @pasxd245
+
 ## [0.1.2] - 2026-09-26
 
 ### Documentation

@@ -68,6 +68,11 @@ automatically, so nothing here may break documented behaviour.
 - [x] **Value trees use own properties only** — a `__proto__` value-partial segment is rejected (it polluted `Object.prototype`); inherited names no longer cause false collisions ([Round 10](.agents/plan/cycles/Round_10.md)).
 - [x] **Walker stops on symlink cycles** — instead of hanging ([Round 10](.agents/plan/cycles/Round_10.md)).
 
+### 0.1.3 — Security Patch
+
+- [x] **Patched runtime dependencies** — `handlebars ^4.7.9`, `js-yaml ^4.3.2`; `pnpm audit --prod` clean ([Round 12](.agents/plan/cycles/Round_12.md)).
+- [x] **Pinned release pipeline** — actions pinned to commit SHAs; CI runs read-only ([Round 12](.agents/plan/cycles/Round_12.md)).
+
 ### 0.1.x Candidates Requiring Evidence
 
 These remain possible within 0.1.x, but should not be scheduled without a

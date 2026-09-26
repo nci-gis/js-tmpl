@@ -1,6 +1,6 @@
 {
   "name": "@nci-gis/js-tmpl",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "The pure JavaScript templating engine that uses handlebars.",
   "type": "module",
   "bin": {
