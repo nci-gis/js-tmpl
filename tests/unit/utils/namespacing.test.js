@@ -38,6 +38,13 @@ describe('assertValidSegments', () => {
       /Invalid namespace segment 'foo>has-hyphen' in x\.yaml/,
     );
   });
+
+  it('throws on __proto__ in any position', () => {
+    assert.throws(
+      () => assertValidSegments(['foo', '__proto__'], 'x.yaml'),
+      /Invalid namespace segment '__proto__' in x\.yaml — reserved name/,
+    );
+  });
 });
 
 describe('assertNoDuplicate', () => {

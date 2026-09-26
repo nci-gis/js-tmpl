@@ -48,7 +48,7 @@ export function buildView(args = {}) {
  * @param {string} valuesDir
  */
 function assertReservedEnvNotInPartials(partials, valuesDir) {
-  if (RESERVED_ENV in partials) {
+  if (Object.hasOwn(partials, RESERVED_ENV)) {
     throw new Error(
       `Value partial conflicts with reserved 'env' namespace.\n` +
         `  Source: ${valuesDir} produced a top-level 'env' namespace.\n` +
@@ -73,7 +73,7 @@ function assertNoRootNamespaceCollision(
     if (key === RESERVED_ENV) {
       continue;
     }
-    if (key in partials) {
+    if (Object.hasOwn(partials, key)) {
       throw new Error(
         `Duplicate view key '${key}' — registered by both:\n` +
           `  - ${valuesFile} top-level key\n` +
@@ -87,7 +87,7 @@ function assertNoRootNamespaceCollision(
  * @param {Record<string, unknown>} values
  */
 function warnOnReservedEnvInValuesFile(values) {
-  if (RESERVED_ENV in values) {
+  if (Object.hasOwn(values, RESERVED_ENV)) {
     console.warn(
       'Warning: "env" is a reserved key in js-tmpl and will be overwritten.\n' +
         'Rename the "env" key in your values file to avoid this.',
@@ -109,7 +109,7 @@ export function pickEnv({ keys = [], prefix = '' }, source = process.env) {
   const result = {};
 
   for (const k of keys) {
-    if (k in source) {
+    if (Object.hasOwn(source, k)) {
       result[k] = /** @type {string} */ (source[k]);
     }
   }

@@ -21,6 +21,11 @@ const FLATTEN_SEGMENT_RE = /^@\w+$/;
  * @param {string} [label='namespace'] - Noun used in the error message (e.g. "partial name").
  */
 export function assertValidSegments(segments, filePath, label = 'namespace') {
+  if (segments.includes('__proto__')) {
+    throw new Error(
+      `Invalid ${label} segment '__proto__' in ${filePath} — reserved name`,
+    );
+  }
   if (!SEGMENT_RE.test(segments.join(''))) {
     throw new Error(
       `Invalid ${label} segment '${segments.join('>')}' in ${filePath} — only alphanumeric and underscore allowed`,
