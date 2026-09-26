@@ -5,6 +5,18 @@ All notable changes to js-tmpl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-09-26
+
+### Documentation
+
+- Reconcile SECURITY.md and ROADMAP with 0.1.1 and 0.1.2 — Round 10 by @pasxd245
+- **plan:** Mark Round 10 complete with learnings by @pasxd245
+
+### Fixed
+
+- **config:** Value trees use own properties only — Round 10 by @pasxd245
+- **engine:** Stop the template walker on symbolic link cycles — Round 10 by @pasxd245
+
 ## [0.1.1] - 2026-09-25
 
 ### Added
