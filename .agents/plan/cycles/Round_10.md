@@ -1,8 +1,8 @@
 # Round 10 — Patch 0.1.2: value trees use own properties only, and the walker cannot loop
 
-**Status**: In Progress
+**Status**: Complete
 **Date started**: 2026-09-26
-**Date completed**: —
+**Date completed**: 2026-09-26
 **Release target**: v0.1.2 (patch; branch `fix/0.1.2` from `main` = `v0.1.1`)
 
 ## Goal
@@ -93,17 +93,27 @@ PR #15, 2026-09-26 (findings R1, A3).
 
 ## Check
 
-- [ ] No prototype key reachable from `valuesDir` or `valuesFile`.
-- [ ] Symlink cycle fails fast with a code on all three CI OSes.
-- [ ] a2scaffold test suite green against 0.1.2.
+- [x] No prototype key reachable from `valuesDir` or `valuesFile`: a
+      `__proto__` segment is rejected; `valuesFile` keys stay own (tests).
+- [x] Symlink cycle fails fast on all three CI OSes (PR #16, 11 / 11).
+      Plain `Error` on 0.1.x; the code is added on `dev`.
+- [x] a2scaffold (`42fd312`) 251 / 251 against the 0.1.2 build.
 
 ## Act
 
 **Learnings**:
 
-- ...
+- **`in` is the wrong presence test for data.** It sees inherited names:
+  it polluted `Object.prototype`, and it raised a false collision for a
+  key named `toString`. Use `Object.hasOwn` for any lookup of
+  user-supplied keys.
+- **Cycle checks: ancestors, not "visited".** Only a link back to an
+  ancestor loops. A shared directory linked twice is legitimate and must
+  still walk.
+- **A patch branches from the release, not from `dev`.** `main` had no
+  `JsTmplError`, so the fix used a plain `Error`. Plan the code for the
+  `main` → `dev` merge.
 
 **Promotions**:
 
-- [ ] → context/ : [topic]
-- [ ] → skills/ : [topic]
+- None. Closed by human direction before merging PR #16.
