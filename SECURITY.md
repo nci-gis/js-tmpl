@@ -4,10 +4,11 @@
 
 Currently supported versions for security updates:
 
-| Version | Supported                                  |
-| ------- | ------------------------------------------ |
-| 0.1.x   | :white_check_mark: (continues after 0.2.0) |
-| 0.0.x   | :x:                                        |
+| Version | Supported                              |
+| ------- | -------------------------------------- |
+| 0.2.x   | :white_check_mark:                     |
+| 0.1.x   | :white_check_mark: security fixes only |
+| 0.0.x   | :x:                                    |
 
 ## Security Considerations
 
@@ -16,7 +17,7 @@ Currently supported versions for security updates:
 js-tmpl renders Handlebars templates with user-provided data. Be aware of:
 
 1. **Template Injection**: Only use templates from trusted sources
-2. **Path Traversal**: A rendered path that would leave `outDir` (e.g. `..` in a path value) is rejected; keep `outDir` free of symbolic links you do not control
+2. **Path Traversal**: A rendered path that would leave `outDir` (`..` in a path value, or a symbolic link in `outDir`) is rejected; see [Filesystem Threat Model](#filesystem-threat-model)
 3. **Environment Variables**: `env` in templates holds only the variables allowed by `envKeys` / `envPrefix` - allow only what templates need
 
 ### Best Practices
@@ -26,13 +27,26 @@ js-tmpl renders Handlebars templates with user-provided data. Be aware of:
 - **Validate template sources** before rendering
 - **Review generated output** before deploying to production
 
-### File System Access
+### Filesystem Threat Model
 
-js-tmpl writes files to the filesystem. Ensure:
+Trusted: templates, partials, values, config, and the user running js-tmpl.
+Not assumed plain: what already exists in `outDir` (links left by other
+tools or earlier runs).
 
-- Output directory (`outDir`) is properly constrained
-- Template directory (`templateDir`) is from a trusted source
-- File permissions are set appropriately
+js-tmpl guarantees:
+
+- A write never lands outside the real `outDir`, including through
+  symbolic links already in it (`JSTMPL_OUTPUT_OUTSIDE_OUTDIR`).
+- A write never goes through a file that has another hard link
+  (`JSTMPL_OUTPUT_LINKED`).
+- Nothing is written if planning or the pre-write check fails.
+
+Not defended:
+
+- Another process changing `outDir` during a run (e.g. a link swapped
+  between the check and the write).
+- Transactional writes: an I/O error while writing (permissions, full
+  disk) can leave earlier files written.
 
 ## Reporting a Vulnerability
 

@@ -14,10 +14,12 @@ Options:
       --config-file <file>   Project config file
       --env-keys <keys>      Comma-separated env var names to expose (default: none)
       --env-prefix <prefix>  Auto-include env vars with this prefix (e.g. JS_TMPL_)
+      --check                Compare with the output dir; write nothing
       --verbose              Print stack traces on error
   -h, --help                 Show this help message
 
 Exit codes:
   0  success
   1  render or configuration error
-  2  usage error (unknown option, missing value, unexpected argument)`;
+  2  usage error (unknown option, missing value, unexpected argument)
+  3  --check: output is out of date`;

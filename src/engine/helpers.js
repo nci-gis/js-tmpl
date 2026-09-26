@@ -1,3 +1,5 @@
+import { ErrorCodes, JsTmplError } from '../errors.js';
+
 /**
  * Bare-identifier rule for helper names: `{{name}}` must parse without
  * bracket notation. Hyphens are allowed (`date-format` is idiomatic).
@@ -29,20 +31,23 @@ function describeType(value) {
  */
 function assertValidHelper(name, fn, hbs) {
   if (!HELPER_NAME_RE.test(name)) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.HELPER_INVALID_NAME,
       `Invalid helper name '${name}' — must start with a letter, underscore, or\n` +
         'dollar sign, and contain only letters, digits, underscores, dollars, or hyphens.\n' +
         'For exotic names, use hbs.registerHelper() directly.',
     );
   }
   if (typeof fn !== 'function') {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.HELPER_NOT_FUNCTION,
       `Helper '${name}' must be a function, got ${describeType(fn)}.\n` +
         'Each value in helpersMap must be a callable function.',
     );
   }
   if (Object.hasOwn(hbs.helpers, name)) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.HELPER_ALREADY_REGISTERED,
       `Helper '${name}' is already registered on this Handlebars instance.\n` +
         'To intentionally override a built-in, use hbs.registerHelper() directly.',
     );
@@ -68,7 +73,8 @@ function assertValidHelper(name, fn, hbs) {
  */
 export function registerHelpers(hbs, helpersMap) {
   if (!hbs || typeof hbs.registerHelper !== 'function') {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.HELPER_NO_INSTANCE,
       'registerHelpers requires a Handlebars instance as its first argument.\n' +
         'Create one with Handlebars.create() and pass it to renderDirectory too.',
     );
@@ -77,7 +83,8 @@ export function registerHelpers(hbs, helpersMap) {
     return;
   }
   if (typeof helpersMap !== 'object' || Array.isArray(helpersMap)) {
-    throw new Error(
+    throw new JsTmplError(
+      ErrorCodes.HELPER_INVALID_MAP,
       `helpersMap must be an object of name → function, got ${describeType(helpersMap)}.\n` +
         'Example: registerHelpers(hbs, { upper: (s) => s.toUpperCase() })',
     );

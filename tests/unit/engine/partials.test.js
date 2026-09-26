@@ -8,6 +8,17 @@ import Handlebars from 'handlebars';
 import { registerPartials } from '../../../src/engine/partials.js';
 import { withTempDir } from '../../helpers/tempDir.js';
 
+/**
+ * Partials are registered pre-compiled (strict arguments), so assert on what
+ * they render rather than on the stored source.
+ * @param {typeof Handlebars} hbs
+ * @param {string} name
+ */
+function renderPartial(hbs, name) {
+  const partial = hbs.partials[name];
+  return typeof partial === 'function' ? partial({}) : partial;
+}
+
 describe('registerPartials', () => {
   // ── Root files ─────────────────────────────────────────────────────
 
@@ -18,7 +29,7 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(hbs.partials['header'], 'Header');
+      assert.strictEqual(renderPartial(hbs, 'header'), 'Header');
     });
   });
 
@@ -30,8 +41,8 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(hbs.partials['header'], 'Header');
-      assert.strictEqual(hbs.partials['footer'], 'Footer');
+      assert.strictEqual(renderPartial(hbs, 'header'), 'Header');
+      assert.strictEqual(renderPartial(hbs, 'footer'), 'Footer');
     });
   });
 
@@ -49,7 +60,7 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(hbs.partials['components.button'], 'Button');
+      assert.strictEqual(renderPartial(hbs, 'components.button'), 'Button');
     });
   });
 
@@ -67,7 +78,7 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(hbs.partials['components.forms.login'], 'Login');
+      assert.strictEqual(renderPartial(hbs, 'components.forms.login'), 'Login');
     });
   });
 
@@ -84,8 +95,8 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(hbs.partials['ui.button'], 'Button');
-      assert.strictEqual(hbs.partials['ui.input'], 'Input');
+      assert.strictEqual(renderPartial(hbs, 'ui.button'), 'Button');
+      assert.strictEqual(renderPartial(hbs, 'ui.input'), 'Input');
     });
   });
 
@@ -103,7 +114,7 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(hbs.partials['date'], 'Date');
+      assert.strictEqual(renderPartial(hbs, 'date'), 'Date');
       assert.ok(!hbs.partials['helpers.date']);
     });
   });
@@ -122,7 +133,7 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(hbs.partials['nested'], 'Nested');
+      assert.strictEqual(renderPartial(hbs, 'nested'), 'Nested');
       assert.ok(!hbs.partials['deep.nested']);
       assert.ok(!hbs.partials['helpers.deep.nested']);
     });
@@ -146,9 +157,9 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(hbs.partials['top'], 'Top');
-      assert.strictEqual(hbs.partials['mid'], 'Mid');
-      assert.strictEqual(hbs.partials['bot'], 'Bot');
+      assert.strictEqual(renderPartial(hbs, 'top'), 'Top');
+      assert.strictEqual(renderPartial(hbs, 'mid'), 'Mid');
+      assert.strictEqual(renderPartial(hbs, 'bot'), 'Bot');
     });
   });
 
@@ -196,7 +207,7 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.tmpl', hbs);
 
-      assert.strictEqual(hbs.partials['header'], 'Header');
+      assert.strictEqual(renderPartial(hbs, 'header'), 'Header');
     });
   });
 
@@ -233,7 +244,7 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(hbs.partials['component'], 'Component');
+      assert.strictEqual(renderPartial(hbs, 'component'), 'Component');
       assert.ok(!hbs.partials['component.hbs']);
     });
   });
@@ -284,7 +295,7 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(hbs.partials['my_partial_2'], 'Content');
+      assert.strictEqual(renderPartial(hbs, 'my_partial_2'), 'Content');
     });
   });
 
@@ -345,8 +356,8 @@ describe('registerPartials', () => {
 
       await registerPartials(tmpDir, '.hbs', hbs);
 
-      assert.strictEqual(hbs.partials['auth.form'], 'Auth Form');
-      assert.strictEqual(hbs.partials['contact.form'], 'Contact Form');
+      assert.strictEqual(renderPartial(hbs, 'auth.form'), 'Auth Form');
+      assert.strictEqual(renderPartial(hbs, 'contact.form'), 'Contact Form');
     });
   });
 
@@ -431,7 +442,7 @@ describe('registerPartials', () => {
 
         await registerPartials(tmpDir, '.hbs', hbs);
 
-        assert.strictEqual(hbs.partials['helpers'], 'H');
+        assert.strictEqual(renderPartial(hbs, 'helpers'), 'H');
         assert.ok(!hbs.partials['foo.shared.helpers']);
       });
     });
@@ -446,11 +457,11 @@ describe('registerPartials', () => {
 
         const hbs1 = Handlebars.create();
         await registerPartials(tmpDir, '.hbs', hbs1);
-        assert.strictEqual(hbs1.partials['app'], 'A');
+        assert.strictEqual(renderPartial(hbs1, 'app'), 'A');
 
         const hbs2 = Handlebars.create();
         await registerPartials(path.join(tmpDir, 'env'), '.hbs', hbs2);
-        assert.strictEqual(hbs2.partials['app'], 'A');
+        assert.strictEqual(renderPartial(hbs2, 'app'), 'A');
       });
     });
   });

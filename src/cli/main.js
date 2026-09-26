@@ -1,42 +1,93 @@
 #!/usr/bin/env node
 
-import { resolveConfig } from '../config/resolver.js';
-import { renderDirectory } from '../engine/renderDirectory.js';
+import { findProjectConfig, resolveConfig } from '../config/resolver.js';
+import {
+  comparePlan,
+  planRender,
+  renderDirectory,
+} from '../engine/renderDirectory.js';
 import { parseArgs, UsageError } from './args.js';
 import { USAGE } from './usage.js';
+
+/** Exit code for `--check` when committed output is out of date. */
+const EXIT_DRIFT = 3;
 
 /**
  * Parse arguments and run the command. Throws on any failure; `run` turns
  * that into output and an exit code.
  *
  * @param {string[]} argv - Arguments without the node binary and script path
- * @returns {Promise<void>}
+ * @returns {Promise<number>} Exit code for a run that did not throw
  */
 export async function main(argv) {
   const cli = parseArgs(argv);
 
   if (cli.command === 'help') {
     console.log(USAGE);
-    return;
+    return 0;
   }
 
-  const cfg = resolveConfig(cli);
+  // Config-file discovery is CLI behaviour; the engine only reads a file it
+  // is given.
+  const configFile = cli.configFile ?? findProjectConfig();
+  // command / check / verbose steer the CLI; they are not config.
+  const {
+    command: _command,
+    check: _check,
+    verbose: _verbose,
+    ...options
+  } = cli;
+  const cfg = resolveConfig(configFile ? { ...options, configFile } : options);
+
+  if (cli.check) {
+    return check(cfg);
+  }
+
   await renderDirectory(cfg);
   console.log('✔ js-tmpl completed.');
+  return 0;
+}
+
+/**
+ * `--check`: render in memory, compare with outDir, write nothing.
+ * Drift is listed on stdout (`added <path>` / `changed <path>`) for scripts;
+ * the summary goes to stderr.
+ *
+ * @param {import('../types.js').TemplateConfig} cfg
+ * @returns {Promise<number>}
+ */
+async function check(cfg) {
+  const plan = await planRender(cfg);
+  const { added, changed } = comparePlan(plan, cfg.outDir);
+
+  if (added.length === 0 && changed.length === 0) {
+    console.log(`✔ js-tmpl: ${plan.length} files up to date.`);
+    return 0;
+  }
+  for (const target of added) {
+    console.log(`added   ${target}`);
+  }
+  for (const target of changed) {
+    console.log(`changed ${target}`);
+  }
+  console.error(
+    `js-tmpl: ${added.length + changed.length} of ${plan.length} files out of date ` +
+      `(${added.length} added, ${changed.length} changed). Run without --check to update.`,
+  );
+  return EXIT_DRIFT;
 }
 
 /**
  * CLI error boundary. Prints `js-tmpl: <message>` (plus the stack with
  * `--verbose`) and returns the exit code: 0 ok, 1 render/config error,
- * 2 usage error.
+ * 2 usage error, 3 `--check` found out-of-date output.
  *
  * @param {string[]} argv - Arguments without the node binary and script path
  * @returns {Promise<number>}
  */
 export async function run(argv) {
   try {
-    await main(argv);
-    return 0;
+    return await main(argv);
   } catch (error) {
     const err = /** @type {Error} */ (error);
     console.error(`js-tmpl: ${err.message}`);
@@ -45,6 +96,10 @@ export async function run(argv) {
       return 2;
     }
     if (argv.includes('--verbose')) {
+      const code = /** @type {{ code?: string }} */ (err).code;
+      if (code) {
+        console.error(`code: ${code}`);
+      }
       console.error(err.stack);
     }
     return 1;

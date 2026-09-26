@@ -16,8 +16,8 @@ Before contributing, please read [docs/PRINCIPLES.md](docs/PRINCIPLES.md) to und
 
 ### Prerequisites
 
-- Node.js 22 or 24 (primary). Node 20 is supported for running the
-  library, but `pnpm verify` needs Node ≥ 22.8 (coverage thresholds).
+- Node.js 22 or 24. `pnpm verify` needs Node ≥ 22.8 (coverage
+  thresholds).
 - pnpm 10.22.0 (specified in `package.json`)
 
 ### Setup

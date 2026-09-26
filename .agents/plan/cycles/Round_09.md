@@ -5,6 +5,13 @@
 **Date completed**: —
 **Release target**: v0.2.x (additive; needs Round 08)
 
+> **Gate (2026-09-26, human-approved):** not part of 0.2.0. Start only when
+> a real user needs "where did this file come from?" — e.g. a2scaffold, or a
+> reviewer of agent-generated values. Until then `--check` + `git diff`
+> answer "what changed". Re-spike the `view` Proxy first: Round 07 showed it
+> is unsafe for detecting misses (lying `has`), not yet whether it is safe
+> for recording reads.
+
 ## Goal
 
 For every output file, answer "where did this come from?": source template,

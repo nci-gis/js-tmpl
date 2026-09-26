@@ -5,6 +5,7 @@ import { beforeEach, describe, it } from 'node:test';
 
 import Handlebars from 'handlebars';
 
+import { resolveConfig } from '../../../src/config/resolver.js';
 import { renderDirectory } from '../../../src/engine/renderDirectory.js';
 import { withTempDir } from '../../helpers/tempDir.js';
 
@@ -849,7 +850,18 @@ describe('renderDirectory — output safety', () => {
             extname: '.hbs',
             view: { name },
           }),
-          /outside outDir[\s\S]*Check the values of: name/,
+          // 0.2.0: rejected at the path level first ('..' part, or '\' on
+          // Windows); the outDir guard stays as a second line of defence.
+          (err) => {
+            assert.ok(
+              [
+                'JSTMPL_PATH_EMPTY_SEGMENT',
+                'JSTMPL_PATH_INVALID_VALUE',
+              ].includes(err.code),
+              err.message,
+            );
+            return true;
+          },
         );
         assert.strictEqual(await exists(path.join(tmpDir, 'escaped')), false);
         assert.strictEqual(await exists(path.join(tmpDir, 'x.txt')), false);
@@ -857,20 +869,22 @@ describe('renderDirectory — output safety', () => {
     });
   }
 
-  it('keeps a leading-slash value inside outDir', async () => {
+  it('rejects a leading-slash value (empty first part, 0.2.0)', async () => {
     await withTempDir(async (tmpDir) => {
       const { templateDir, outDir } = await seed(tmpDir, {
         '${name}/x.txt.hbs': 'x',
       });
 
-      await renderDirectory({
-        templateDir,
-        outDir,
-        extname: '.hbs',
-        view: { name: '/abs' },
-      });
-
-      assert.strictEqual(await exists(path.join(outDir, 'abs', 'x.txt')), true);
+      await assert.rejects(
+        renderDirectory({
+          templateDir,
+          outDir,
+          extname: '.hbs',
+          view: { name: '/abs' },
+        }),
+        /every part must name a file or directory/,
+      );
+      assert.strictEqual(await exists(outDir), false);
     });
   });
 
@@ -905,9 +919,27 @@ describe('renderDirectory — output safety', () => {
           extname: '.hbs',
           view: { name: '..' },
         }),
-        /outside outDir/,
+        /every part must name a file or directory/,
       );
       assert.strictEqual(await exists(outDir), false);
+    });
+  });
+
+  it('nests a value with / (variable depth)', async () => {
+    await withTempDir(async (tmpDir) => {
+      const { templateDir, outDir } = await seed(tmpDir, {
+        '${skill}/SKILL.md.hbs': 'S',
+      });
+
+      await renderDirectory({
+        templateDir,
+        outDir,
+        extname: '.hbs',
+        view: { skill: 'skills/group/nested' },
+      });
+
+      const out = path.join(outDir, 'skills', 'group', 'nested', 'SKILL.md');
+      assert.strictEqual(await fs.readFile(out, 'utf8'), 'S');
     });
   });
 
@@ -927,10 +959,30 @@ describe('renderDirectory — output safety', () => {
         }),
         (err) => {
           assert.match(err.message, /both render to/);
-          assert.ok(err.message.includes(path.join('${a}', 'x.txt.hbs')));
-          assert.ok(err.message.includes(path.join('${b}', 'x.txt.hbs')));
+          assert.ok(err.message.includes('${a}/x.txt.hbs'));
+          assert.ok(err.message.includes('${b}/x.txt.hbs'));
           return true;
         },
+      );
+      assert.strictEqual(await exists(outDir), false);
+    });
+  });
+
+  it('treats targets differing only by case as a collision (0.2.0)', async () => {
+    await withTempDir(async (tmpDir) => {
+      const { templateDir, outDir } = await seed(tmpDir, {
+        '${a}.txt.hbs': 'A',
+        '${b}.txt.hbs': 'B',
+      });
+
+      await assert.rejects(
+        renderDirectory({
+          templateDir,
+          outDir,
+          extname: '.hbs',
+          view: { a: 'README', b: 'readme' },
+        }),
+        /render to 'README\.txt' and 'readme\.txt', the same file on case-insensitive file systems/,
       );
       assert.strictEqual(await exists(outDir), false);
     });
@@ -953,6 +1005,226 @@ describe('renderDirectory — output safety', () => {
       const one = await fs.readFile(path.join(outDir, 'one', 'x.txt'), 'utf8');
       const two = await fs.readFile(path.join(outDir, 'two', 'x.txt'), 'utf8');
       assert.deepStrictEqual([one, two], ['A', 'B']);
+    });
+  });
+});
+
+// Round 07 — outDir is the container, checked against the real disk.
+describe('renderDirectory — outDir containment through symlinks', () => {
+  /** @param {string} tmpDir */
+  async function tree(tmpDir) {
+    const templateDir = path.join(tmpDir, 'templates');
+    await fs.mkdir(path.join(templateDir, '${a}'), { recursive: true });
+    await fs.writeFile(path.join(templateDir, '${a}', 'x.txt.hbs'), 'X');
+    const outDir = path.join(tmpDir, 'out');
+    await fs.mkdir(outDir);
+    await fs.mkdir(path.join(tmpDir, 'elsewhere'));
+    return { templateDir, outDir, elsewhere: path.join(tmpDir, 'elsewhere') };
+  }
+
+  it('refuses to write through a directory symlink that leaves outDir', async () => {
+    await withTempDir(async (tmpDir) => {
+      const { templateDir, outDir, elsewhere } = await tree(tmpDir);
+      await fs.symlink(elsewhere, path.join(outDir, 'link'), 'junction');
+
+      await assert.rejects(
+        renderDirectory({
+          templateDir,
+          outDir,
+          extname: '.hbs',
+          view: { a: 'link' },
+        }),
+        { code: 'JSTMPL_OUTPUT_OUTSIDE_OUTDIR' },
+      );
+      assert.deepStrictEqual(await fs.readdir(elsewhere), []);
+    });
+  });
+
+  it('allows a symlink that stays inside outDir', async () => {
+    await withTempDir(async (tmpDir) => {
+      const { templateDir, outDir } = await tree(tmpDir);
+      await fs.mkdir(path.join(outDir, 'real'));
+      await fs.symlink(
+        path.join(outDir, 'real'),
+        path.join(outDir, 'link'),
+        'junction',
+      );
+
+      await renderDirectory({
+        templateDir,
+        outDir,
+        extname: '.hbs',
+        view: { a: 'link' },
+      });
+      const out = await fs.readFile(path.join(outDir, 'real', 'x.txt'), 'utf8');
+      assert.strictEqual(out, 'X');
+    });
+  });
+
+  // File symlinks need privileges on Windows; the logic is the same.
+  it(
+    'refuses to write through a dangling file symlink',
+    { skip: process.platform === 'win32' },
+    async () => {
+      await withTempDir(async (tmpDir) => {
+        const { templateDir, outDir, elsewhere } = await tree(tmpDir);
+        await fs.mkdir(path.join(outDir, 'd'));
+        await fs.symlink(
+          path.join(elsewhere, 'created.txt'),
+          path.join(outDir, 'd', 'x.txt'),
+        );
+
+        await assert.rejects(
+          renderDirectory({
+            templateDir,
+            outDir,
+            extname: '.hbs',
+            view: { a: 'd' },
+          }),
+          { code: 'JSTMPL_OUTPUT_OUTSIDE_OUTDIR' },
+        );
+        assert.deepStrictEqual(await fs.readdir(elsewhere), []);
+      });
+    },
+  );
+});
+
+// Round 07 — targetFs declares the file system the output is for.
+describe('renderDirectory — targetFs', () => {
+  /**
+   * Whether the temp dir's file system is case-sensitive. The test probes;
+   * js-tmpl never does.
+   * @param {string} dir
+   */
+  async function diskIsCaseSensitive(dir) {
+    await fs.writeFile(path.join(dir, 'PROBE'), '');
+    const sensitive = !(await fs
+      .stat(path.join(dir, 'probe'))
+      .then(() => true)
+      .catch(() => false));
+    await fs.rm(path.join(dir, 'PROBE'));
+    return sensitive;
+  }
+
+  /** @param {string} tmpDir */
+  async function caseTree(tmpDir) {
+    const templateDir = path.join(tmpDir, 'templates');
+    await fs.mkdir(templateDir);
+    await fs.writeFile(path.join(templateDir, '${a}.txt.hbs'), 'UPPER');
+    await fs.writeFile(path.join(templateDir, '${b}.txt.hbs'), 'lower');
+    return {
+      templateDir,
+      outDir: path.join(tmpDir, 'out'),
+      view: { a: 'README', b: 'readme' },
+    };
+  }
+
+  it("'portable' (default) rejects case-only differences on every OS", async () => {
+    await withTempDir(async (tmpDir) => {
+      const cfg = await caseTree(tmpDir);
+      await assert.rejects(
+        renderDirectory({ ...cfg, extname: '.hbs', targetFs: 'portable' }),
+        /set targetFs: 'case-sensitive'/,
+      );
+    });
+  });
+
+  it("'case-sensitive' writes both where the disk agrees, and fails loudly where it does not", async () => {
+    await withTempDir(async (tmpDir) => {
+      const cfg = await caseTree(tmpDir);
+      const run = renderDirectory({
+        ...cfg,
+        extname: '.hbs',
+        targetFs: 'case-sensitive',
+      });
+
+      if (await diskIsCaseSensitive(tmpDir)) {
+        await run;
+        const upper = await fs.readFile(
+          path.join(cfg.outDir, 'README.txt'),
+          'utf8',
+        );
+        const lower = await fs.readFile(
+          path.join(cfg.outDir, 'readme.txt'),
+          'utf8',
+        );
+        assert.deepStrictEqual([upper, lower], ['UPPER', 'lower']);
+      } else {
+        await assert.rejects(run, (err) => {
+          assert.strictEqual(err.code, 'JSTMPL_OUTPUT_COLLISION');
+          assert.match(
+            err.message,
+            /which this file system treats as one file/,
+          );
+          return true;
+        });
+      }
+    });
+  });
+
+  // Two names, one inode: exactly what a case-insensitive disk does with
+  // README.txt / readme.txt, reproduced with a hard link on any OS.
+  it("'case-sensitive' detects two names that are one file on disk", async () => {
+    await withTempDir(async (tmpDir) => {
+      const cfg = await caseTree(tmpDir);
+      await fs.mkdir(cfg.outDir);
+      await fs.writeFile(path.join(cfg.outDir, 'README.txt'), 'old');
+      try {
+        await fs.link(
+          path.join(cfg.outDir, 'README.txt'),
+          path.join(cfg.outDir, 'readme.txt'),
+        );
+      } catch {
+        return; // case-insensitive disk: the names already are one file
+      }
+
+      await assert.rejects(
+        renderDirectory({
+          ...cfg,
+          extname: '.hbs',
+          targetFs: 'case-sensitive',
+        }),
+        (err) => {
+          assert.strictEqual(err.code, 'JSTMPL_OUTPUT_COLLISION');
+          assert.deepStrictEqual(err.details.templates, [
+            '${a}.txt.hbs',
+            '${b}.txt.hbs',
+          ]);
+          return true;
+        },
+      );
+    });
+  });
+
+  it('a file left from an earlier run is not mistaken for a collision', async () => {
+    await withTempDir(async (tmpDir) => {
+      if (!(await diskIsCaseSensitive(tmpDir))) {
+        return; // only meaningful where both names can coexist
+      }
+      const cfg = await caseTree(tmpDir);
+      await fs.mkdir(cfg.outDir);
+      await fs.writeFile(path.join(cfg.outDir, 'readme.txt'), 'stale');
+
+      await renderDirectory({
+        ...cfg,
+        extname: '.hbs',
+        targetFs: 'case-sensitive',
+      });
+      const lower = await fs.readFile(
+        path.join(cfg.outDir, 'readme.txt'),
+        'utf8',
+      );
+      assert.strictEqual(lower, 'lower');
+    });
+  });
+
+  it('resolveConfig passes targetFs through and defaults to portable', async () => {
+    await withTempDir(async (tmpDir) => {
+      assert.strictEqual(resolveConfig({}, tmpDir).targetFs, 'portable');
+      assert.strictEqual(
+        resolveConfig({ targetFs: 'case-sensitive' }, tmpDir).targetFs,
+        'case-sensitive',
+      );
     });
   });
 });

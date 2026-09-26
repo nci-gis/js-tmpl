@@ -5,6 +5,8 @@ import { describe, it } from 'node:test';
 
 import {
   ensureDir,
+  isInsideDir,
+  realPathOfNearest,
   resolvePath,
   safeResolvePath,
   writeFileSafe,
@@ -171,4 +173,93 @@ describe('safeResolvePath', () => {
     const result = safeResolvePath('./src', './utils');
     assert.strictEqual(result, path.resolve(process.cwd(), './src', './utils'));
   });
+});
+
+describe('isInsideDir', () => {
+  const root = path.resolve('/project/dist');
+
+  it('is true for paths strictly inside', () => {
+    assert.strictEqual(isInsideDir(root, path.join(root, 'a.txt')), true);
+    assert.strictEqual(isInsideDir(root, path.join(root, 'a', 'b')), true);
+    assert.strictEqual(isInsideDir(root, path.join(root, '..hidden')), true);
+  });
+
+  it('is false for the directory itself, parents, and siblings', () => {
+    assert.strictEqual(isInsideDir(root, root), false);
+    assert.strictEqual(isInsideDir(root, path.join(root, '..')), false);
+    assert.strictEqual(isInsideDir(root, path.join(root, '..', 'x')), false);
+    assert.strictEqual(
+      isInsideDir(root, path.resolve('/project/dist-other/x')),
+      false,
+    );
+  });
+
+  it('resolves relative inputs before comparing', () => {
+    assert.strictEqual(isInsideDir('dist', path.join('dist', 'a')), true);
+    assert.strictEqual(
+      isInsideDir('dist', path.join('dist', '..', 'a')),
+      false,
+    );
+  });
+});
+
+describe('realPathOfNearest', () => {
+  it('returns the real path of an existing path', async () => {
+    await withTempDir(async (d) => {
+      assert.strictEqual(realPathOfNearest(d), await fs.realpath(d));
+    });
+  });
+
+  it('falls back to the nearest existing ancestor', async () => {
+    await withTempDir(async (d) => {
+      assert.strictEqual(
+        realPathOfNearest(path.join(d, 'a', 'b', 'c.txt')),
+        await fs.realpath(d),
+      );
+    });
+  });
+
+  it('follows a directory symlink', async () => {
+    await withTempDir(async (d) => {
+      await fs.mkdir(path.join(d, 'real'));
+      await fs.symlink(path.join(d, 'real'), path.join(d, 'link'), 'junction');
+      assert.strictEqual(
+        realPathOfNearest(path.join(d, 'link', 'new.txt')),
+        await fs.realpath(path.join(d, 'real')),
+      );
+    });
+  });
+
+  it(
+    'follows a dangling symlink to where it would create a file',
+    { skip: process.platform === 'win32' },
+    async () => {
+      await withTempDir(async (d) => {
+        await fs.mkdir(path.join(d, 'target-dir'));
+        await fs.symlink(
+          path.join(d, 'target-dir', 'missing.txt'),
+          path.join(d, 'dangling'),
+        );
+        assert.strictEqual(
+          realPathOfNearest(path.join(d, 'dangling')),
+          await fs.realpath(path.join(d, 'target-dir')),
+        );
+      });
+    },
+  );
+
+  it(
+    'throws on a symlink loop',
+    { skip: process.platform === 'win32' },
+    async () => {
+      await withTempDir(async (d) => {
+        await fs.symlink(path.join(d, 'b'), path.join(d, 'a'));
+        await fs.symlink(path.join(d, 'a'), path.join(d, 'b'));
+        assert.throws(
+          () => realPathOfNearest(path.join(d, 'a')),
+          /Too many symbolic links/,
+        );
+      });
+    },
+  );
 });

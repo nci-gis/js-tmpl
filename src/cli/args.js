@@ -1,14 +1,16 @@
 import { parseArgs as parseNodeArgs } from 'node:util';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
+
 /**
  * The command line was malformed: unknown option, missing value, stray
  * argument. The CLI exits with code 2 for these, distinct from render or
  * config failures (code 1).
  */
-export class UsageError extends Error {
+export class UsageError extends JsTmplError {
   /** @param {string} message */
   constructor(message) {
-    super(message);
+    super(ErrorCodes.CLI_USAGE, message);
     this.name = 'UsageError';
   }
 }
@@ -29,6 +31,7 @@ const FIELDS = {
 const OPTIONS = {
   help: { type: 'boolean', short: 'h' },
   verbose: { type: 'boolean' },
+  check: { type: 'boolean' },
   'template-dir': { type: 'string', short: 't' },
   values: { type: 'string', short: 'c' },
   'values-dir': { type: 'string' },
@@ -121,6 +124,9 @@ export function parseArgs(args) {
   const opts = { command: values.help ? 'help' : command };
   if (values.verbose) {
     opts.verbose = true;
+  }
+  if (values.check) {
+    opts.check = true;
   }
 
   for (const [option, field] of Object.entries(FIELDS)) {

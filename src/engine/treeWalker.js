@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { ErrorCodes, JsTmplError } from '../errors.js';
 import { evalFormula } from './pathFormula.js';
 
 /**
@@ -16,7 +17,7 @@ function shouldSkipSubtree(rel, view) {
   if (!rel || view === undefined) {
     return false;
   }
-  return evalFormula(path.basename(rel), view, rel) === 'skip';
+  return evalFormula(path.posix.basename(rel), view, rel) === 'skip';
 }
 
 /**
@@ -27,12 +28,19 @@ function shouldSkipSubtree(rel, view) {
  * prune the subtree before any filesystem descent (early-exit — no
  * `stat`/`readdir` on skipped paths).
  *
+ * `relPath` always uses `/`, on every OS, so paths in plans and messages
+ * are identical everywhere; `absPath` is native.
+ *
+ * With `errors`, a guard that fails to evaluate (missing variable,
+ * malformed) is recorded there and its subtree skipped, so a render can
+ * report every problem at once; without it, the first one throws.
+ *
  * Symbolic links are followed. A directory that resolves to one of its own
- * ancestors throws instead of looping; the same directory linked from two
- * places (no cycle) is walked twice.
+ * ancestors throws `JSTMPL_TEMPLATE_DIR_LOOP` instead of looping; the same
+ * directory linked from two places (no cycle) is walked twice.
  *
  * @param {string} rootDir
- * @param {(string | { ext?: string, view?: Record<string, unknown> })} [optsOrExt]
+ * @param {(string | { ext?: string, view?: Record<string, unknown>, errors?: Error[] })} [optsOrExt]
  *   Options object, or a bare `ext` string for back-compat.
  * @returns {Promise<import('../types.js').TemplateFile[]>}
  */
@@ -41,6 +49,7 @@ export async function walkTemplateTree(rootDir, optsOrExt) {
     typeof optsOrExt === 'string' ? { ext: optsOrExt } : optsOrExt || {};
   const ext = opts.ext ?? '.hbs';
   const view = opts.view;
+  const errors = opts.errors;
 
   /** @type {import('../types.js').TemplateFile[]} */
   const results = [];
@@ -55,24 +64,31 @@ export async function walkTemplateTree(rootDir, optsOrExt) {
     const stat = await fs.stat(abs);
 
     if (stat.isDirectory()) {
-      if (shouldSkipSubtree(rel, view)) {
+      try {
+        if (shouldSkipSubtree(rel, view)) {
+          continue;
+        }
+      } catch (error) {
+        if (!errors || !(error instanceof JsTmplError)) {
+          throw error;
+        }
+        errors.push(error);
         continue;
       }
       const real = await fs.realpath(abs);
       const loop = ancestors.find((a) => a.real === real);
       if (loop) {
-        throw new Error(
+        throw new JsTmplError(
+          ErrorCodes.TEMPLATE_DIR_LOOP,
           `Template directory '${rel}' links back to '${loop.rel || '.'}' (a symbolic link cycle in '${rootDir}').\n` +
             'Remove the link, or point it outside its own parent directories.',
+          { details: { relPath: rel, target: loop.rel } },
         );
       }
       const chain = [...ancestors, { rel, real }];
       const items = (await fs.readdir(abs)).sort();
       for (const name of items) {
-        queue.push({
-          rel: rel ? path.join(rel, name) : name,
-          ancestors: chain,
-        });
+        queue.push({ rel: rel ? `${rel}/${name}` : name, ancestors: chain });
       }
     } else if (path.extname(abs) === ext) {
       results.push({ absPath: abs, relPath: rel });

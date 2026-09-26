@@ -2,20 +2,14 @@ import assert from 'node:assert';
 import { describe, it } from 'node:test';
 
 import { renderPath } from '../../../src/engine/pathRenderer.js';
-import { toNative, toPosix } from '../../helpers/paths.js';
 
 /**
- * renderPath with POSIX-style test paths on every OS.
+ * renderPath takes and returns '/'-separated paths on every OS (Round 08).
  * @param {string} rel
  * @param {Record<string, unknown>} view
  */
 function render(rel, view) {
-  try {
-    return toPosix(renderPath(toNative(rel), view));
-  } catch (e) {
-    e.message = toPosix(e.message);
-    throw e;
-  }
+  return renderPath(rel, view);
 }
 
 describe('renderPath', () => {
@@ -49,10 +43,11 @@ describe('renderPath', () => {
     assert.strictEqual(result, 'static/file.txt');
   });
 
-  it('returns empty string for undefined placeholder', () => {
-    const view = {};
-    const result = render('${missing}.txt', view);
-    assert.strictEqual(result, '.txt');
+  it('throws for a missing placeholder variable (0.2.0)', () => {
+    assert.throws(
+      () => render('${missing}.txt', {}),
+      /Path variable 'missing' is not defined in the view \(in '\$\{missing\}\.txt'\)/,
+    );
   });
 
   it('returns empty string for null placeholder', () => {
@@ -165,6 +160,71 @@ describe('renderPath', () => {
       assert.throws(
         () => render('folder/$if{x}name.yaml', {}),
         /in 'folder\/\$if\{x\}name\.yaml'/,
+      );
+    });
+  });
+
+  // Round 07 (0.2.0): a value may nest with '/', but every resulting part
+  // must name something, and '\\' is rejected on every OS.
+  describe('path values', () => {
+    it('throws for a missing nested variable', () => {
+      assert.throws(
+        () => render('${a.b}/x', { a: {} }),
+        /'a\.b' is not defined/,
+      );
+    });
+
+    it('nests with / (variable depth)', () => {
+      assert.strictEqual(
+        render('${skill}/SKILL.md', { skill: 'skills/group/nested' }),
+        'skills/group/nested/SKILL.md',
+      );
+      assert.strictEqual(render('pre-${v}.txt', { v: 'a/b' }), 'pre-a/b.txt');
+    });
+
+    it("throws for a value with '\\'", () => {
+      // Matched on the code: the message itself contains '\\', which the
+      // test helper would turn into '/' on Windows.
+      assert.throws(() => render('${v}/x', { v: 'a\\b' }), {
+        code: 'JSTMPL_PATH_INVALID_VALUE',
+      });
+    });
+
+    for (const [label, value] of [
+      ['empty', ''],
+      ['null', null],
+      ['.', '.'],
+      ['..', '..'],
+      ['a leading slash', '/abs'],
+      ['a trailing slash', 'a/'],
+      ['a double slash', 'a//b'],
+      ['a .. part', '../x'],
+      ['an inner .. part', 'a/../b'],
+      ['a . part', 'a/./b'],
+    ]) {
+      it(`throws when a part renders ${label}`, () => {
+        assert.throws(
+          () => render('${v}/x', { v: value }),
+          /every part must name a file or directory/,
+        );
+      });
+    }
+
+    it('throws for object and array values', () => {
+      assert.throws(() => render('${v}.txt', { v: {} }), /is an object/);
+      assert.throws(() => render('${v}.txt', { v: [1] }), /is an array/);
+    });
+
+    it('allows dots inside a part and empty values within a segment', () => {
+      assert.strictEqual(render('${v}.txt', { v: '..hidden' }), '..hidden.txt');
+      assert.strictEqual(render('app-${v}.txt', { v: '' }), 'app-.txt');
+      assert.strictEqual(render('${v}.txt', { v: null }), '.txt');
+    });
+
+    it('supports array index paths', () => {
+      assert.strictEqual(
+        render('${items.0.name}.txt', { items: [{ name: 'a' }] }),
+        'a.txt',
       );
     });
   });

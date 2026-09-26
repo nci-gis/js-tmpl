@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   # Library behaviour on every supported Node version and OS.
-  # Node support: primary 22, 24; compatible 20 (see ROADMAP.md).
+  # Node support: 22, 24 (see ROADMAP.md).
   test:
     name: test (${{ matrix.os }}, node ${{ matrix.node }})
     runs-on: ${{ matrix.os }}
@@ -23,12 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node: ['20', '22', '24']
-        exclude:
-          - os: macos-latest
-            node: '20'
-          - os: windows-latest
-            node: '20'
+        node: ['22', '24']
 
     steps:
       - name: Checkout code

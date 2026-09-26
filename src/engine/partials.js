@@ -5,6 +5,7 @@ import {
   assertValidSegments,
   deriveNamespace,
 } from '../utils/namespacing.js';
+import { compileStrict } from './strictCompile.js';
 
 /**
  * Derive a partial entry from a relative file path.
@@ -84,6 +85,8 @@ export async function registerPartials(partialsDir, ext, hbs) {
 
   for (const p of allPartials) {
     const content = await fs.readFile(p.source, 'utf8');
-    hbs.registerPartial(p.name, content);
+    // Pre-compiled so partials get the same strict-argument checks as
+    // templates; a string partial would be compiled by Handlebars without them.
+    hbs.registerPartial(p.name, compileStrict(hbs, content));
   }
 }

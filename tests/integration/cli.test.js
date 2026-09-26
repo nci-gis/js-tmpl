@@ -69,6 +69,16 @@ describe('CLI (bin/js-tmpl.js)', () => {
       const verbose = await cli(['--verbose'], tmpDir);
       assert.strictEqual(verbose.code, 1);
       assert.match(verbose.stderr, /\n\s+at /);
+
+      await fs.mkdir(path.join(tmpDir, 'templates'));
+      await fs.writeFile(
+        path.join(tmpDir, 'templates', '${nope}.hbs'),
+        'x',
+        'utf8',
+      );
+      const coded = await cli(['--verbose'], tmpDir);
+      assert.strictEqual(coded.code, 1);
+      assert.match(coded.stderr, /\ncode: JSTMPL_PATH_MISSING_VAR\n/);
     });
   });
 
@@ -80,6 +90,26 @@ describe('CLI (bin/js-tmpl.js)', () => {
 
       const bad = await cli(['--bogus'], tmpDir, MAIN);
       assert.strictEqual(bad.code, 2);
+    });
+  });
+
+  it('uses js-tmpl.config.yaml from the working directory', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'tpl'));
+      await fs.writeFile(path.join(tmpDir, 'tpl', 'a.txt.hbs'), 'A', 'utf8');
+      await fs.writeFile(
+        path.join(tmpDir, 'js-tmpl.config.yaml'),
+        'templateDir: tpl\noutDir: built\n',
+        'utf8',
+      );
+
+      const r = await cli([], tmpDir);
+      assert.strictEqual(r.code, 0, r.stderr);
+      const out = await fs.readFile(
+        path.join(tmpDir, 'built', 'a.txt'),
+        'utf8',
+      );
+      assert.strictEqual(out, 'A');
     });
   });
 
@@ -100,6 +130,78 @@ describe('CLI (bin/js-tmpl.js)', () => {
         'utf8',
       );
       assert.strictEqual(out, 'Hello CLI');
+    });
+  });
+
+  it('--check: exit 3 on drift, 0 when up to date, and never writes', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'templates'));
+      await fs.writeFile(
+        path.join(tmpDir, 'templates', 'a.txt.hbs'),
+        'v{{n}}',
+        'utf8',
+      );
+      await fs.writeFile(path.join(tmpDir, 'v.yaml'), 'n: 1\n');
+
+      const before = await cli(['-c', 'v.yaml', '--check'], tmpDir);
+      assert.strictEqual(before.code, 3, before.stderr);
+      assert.strictEqual(before.stdout, 'added   a.txt\n');
+      assert.match(
+        before.stderr,
+        /1 of 1 files out of date \(1 added, 0 changed\)/,
+      );
+      await assert.rejects(fs.stat(path.join(tmpDir, 'dist')));
+
+      assert.strictEqual((await cli(['-c', 'v.yaml'], tmpDir)).code, 0);
+      const clean = await cli(['-c', 'v.yaml', '--check'], tmpDir);
+      assert.strictEqual(clean.code, 0, clean.stderr);
+
+      await fs.writeFile(path.join(tmpDir, 'v.yaml'), 'n: 2\n');
+      const drift = await cli(['-c', 'v.yaml', '--check'], tmpDir);
+      assert.strictEqual(drift.code, 3);
+      assert.strictEqual(drift.stdout, 'changed a.txt\n');
+      const out = await fs.readFile(path.join(tmpDir, 'dist', 'a.txt'), 'utf8');
+      assert.strictEqual(out, 'v1');
+    });
+  });
+
+  it('--check: fails like a render would when the disk blocks a target', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'templates'));
+      await fs.writeFile(path.join(tmpDir, 'templates', 'a.hbs'), 'A');
+      await fs.mkdir(path.join(tmpDir, 'dist', 'a'), { recursive: true });
+      const r = await cli(['--check', '--verbose'], tmpDir);
+      assert.strictEqual(r.code, 1);
+      assert.match(r.stderr, /exists in outDir as a directory/);
+      assert.match(r.stderr, /code: JSTMPL_OUTPUT_BLOCKED/);
+    });
+  });
+
+  it('a config typo fails with a suggestion instead of rendering to dist', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'templates'));
+      await fs.writeFile(path.join(tmpDir, 'templates', 'a.hbs'), 'A');
+      await fs.writeFile(
+        path.join(tmpDir, 'js-tmpl.config.yaml'),
+        'outdir: elsewhere\n',
+      );
+      const r = await cli([], tmpDir);
+      assert.strictEqual(r.code, 1);
+      assert.match(
+        r.stderr,
+        /Unknown config key 'outdir'.*Did you mean 'outDir'\?/,
+      );
+      await assert.rejects(fs.stat(path.join(tmpDir, 'dist')));
+    });
+  });
+
+  it('--check: render errors still exit 1', async () => {
+    await withTempDir(async (tmpDir) => {
+      await fs.mkdir(path.join(tmpDir, 'templates'));
+      await fs.writeFile(path.join(tmpDir, 'templates', 'a.hbs'), '{{x}}');
+      const r = await cli(['--check'], tmpDir);
+      assert.strictEqual(r.code, 1);
+      assert.match(r.stderr, /"x" is not defined in the view/);
     });
   });
 });
