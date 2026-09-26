@@ -214,18 +214,30 @@ stays in Review until then). Phases 7–8 land on `dev` before the release.
   are checked too (`outDir: 5`, empty `outDir:` crashed with a raw
   `TypeError`). `undefined` options count as absent. a2scaffold: 250 / 251;
   the one failure (`${missing}` mirror) is the same on `dev` (Round 07).
-- **Phase 8** waits for v0.1.2 (PR #16) and the `main` → `dev` merge: it
-  edits the SECURITY.md lines Round 10 changed.
+- **2026-09-26 — v0.1.2 released; PR #15 merged.** `feat/strict-config`
+  rebased onto `dev`, then `main` merged in (`5945396`). Conflicts were in
+  `view.js` and `treeWalker.js`. The loop error got
+  `JSTMPL_TEMPLATE_DIR_LOOP`, and the `__proto__` rejection got
+  `NS_INVALID_SEGMENT`.
+- **Phase 8.** ROADMAP 0.2.0 ticked + Round 11 lines; deferred items as
+  one-liners (EOL `--check` in 0.2.x; type-check gate and `portable` rules
+  in 0.3.x). SECURITY.md: 0.2.x supported, 0.1.x security fixes only.
+  API.md migration notes for strict config and hard links. Deviation: no
+  hand-written CHANGELOG. git-cliff writes it at release from the `!` /
+  `BREAKING CHANGE` commits.
 
 ## Check
 
-- [ ] Each finding above has a regression test that fails on
-      `feat/render-plan@afd9c16`.
-- [ ] For every fixture, `--check` exit 1 ⇔ `renderDirectory` throws, with
-      the same codes.
-- [ ] No fixture leaves files in `outDir` after a planning or preflight
-      error.
-- [ ] a2scaffold prototype (Round 08) still green on the final build.
+- [x] Each finding above has a regression test that fails on
+      `feat/render-plan@afd9c16` (checked per phase with the source
+      stashed).
+- [x] For every fixture, `--check` exit 1 ⇔ `renderDirectory` throws, with
+      the same codes (`bothReject` in `planRender.test.js`, CLI test).
+- [x] No fixture leaves files in `outDir` after a planning or preflight
+      error (same tests assert the tree is unchanged).
+- [ ] a2scaffold prototype (Round 08) still green on the final build. The
+      plain a2scaffold suite gives 250 / 251; the one failure is the
+      `${missing}` mirror, the same on `dev`.
 
 ## Act
 

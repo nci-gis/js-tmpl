@@ -52,6 +52,10 @@ Unknown keys, in `options` or in the config file, throw
 `key: value` pairs, throws `JSTMPL_CONFIG_INVALID_VALUE`. An option set to
 `undefined` counts as not given.
 
+> **0.2.0 migration:** before 0.2.0, unknown keys were ignored, so a typo
+> such as `outdir:` silently rendered to `dist`. Remove or fix keys the
+> error names.
+
 Both `valuesFile` and `valuesDir` are optional (VP-5, VP-6, VP-8). If neither
 is supplied, `view` is `{ env: {...} }` only — the CLI invocation itself is
 the declaration. Missing `{{var}}` references in templates throw loudly
@@ -141,6 +145,10 @@ in memory, every problem collected), then the disk checks that
 written if planning or the disk checks fail.** Writes are not
 transactional: an I/O error while writing (permissions, full disk) can leave
 earlier files written; fix it and render again.
+
+> **0.2.0 migration:** before 0.2.0, a target in `outDir` with another hard
+> link was written through, changing the linked file too. It now throws
+> `JSTMPL_OUTPUT_LINKED`: replace such files with plain copies.
 
 #### Parameters
 
