@@ -1,8 +1,8 @@
 # Round 11 — Make planRender, --check and render agree on every error, so --check passing means a render succeeds and changes nothing
 
-**Status**: In Progress
+**Status**: Complete
 **Date started**: 2026-09-26
-**Date completed**: —
+**Date completed**: 2026-09-26
 **Release target**: v0.2.0 (breaking release; with Rounds 07–08)
 
 ## Goal
@@ -235,17 +235,27 @@ stays in Review until then). Phases 7–8 land on `dev` before the release.
       the same codes (`bothReject` in `planRender.test.js`, CLI test).
 - [x] No fixture leaves files in `outDir` after a planning or preflight
       error (same tests assert the tree is unchanged).
-- [ ] a2scaffold prototype (Round 08) still green on the final build. The
-      plain a2scaffold suite gives 250 / 251; the one failure is the
-      `${missing}` mirror, the same on `dev`.
+- [x] a2scaffold on the final build: 250 / 251. The one failure is its
+      mirror test of the old `${missing}`-renders-empty rule, the same on
+      `dev`: an expected 0.2.0 break, accepted in PR #18. a2scaffold drops
+      the mirror when it moves to 0.2.0 (Round 08 prototype).
 
 ## Act
 
 **Learnings**:
 
-- ...
+- **Two checks that must agree should be one function.** `--check` and
+  the write disagreed until both ran the same `preflight`; parallel
+  implementations drift.
+- **Prove each regression test on the unfixed code.** Every finding got a
+  test that fails on `feat/render-plan@afd9c16`; a test that never failed
+  proves nothing.
+- **Filesystem tests need the odd file types.** Without the fix the FIFO
+  test hung; directories, FIFOs and hard links at a target are real
+  states of `outDir`.
+- **Commit messages are the release notes.** The CHANGELOG comes from
+  git-cliff, so `!` / `BREAKING CHANGE` must be right at commit time.
 
 **Promotions**:
 
-- [ ] → context/ : [topic]
-- [ ] → skills/ : [topic]
+- None. Closed by human direction before merging PR #18.

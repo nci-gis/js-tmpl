@@ -106,6 +106,8 @@ Reason:
 - [x] **`--check`** — fail CI when committed output drifts; exit `3` ([Round 08](.agents/plan/cycles/Round_08.md)). Replaces the 0.1.x "dry-run" candidate.
 - [x] **Plan, check and write agree** — every template body checked; empty targets, file-vs-directory targets and disk conflicts rejected before any write; hard-linked targets refused; `--check` passes only if a render would succeed and change nothing ([Round 11](.agents/plan/cycles/Round_11.md)).
 - [x] **Strict config** — unknown keys (with a suggestion), wrong types and non-mapping config files throw ([Round 11](.agents/plan/cycles/Round_11.md)).
+- [x] **Patched dependencies, pinned pipeline** — `handlebars ^4.7.9`, `js-yaml ^4.3.2`; actions pinned to SHAs; CI read-only; Dependabot ([Round 12](.agents/plan/cycles/Round_12.md)).
+- [x] **Node.js ≥ 22** — Node 20 reached end of life ([Round 12](.agents/plan/cycles/Round_12.md)).
 
 ### 0.2.x — Explain
 

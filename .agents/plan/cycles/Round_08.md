@@ -1,8 +1,8 @@
 # Round 08: Render Plan — `planRender()` + `--check`
 
-**Status**: Review
+**Status**: Complete
 **Date started**: 2026-09-25
-**Date completed**: —
+**Date completed**: 2026-09-26
 **Release target**: v0.2.0 (additive; ships with Round 07)
 
 ## Goal
@@ -160,9 +160,19 @@ generated output.
 
 **Learnings**:
 
-- ...
+- **A consumer prototype is the evidence for an API.** a2scaffold's path
+  mirror went 192 → 34 lines with zero mirrored engine rules; that, not
+  the design note, justified `planRender` as public API.
+- **Canonical `/` inside, native paths only at fs calls.** Windows CI went
+  red on the tests, not the engine: they still built native paths. Keep
+  one path form end to end and convert at the edge.
+- **Once errors have codes, text is free to change.** Missing-value
+  messages were rewritten without breaking anyone, because codes are the
+  contract.
+- **A review against the round's own promise finds what tests miss.**
+  "Nothing is written" did not hold (Round 11 found ten gaps before
+  merge).
 
 **Promotions**:
 
-- [ ] → context/ : [topic]
-- [ ] → skills/ : [topic]
+- None. Closed by human direction before merging PR #18.
