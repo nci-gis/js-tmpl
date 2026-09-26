@@ -298,23 +298,57 @@ js-tmpl render [options]
 
 ### Options
 
-| Option                   | Description                              | Default         |
-| ------------------------ | ---------------------------------------- | --------------- |
-| `-c, --values FILE`      | Values file (`.yaml` / `.yml` / `.json`) | Optional        |
-| `--values-dir DIR`       | Value-partials root (namespaced by path) | Optional        |
-| `-t, --template-dir DIR` | Template directory                       | `templates`     |
-| `-o, --out DIR`          | Output directory                         | `dist`          |
-| `-p, --partials-dir DIR` | Partials directory                       | None (skipped)  |
-| `-x, --ext EXT`          | Template extension                       | `.hbs`          |
-| `--config-file FILE`     | Explicit config file                     | Auto-discovered |
-| `--env-keys KEYS`        | Comma-separated env var names to expose  | None            |
-| `--env-prefix PREFIX`    | Auto-include env vars with this prefix   | None            |
-| `--verbose`              | Print stack traces on error              | Off             |
-| `-h, --help`             | Show usage                               |                 |
+| Option                   | Description                                | Default         |
+| ------------------------ | ------------------------------------------ | --------------- |
+| `-c, --values FILE`      | Values file (`.yaml` / `.yml` / `.json`)   | Optional        |
+| `--values-dir DIR`       | Value-partials root (namespaced by path)   | Optional        |
+| `-t, --template-dir DIR` | Template directory                         | `templates`     |
+| `-o, --out DIR`          | Output directory                           | `dist`          |
+| `-p, --partials-dir DIR` | Partials directory                         | None (skipped)  |
+| `-x, --ext EXT`          | Template extension                         | `.hbs`          |
+| `--config-file FILE`     | Explicit config file                       | Auto-discovered |
+| `--env-keys KEYS`        | Comma-separated env var names to expose    | None            |
+| `--env-prefix PREFIX`    | Auto-include env vars with this prefix     | None            |
+| `--check`                | Compare with the output dir; write nothing | Off             |
+| `--verbose`              | Print stack traces on error                | Off             |
+| `-h, --help`             | Show usage                                 |                 |
 
 The CLI is strict: an unknown option, an option without its value, a
 repeated option, or an unexpected argument is an error. Exit codes: `0`
-success, `1` render or configuration error, `2` usage error.
+success, `1` render or configuration error, `2` usage error, `3` `--check`
+found out-of-date output.
+
+Every problem in a run is reported at once (each failing guard and path
+variable, and the first missing value in each template), and nothing is
+written unless the whole render succeeds.
+
+### Using js-tmpl in CI
+
+Commit the generated files, then fail the build when someone changes
+templates or values without re-rendering:
+
+```bash
+js-tmpl render --values values.yaml --check
+```
+
+```text
+changed config/app.yaml
+added   config/worker.yaml
+js-tmpl: 2 of 14 files out of date (1 added, 1 changed). Run without --check to update.
+```
+
+`--check` renders in memory and writes nothing. It exits `0` only if a render
+would succeed and change nothing; when a render would fail, it fails the same
+way (exit `1`).
+
+- **Line endings:** keep Git from converting generated files, or a CRLF
+  checkout (Windows `core.autocrlf`) shows every file as changed. In
+  `.gitattributes`: `dist/** -text` (use your output directory).
+- **Stale files:** files in the output directory that the templates no
+  longer produce are ignored (js-tmpl does not own that directory). If the
+  directory holds only generated files, render into it from empty and let Git
+  show them as deleted:
+  `rm -rf dist && js-tmpl render --values values.yaml && git status --porcelain dist`.
 
 Both `--values` and `--values-dir` are optional (VP-8, VP-6). If neither is
 supplied, `view` is `{ env: {...} }` only. Missing `{{var}}` in a template

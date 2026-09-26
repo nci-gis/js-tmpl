@@ -7,7 +7,10 @@ import Handlebars from 'handlebars';
 import { helpers } from '../../examples/helpers/helpers.js';
 import { resolveConfig } from '../../src/config/resolver.js';
 import { registerHelpers } from '../../src/engine/helpers.js';
-import { renderDirectory } from '../../src/engine/renderDirectory.js';
+import {
+  planRender,
+  renderDirectory,
+} from '../../src/engine/renderDirectory.js';
 
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -90,6 +93,16 @@ export const CASES = [
 ];
 
 /**
+ * Plan one case in memory (nothing written).
+ *
+ * @param {(typeof CASES)[number]} c
+ * @returns {Promise<import('../../src/engine/renderDirectory.js').PlanEntry[]>}
+ */
+export async function planCase(c) {
+  return withCase(c, 'unused-out', (cfg, hbs) => planRender(cfg, hbs));
+}
+
+/**
  * Render one case into `outDir`.
  *
  * @param {(typeof CASES)[number]} c
@@ -97,6 +110,20 @@ export const CASES = [
  * @returns {Promise<void>}
  */
 export async function renderCase(c, outDir) {
+  await withCase(c, outDir, (cfg, hbs) => renderDirectory(cfg, hbs));
+}
+
+/**
+ * Resolve a case's config with its pinned env and view overrides, then run
+ * `fn`. The environment is restored afterwards.
+ *
+ * @template T
+ * @param {(typeof CASES)[number]} c
+ * @param {string} outDir
+ * @param {(cfg: import('../../src/types.js').TemplateConfig, hbs: typeof Handlebars) => Promise<T>} fn
+ * @returns {Promise<T>}
+ */
+async function withCase(c, outDir, fn) {
   const exampleDir = path.join(EXAMPLES_DIR, c.example);
   const saved = { ...process.env };
   try {
@@ -113,7 +140,7 @@ export async function renderCase(c, outDir) {
 
     const hbs = Handlebars.create();
     registerHelpers(hbs, c.helpers);
-    await renderDirectory(cfg, hbs);
+    return await fn(cfg, hbs);
   } finally {
     process.env = saved;
   }

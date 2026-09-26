@@ -2,20 +2,14 @@ import assert from 'node:assert';
 import { describe, it } from 'node:test';
 
 import { renderPath } from '../../../src/engine/pathRenderer.js';
-import { toNative, toPosix } from '../../helpers/paths.js';
 
 /**
- * renderPath with POSIX-style test paths on every OS.
+ * renderPath takes and returns '/'-separated paths on every OS (Round 08).
  * @param {string} rel
  * @param {Record<string, unknown>} view
  */
 function render(rel, view) {
-  try {
-    return toPosix(renderPath(toNative(rel), view));
-  } catch (e) {
-    e.message = toPosix(e.message);
-    throw e;
-  }
+  return renderPath(rel, view);
 }
 
 describe('renderPath', () => {

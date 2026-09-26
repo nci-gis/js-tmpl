@@ -29,7 +29,11 @@ export async function renderContent(filePath, view, hbs, relPath) {
     const label = relPath || path.basename(filePath);
     const msg = err instanceof Error ? err.message : String(err);
     const { code, details } = classify(msg);
-    throw new JsTmplError(code, `Template '${label}': ${msg}`, {
+    const text =
+      code === ErrorCodes.TEMPLATE_MISSING_VALUE && details
+        ? `"${details.variable}" is not defined in the view (line ${details.line}, column ${details.column})`
+        : msg;
+    throw new JsTmplError(code, `Template '${label}': ${text}`, {
       details: { relPath: label, ...details },
       cause: err,
     });

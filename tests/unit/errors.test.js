@@ -137,7 +137,7 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
   it('PATH_EMPTY_SEGMENT', () =>
     expectCode(
       ErrorCodes.PATH_EMPTY_SEGMENT,
-      () => renderPath(path.join('${x}', 'y'), { x: '' }),
+      () => renderPath('${x}/y', { x: '' }),
       { segment: '${x}' },
     ));
 
@@ -150,12 +150,12 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
 
   it('GUARD_MALFORMED', () =>
     expectCode(ErrorCodes.GUARD_MALFORMED, () =>
-      renderPath(path.join('$if{a}b', 'x'), { a: 1 }),
+      renderPath('$if{a}b/x', { a: 1 }),
     ));
 
   it('GUARD_IN_FILENAME', () =>
     expectCode(ErrorCodes.GUARD_IN_FILENAME, () =>
-      renderPath(path.join('d', '$if{a}'), { a: 1 }),
+      renderPath('d/$if{a}', { a: 1 }),
     ));
 
   for (const [code, src, details] of [
@@ -208,7 +208,7 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
             extname: '.hbs',
             view: { a: 'link' },
           }),
-        { relPath: path.join('${a}', 'x.hbs') },
+        { relPath: '${a}/x.hbs' },
       );
     }));
 
@@ -225,6 +225,54 @@ describe('ErrorCodes — every code is produced by the case it names', () => {
             view: { a: 'same', b: 'same' },
           }),
         { target: 'same', templates: ['${a}.hbs', '${b}.hbs'] },
+      );
+    }));
+
+  it('OUTPUT_BLOCKED (a directory where the plan puts a file)', () =>
+    withTempDir(async (d) => {
+      await seed(d, { 't/a.hbs': 'A' });
+      await fs.mkdir(path.join(d, 'out', 'a'), { recursive: true });
+      await expectCode(
+        ErrorCodes.OUTPUT_BLOCKED,
+        () =>
+          renderDirectory({
+            templateDir: path.join(d, 't'),
+            outDir: path.join(d, 'out'),
+            extname: '.hbs',
+            view: {},
+          }),
+        { relPath: 'a.hbs', target: 'a', path: 'a' },
+      );
+    }));
+
+  it('OUTPUT_LINKED (a target with another hard link)', () =>
+    withTempDir(async (d) => {
+      await seed(d, { 't/a.hbs': 'A', 'elsewhere.txt': 'keep' });
+      await fs.mkdir(path.join(d, 'out'));
+      await fs.link(path.join(d, 'elsewhere.txt'), path.join(d, 'out', 'a'));
+      await expectCode(
+        ErrorCodes.OUTPUT_LINKED,
+        () =>
+          renderDirectory({
+            templateDir: path.join(d, 't'),
+            outDir: path.join(d, 'out'),
+            extname: '.hbs',
+            view: {},
+          }),
+        { relPath: 'a.hbs', target: 'a' },
+      );
+    }));
+
+  it('MULTIPLE_ERRORS', () =>
+    withTempDir(async (d) => {
+      await seed(d, { 't/a.hbs': '{{a}}', 't/b.hbs': '{{b}}' });
+      await expectCode(ErrorCodes.MULTIPLE_ERRORS, () =>
+        renderDirectory({
+          templateDir: path.join(d, 't'),
+          outDir: path.join(d, 'out'),
+          extname: '.hbs',
+          view: {},
+        }),
       );
     }));
 

@@ -114,7 +114,8 @@ function renderSegment(seg, isFilename, view, relPath) {
 }
 
 /**
- * Render all segments of `relPath`. `${var}` is expanded; `$if{var}` /
+ * Render all segments of `relPath` (a `/`-separated template path, as the
+ * walker produces on every OS). `${var}` is expanded; `$if{var}` /
  * `$ifn{var}` directory segments collapse to empty (the walker already
  * decided inclusion). Filename-position formulas and malformed segments
  * throw.
@@ -124,10 +125,10 @@ function renderSegment(seg, isFilename, view, relPath) {
  * @returns {string}
  */
 export function renderPath(relPath, view) {
-  const segments = relPath.split(path.sep);
+  const segments = relPath.split('/');
   const lastIdx = segments.length - 1;
   const rendered = segments.map((seg, idx) =>
     renderSegment(seg, idx === lastIdx, view, relPath),
   );
-  return path.join(...rendered);
+  return path.posix.join(...rendered);
 }

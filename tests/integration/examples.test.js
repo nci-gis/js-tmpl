@@ -3,8 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { withTempDir } from '../helpers/tempDir.js';
-import { CASES, GOLDEN_DIR, listFiles, renderCase } from './examples.golden.js';
+import { CASES, GOLDEN_DIR, listFiles, planCase } from './examples.golden.js';
 
 // Golden tests: every example renders byte-for-byte to its committed
 // snapshot in tests/golden/<example>/<mode>/. Regenerate deliberately with
@@ -12,20 +11,22 @@ import { CASES, GOLDEN_DIR, listFiles, renderCase } from './examples.golden.js';
 describe('examples (golden)', () => {
   for (const c of CASES) {
     it(`${c.example} [${c.mode}] matches tests/golden`, async () => {
-      await withTempDir(async (tmpDir) => {
-        const expectedDir = path.join(GOLDEN_DIR, c.example, c.mode);
-        await renderCase(c, tmpDir);
+      // Planned in memory (Round 08): no temp dir, nothing written.
+      const expectedDir = path.join(GOLDEN_DIR, c.example, c.mode);
+      const plan = await planCase(c);
 
-        const actual = await listFiles(tmpDir);
-        const expected = await listFiles(expectedDir);
-        assert.deepStrictEqual(actual, expected, 'file list differs');
-
-        for (const rel of expected) {
-          const got = await fs.readFile(path.join(tmpDir, rel));
-          const want = await fs.readFile(path.join(expectedDir, rel));
-          assert.ok(got.equals(want), `content differs: ${rel}`);
-        }
-      });
+      assert.deepStrictEqual(
+        plan.map((e) => e.target),
+        await listFiles(expectedDir),
+        'file list differs',
+      );
+      for (const entry of plan) {
+        const want = await fs.readFile(path.join(expectedDir, entry.target));
+        assert.ok(
+          Buffer.from(entry.content).equals(want),
+          `content differs: ${entry.target}`,
+        );
+      }
     });
   }
 });
