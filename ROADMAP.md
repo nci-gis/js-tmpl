@@ -10,8 +10,8 @@ This document outlines the planned features and improvements for js-tmpl.
 
 ## Node.js Support
 
-- **Primary**: 22, 24
-- **Compatible**: 20
+- **Supported**: 22, 24 (Node 20 dropped in 0.2.0; it reached end of life
+  in April 2026)
 
 ## Milestones
 

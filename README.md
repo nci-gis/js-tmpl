@@ -116,7 +116,7 @@ a discovered config file sets them.
 npm install @nci-gis/js-tmpl
 ```
 
-**Requirements:** Node.js ≥ 20
+**Requirements:** Node.js ≥ 22
 
 ## Quick Start
 
