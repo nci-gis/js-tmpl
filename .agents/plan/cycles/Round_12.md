@@ -1,8 +1,8 @@
 # Round 12 — Security: patched runtime dependencies and a pinned release pipeline, for 0.1.3 and 0.2.0
 
-**Status**: In Progress
+**Status**: Complete
 **Date started**: 2026-09-26
-**Date completed**: —
+**Date completed**: 2026-09-27
 **Release target**: v0.1.3 (patch; branch `fix/0.1.3` from `main` = `v0.1.2`) and v0.2.0 (on `dev`, PR #18)
 
 ## Goal
@@ -54,22 +54,36 @@ lockfiles keep the vulnerable versions, and audit scanners flag the ranges.
 
 ## Check
 
-- [ ] v0.1.3 published; `npm view @nci-gis/js-tmpl@0.1.3 dependencies`
-      shows the new floors.
-- [ ] `main` → `dev` merge clean; PR #18 CI green on Node 22 / 24, three
+- [x] v0.1.3 published 2026-09-26; `npm view @nci-gis/js-tmpl@0.1.3
+  dependencies` → `handlebars ^4.7.9`, `js-yaml ^4.3.2`.
+- [x] `main` → `dev` merge clean; PR #18 CI green on Node 22 / 24, three
       OSes.
-- [ ] v0.2.0 published; `pnpm audit --prod` clean on the released tree.
-- [ ] Dependabot alerts and security updates enabled in the repository
-      settings (Dependabot reads `dependabot.yml` from `main` only, so it
-      starts after PR #18).
+- [x] v0.2.0 published 2026-09-26 (PR #18); `pnpm audit --prod` clean.
+- [x] Dependabot alerts enabled (API check 2026-09-27); first version PRs
+      (#20–#25) opened against `dev` right after PR #18 merged.
+- [x] Dependabot security updates enabled by hand 2026-09-27
+      (repository setting; `automated-security-fixes` → `enabled: true`).
 
 ## Act
 
 **Learnings**:
 
-- ...
+- **A patch must ship before the minor merges.** `release.yml` checks out
+  `main`, so once `main` is 0.2.0 no 0.1.x can be cut. Rehearse the
+  ordering with a throwaway merge before opening the release PR.
+- **Advisories found by hand mean a missing gate.** S1 / S2 sat in the
+  lockfile until a review read it. Dependabot now watches; `pnpm audit
+--prod` is still not in `pnpm verify`.
+- **Pinning by SHA changes some action inputs.** `install-action@<sha>`
+  cannot select a tool by tag, so `tool: git-cliff` replaces `@git-cliff`.
+- **Dependabot reads its config from `main` only.** Committing
+  `dependabot.yml` to `dev` does nothing until it reaches `main`; version
+  PRs target `dev` as configured.
+- **A new prettier can fail a dependency PR.** #21 (prettier 3.9.9)
+  reformats `docs/analysis/overview.md`; formatter bumps need a `--write`
+  commit on the same PR.
 
 **Promotions**:
 
-- [ ] → context/ : [topic]
-- [ ] → skills/ : [topic]
+- [ ] → context/ : release ordering rule (patch from `main` before the
+      minor merges) — candidate once a second release confirms it.
