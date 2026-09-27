@@ -5,6 +5,55 @@ All notable changes to js-tmpl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-26
+
+### Added
+
+- **engine:** Strict-check helper and block-helper arguments — Round 07 by @pasxd245
+- **engine:** Path variables must exist and render exactly one segment — Round 07 by @pasxd245
+- **engine:** Treat case-only target differences as collisions — Round 07 by @pasxd245
+- **config:** Config-file discovery is CLI-only; add findProjectConfig — Round 07 by @pasxd245
+- Stable error codes (JsTmplError, ErrorCodes) — Round 07 by @pasxd245
+- **engine:** Path values may nest with '/'; every part must name something — Round 07 by @pasxd245
+- **config:** TargetFs; symlink-aware outDir containment — Round 07 by @pasxd245
+- **engine:** PlanRender, collect-all errors, comparePlan, CLI --check — Round 08 by @pasxd245
+- **config:** Reject unknown keys and malformed config — Round 11 by @pasxd245
+
+### Build
+
+- Require Node.js 22 or later — Round 12 by @pasxd245
+
+### CI/CD
+
+- Pin actions to commit SHAs and default CI to read-only — Round 12 by @pasxd245
+- Add Dependabot for npm and GitHub Actions — Round 12 by @pasxd245
+
+### Documentation
+
+- **plan:** Record Round 07 targetFs and containment work by @pasxd245
+- **plan:** Record Round 07 CI result; move to review by @pasxd245
+- **plan:** Mark Round 07 complete with learnings by @pasxd245
+- **plan:** Record Round 08 work and a2scaffold prototype by @pasxd245
+- **plan:** Record Round 08 CI result; move to review by @pasxd245
+- **plan:** Gate Round 09 (--explain) on a real user case by @pasxd245
+- **security:** Filesystem threat model — Round 11 by @pasxd245
+- State the write promise precisely; CI notes for --check — Round 11 by @pasxd245
+- Reconcile ROADMAP, SECURITY.md and migration notes for 0.2.0 — Round 11 by @pasxd245
+- **plan:** Close Rounds 08 and 11; Round 12 in ROADMAP 0.2.0 — Round 12 by @pasxd245
+
+### Fixed
+
+- Resolve real paths with the OS (realpath.native) for outDir containment by @pasxd245
+- **engine:** Check every template body, even when its path fails — Round 11 by @pasxd245
+- **engine:** Validate the target once the extension is removed — Round 11 by @pasxd245
+- **engine:** Reject file-vs-directory targets; NFC-insensitive portable key — Round 11 by @pasxd245
+- **engine:** One disk preflight for render and --check — Round 11 by @pasxd245
+- **deps:** Raise handlebars to ^4.7.9 and js-yaml to ^4.3.2 — Round 12 by @pasxd245
+
+### Testing
+
+- Use '/' template paths now that relPath is canonical on every OS by @pasxd245
+
 ## [0.1.3] - 2026-09-26
 
 ### CI/CD
