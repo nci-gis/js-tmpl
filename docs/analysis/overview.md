@@ -147,16 +147,16 @@ Implemented in [src/config/defaults.js](src/config/defaults.js):
 
 ```yaml
 # Without valuesDir (resolves from cwd)
-valuesFile: "config/prod.yaml"
+valuesFile: 'config/prod.yaml'
 # Resolves to: <cwd>/config/prod.yaml
 
 # With valuesDir (organized values directory)
-valuesDir: "templates.values"
-valuesFile: "prod.yaml"
+valuesDir: 'templates.values'
+valuesFile: 'prod.yaml'
 # Resolves to: <cwd>/templates.values/prod.yaml
 
 # Absolute path (ignores valuesDir)
-valuesFile: "/absolute/path/values.yaml"
+valuesFile: '/absolute/path/values.yaml'
 # Resolves to: /absolute/path/values.yaml
 ```
 
