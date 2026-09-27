@@ -1,6 +1,6 @@
 # Round 09: `--explain` — Output Provenance
 
-**Status**: Planning
+**Status**: Deferred — gated on a real user case (see note below)
 **Date started**: 2026-09-25
 **Date completed**: —
 **Release target**: v0.2.x (additive; needs Round 08)
